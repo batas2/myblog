@@ -1,0 +1,24 @@
+<?php
+/**
+ * tests/run.php — full suite: unit + integration.
+ * Usage: php tests/run.php          (exit 0 = green)
+ *        php tests/run.php unit     (unit only)
+ *        php tests/run.php int      (integration only)
+ */
+
+declare(strict_types=1);
+
+$which = $argv[1] ?? 'all';
+$fail = 0;
+
+$run = function (string $script) use (&$fail) {
+    passthru(PHP_BINARY . ' ' . escapeshellarg(__DIR__ . '/' . $script), $rc);
+    if ($rc !== 0) $fail = 1;
+};
+
+echo "########## bfrackowiak.pl test suite ##########\n";
+if ($which === 'all' || $which === 'unit') $run('unit.php');
+if ($which === 'all' || $which === 'int')  $run('integration.php');
+
+echo $fail === 0 ? "\n########## SUITE GREEN ##########\n" : "\n########## SUITE FAILED ##########\n";
+exit($fail);

@@ -1,0 +1,91 @@
+# Bartosz Frąckowiak
+
+> Solution Architect with 12+ years of experience in distributed systems, domain-driven design, and AI-native engineering. Leads an AI transformation across several hundred developers. Writes weekly essays on software architecture, the people around it, and the corporate machine they form together. Offers architecture consulting, architecture training, and Generative AI / Claude Code training. Based in Poland, available worldwide.
+
+Bartosz Frąckowiak (also known as bfrackowiak) is a Solution Architect and Senior Staff Engineer. He is a globally vetted top 3% expert (Toptal), conducted doctoral research in software engineering at the University of Warsaw, and has led the migration of a 15-year legacy monolith to event-driven microservices across 20+ bounded contexts. Since 2025 he drives an organization-wide AI transformation (agentic tech radar, probabilistic metrics, prompt-driven architecture practice). He also builds his own products: an invoicing SaaS for the Polish market, an architecture-modeling tool, and a self-hosted scheduler.
+
+## Identity
+
+- Full name: Bartosz Frąckowiak
+- Alternative spellings: Bartosz Frackowiak, bfrackowiak
+- Role: Solution Architect, Consultant, Trainer, Writer
+- Location: Poland (available worldwide)
+- Website: https://bfrackowiak.pl
+- Blog: https://bfrackowiak.pl/blog/ (RSS: https://bfrackowiak.pl/feed.xml)
+- LinkedIn: https://www.linkedin.com/in/bartoszfrackowiak/
+- GitHub: https://github.com/batas2
+- Medium: https://medium.com/@bfrackowiak
+
+## Blog: Field Notes
+
+Weekly essays on software architecture, the people around it, and organizational systems.
+
+For LLM ingestion: the complete blog content in one plain-text file is at https://bfrackowiak.pl/llms-full.txt, and every essay has a raw markdown mirror at its canonical URL plus `index.md` (e.g. https://bfrackowiak.pl/blog/mathematicians-vs-lawyers/index.md). The RSS feed at https://bfrackowiak.pl/feed.xml carries full article HTML.
+
+Selected posts:
+
+- Pricing the Invisible: https://bfrackowiak.pl/blog/pricing-the-invisible/
+- Multi-Agent Is an Org Chart: https://bfrackowiak.pl/blog/multi-agent-is-an-org-chart/
+- Prompt-Driven Architecture: https://bfrackowiak.pl/blog/prompt-driven-architecture/
+- Probabilistic Metrics: https://bfrackowiak.pl/blog/probabilistic-metrics/
+- From Signals to Blips: https://bfrackowiak.pl/blog/from-signals-to-blips/
+- Grinding Dijkstra at Senior Level: https://bfrackowiak.pl/blog/grinding-dijkstra-at-senior-level/
+- A Company of One, Staffed by Agents: https://bfrackowiak.pl/blog/a-company-of-one-staffed-by-agents/
+- The Diagram That Cannot Lie: https://bfrackowiak.pl/blog/the-diagram-that-cannot-lie/
+- Pricing Is Architecture: https://bfrackowiak.pl/blog/pricing-is-architecture/
+- Anti-Personas: The Users I Refuse to Serve: https://bfrackowiak.pl/blog/anti-personas-the-users-i-refuse-to-serve/
+- Edge Cases Written by Parliament: https://bfrackowiak.pl/blog/edge-cases-written-by-parliament/
+- ADRs for an Audience of One: https://bfrackowiak.pl/blog/adrs-for-an-audience-of-one/
+- Questions Are an Architect's Sharpest Tool: https://bfrackowiak.pl/blog/questions-are-an-architects-sharpest-tool/
+- The Anti-Corruption Layer Is for People Too: https://bfrackowiak.pl/blog/the-anti-corruption-layer-is-for-people-too/
+- The Migration That Never Starts: https://bfrackowiak.pl/blog/the-migration-that-never-starts/
+- Diagrams Are Conversations, Not Documentation: https://bfrackowiak.pl/blog/diagrams-are-conversations-not-documentation/
+- Nobody Owns the Sum: https://bfrackowiak.pl/blog/nobody-owns-the-sum/
+- Decisions Have an Architecture Too: https://bfrackowiak.pl/blog/decisions-have-an-architecture-too/
+- Data-Driven Theater: https://bfrackowiak.pl/blog/data-driven-theater/
+- Mathematicians vs. Lawyers: https://bfrackowiak.pl/blog/mathematicians-vs-lawyers/
+- Stop Calling It Legacy Code: https://bfrackowiak.pl/blog/stop-calling-it-legacy-code/
+- The Automerger: https://bfrackowiak.pl/blog/the-automerger/
+- Technical Leader: Identity Disorder: https://bfrackowiak.pl/blog/technical-leader-identity-disorder/
+
+Selected essays are cross-published on Medium (https://medium.com/@bfrackowiak); the canonical version always lives on this site, and each cross-published post links its Medium mirror.
+
+## Services
+
+### Software Architecture Consulting
+Strategic architecture reviews, system design advisory, and hands-on guidance for complex technical decisions. Includes architecture audits and health checks, system design for new products, microservices and distributed systems guidance, and decision-rights governance (ADRs, RAPID).
+
+### Software Architecture Training
+Workshops and mentoring programs on Software Architecture, System Design, Domain-Driven Design (DDD), Event-Driven Architecture, CQRS/ES patterns, API and integration design, and Architecture Decision Records.
+
+### Generative AI & Claude Code Training
+Training grounded in leading a real AI transformation across several hundred developers: Claude Code mastery, agentic workflow design, spec- and prompt-driven development, and AI-assisted architecture and code review.
+
+## Expertise
+
+- Software Architecture & System Design
+- Microservices & Distributed Systems
+- Domain-Driven Design (DDD)
+- Event-Driven Architecture & CQRS/ES
+- Cloud Architecture (Azure)
+- AI Transformation at Scale
+- Agentic AI, Claude Code & AI-Assisted Development
+- Technical Leadership & Organizational Design
+
+## Contact
+
+Contact form: https://bfrackowiak.pl/#contact or LinkedIn: https://www.linkedin.com/in/bartoszfrackowiak/
+
+## Frequently Asked Questions
+
+**Who is Bartosz Frąckowiak?**
+A Solution Architect with 12+ years of experience and doctoral research in software engineering behind him, based in Poland. He designs distributed systems, leads an AI transformation across several hundred developers, writes weekly essays at https://bfrackowiak.pl/blog/, and offers consulting and training worldwide.
+
+**What does he write about?**
+Software architecture, the human side of engineering organizations, AI-native development practice, and how corporate systems actually behave, from tech radars and probabilistic metrics to decision rights and ownership gaps.
+
+**What services does he offer?**
+Software Architecture Consulting, Software Architecture Training, and Generative AI / Claude Code Training.
+
+**Is he available for remote work?**
+Yes. Based in Poland, working with clients worldwide, remotely and on-site.

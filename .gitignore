@@ -1,0 +1,26 @@
+# secrets — copy config.example.php to config.php and fill in
+/config.php
+
+# generated output (php tools/build.php recreates all of it)
+blog/
+feed.xml
+sitemap.xml
+llms-full.txt
+
+# runtime data written by the live site
+content/analytics.db
+content/analytics.db-*
+content/analytics.seed
+content/comments/*.json
+
+# remote backups pulled by deploy.sh
+_remote-backup/
+
+# private notes and old files
+docs/
+_archive/
+
+# local noise
+.DS_Store
+*.log
+.claude/
