@@ -19,7 +19,11 @@ require __DIR__ . '/../lib/config.php';
 require __DIR__ . '/../lib/helpers.php';
 require __DIR__ . '/../lib/markdown.php';
 require __DIR__ . '/../lib/blog.php';
-require __DIR__ . '/../lib/templates.php';
+require __DIR__ . '/../lib/schema.php';
+require __DIR__ . '/../lib/components.php';
+require __DIR__ . '/../lib/page.php';
+require __DIR__ . '/../lib/pages.php';
+require __DIR__ . '/../lib/feeds.php';
 
 if (defined('BUILD_NO_RUN')) return;
 

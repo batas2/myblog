@@ -157,4 +157,35 @@ $expiredPayload = '3|4|' . (time() - 100);
 $expired = base64_encode($expiredPayload) . '.' . hash_hmac('sha256', $expiredPayload, c_secret());
 t_assert(!c_verify_challenge($expired, '7'), 'expired token rejected');
 
+
+/* ---------------- refactor helpers ---------------- */
+section('urls & series');
+t_eq('/blog/my-post/', post_path('my-post'), 'post_path relative');
+t_eq('https://bfrackowiak.pl/blog/my-post/', post_url('my-post'), 'post_url absolute');
+t_eq('/blog/tag/data-quality/', tag_path('Data Quality'), 'tag_path from name');
+t_eq('', series_suffix('mathematicians-vs-lawyers'), 'no series suffix outside series');
+t_contains('Tools That Scale, part 1', series_suffix('from-signals-to-blips'), 'series suffix for series post');
+t_contains('· 5 min read', post_meta_line(['date' => '2026-07-13', 'minutes' => 5, 'slug' => 'x']), 'post meta line');
+
+section('components');
+t_eq('<img src="/a.jpg" alt="x" width="10" height="5" loading="lazy" decoding="async">', img_lazy('/a.jpg', 'x', 10, 5), 'lazy img attrs');
+t_contains('fetchpriority="high"', img_eager('/a.jpg', 'x', 10, 5), 'eager img priority');
+t_eq('<span class="eyebrow"><span class="blip"></span>Tag</span>', eyebrow('Tag'), 'eyebrow static');
+t_contains('blip-live', eyebrow('Live', true), 'eyebrow live variant');
+t_eq('', thumb_span(null, 'thumb'), 'thumb span empty without hero');
+t_eq('', syndication_badge(null), 'no badge without medium url');
+t_contains('Also published on Medium', syndication_badge('https://medium.com/x'), 'badge with medium url');
+$fc = featured_card($posts[0]);
+t_contains('class="featured2', $fc, 'featured card class');
+t_contains('Latest signal', $fc, 'featured card eyebrow');
+
+section('schema builders');
+$bp = schema_blog_posting($posts[0], hero_meta($posts[0]['slug']), post_url($posts[0]['slug']), '2026-07-13T09:00:00+01:00');
+t_eq('BlogPosting', $bp['@type'], 'blog posting type');
+t_assert(isset($bp['image']['width']), 'posting image has dimensions');
+$bc = schema_breadcrumbs(['Home' => 'https://x/', 'Blog' => 'https://x/blog/']);
+t_eq(2, count($bc['itemListElement']), 'breadcrumb items');
+t_eq(1, $bc['itemListElement'][0]['position'], 'breadcrumb positions start at 1');
+t_assert(json_decode(ld_script(schema_blog()) ? substr(ld_script(schema_blog()), 51, -9) : '') !== null || str_contains(ld_script(schema_blog()), '"@type":"Blog"'), 'ld_script serializes');
+
 if (basename($_SERVER['SCRIPT_NAME'] ?? '') === 'unit.php') exit(t_summary());

@@ -1,7 +1,8 @@
 <?php
 /**
- * lib/blog.php — the content model: loading posts from markdown sources,
- * tags, hero images, and plain-text renderings (markdown mirrors, llms-full).
+ * lib/blog.php — the content model.
+ * Loading and parsing posts, URLs, tags, series, hero-image metadata, and the
+ * plain-text renderings (per-post markdown mirrors, llms-full.txt).
  */
 
 declare(strict_types=1);
@@ -13,70 +14,21 @@ const SERIES = [
     'prompt-driven-architecture' => ['Tools That Scale', 3],
 ];
 
-/* ============================== parsing ============================== */
+/* ---------------- urls & labels ---------------- */
 
-function load_posts(): array
+/** Site-relative post path: /blog/<slug>/ */
+function post_path(string $slug): string
 {
-    $posts = [];
-    foreach (glob(APP_ROOT . '/content/posts/*.md') as $file) {
-        $name = basename($file, '.md');
-        if (!preg_match('/^(\d{4}-\d{2}-\d{2})-(.+)$/', $name, $m)) {
-            fwrite(STDERR, "skip (bad name): $name\n");
-            continue;
-        }
-        [, $date, $slug] = $m;
-
-        $lines = preg_split('/\r?\n/', file_get_contents($file));
-        $title = $subtitle = '';
-        $medium = null;
-        $tags = [];
-        $body = [];
-
-        foreach ($lines as $line) {
-            if ($title === '' && preg_match('/^#\s+(.*)$/', $line, $mm)) { $title = trim($mm[1]); continue; }
-            $bodyStarted = (bool) array_filter($body, fn($l) => trim($l) !== '');
-            if ($title !== '' && $subtitle === '' && !$bodyStarted
-                && preg_match('/^\*([^*].*)\*\s*$/', trim($line), $mm)) {
-                $subtitle = trim($mm[1]);
-                continue;
-            }
-            if (preg_match('/^\*\*Medium:\*\*\s*(\S+)\s*$/', trim($line), $mm)) {
-                $medium = $mm[1];
-                while ($body && in_array(trim(end($body)), ['', '---'], true)) array_pop($body);
-                continue;
-            }
-            if (preg_match('/^\*\*Tags:\*\*\s*(.+)$/', trim($line), $mm)) {
-                $tags = array_map('trim', explode(',', $mm[1]));
-                // drop a trailing hr that only separated the tag line
-                while ($body && in_array(trim(end($body)), ['', '---'], true)) array_pop($body);
-                continue;
-            }
-            if ($title !== '') $body[] = $line;
-        }
-
-        $plain = trim(preg_replace('/\s+/', ' ', strip_tags(md_to_html($body))));
-        $words = str_word_count($plain);
-
-        $posts[] = [
-            'slug'     => $slug,
-            'date'     => $date,
-            'title'    => $title,
-            'subtitle' => $subtitle,
-            'tags'     => $tags,
-            'medium'   => $medium,
-            'words'    => $words,
-            'minutes'  => max(1, (int) ceil($words / 215)),
-            'html'     => md_to_html($body),
-            'md'       => trim(implode("\n", $body)),
-        ];
-    }
-    usort($posts, fn($a, $b) => strcmp($b['date'], $a['date']));
-    return $posts;
+    return '/blog/' . $slug . '/';
 }
 
-function nice_date(string $d): string { return date('M j, Y', strtotime($d)); }
-function log_date(string $d): string { return date('Y.m.d', strtotime($d)); }
+/** Absolute post URL. */
+function post_url(string $slug): string
+{
+    return cfg('site_url') . post_path($slug);
+}
 
+/** kebab-case tag slug used in URLs and hashtags */
 function tag_slug(string $tag): string
 {
     $s = strtolower(trim($tag));
@@ -85,10 +37,105 @@ function tag_slug(string $tag): string
     return trim($s, '-');
 }
 
+/** Site-relative tag archive path: /blog/tag/<slug>/ */
+function tag_path(string $tag): string
+{
+    return '/blog/tag/' . tag_slug($tag) . '/';
+}
+
+/** clickable #hashtag link to the tag archive */
 function tag_link(string $tag): string
 {
-    $slug = tag_slug($tag);
-    return '<a class="tag" href="/blog/tag/' . $slug . '/" title="' . e($tag) . '">#' . $slug . '</a>';
+    return '<a class="tag" href="' . tag_path($tag) . '" title="' . e($tag) . '">#' . tag_slug($tag) . '</a>';
+}
+
+/** " · Series Name, part N" or "" when the post is not part of a series */
+function series_suffix(string $slug): string
+{
+    if (!isset(SERIES[$slug])) return '';
+    [$name, $part] = SERIES[$slug];
+    return ' · ' . e($name) . ', part ' . $part;
+}
+
+function nice_date(string $d): string { return date('M j, Y', strtotime($d)); }
+function log_date(string $d): string { return date('Y.m.d', strtotime($d)); }
+
+/* ---------------- loading & parsing ---------------- */
+
+/**
+ * Parse one content/posts/YYYY-MM-DD-slug.md file into the post array,
+ * or null when the filename doesn't match the convention.
+ *
+ * File format: `# Title`, first standalone *italic* line = subtitle,
+ * optional `**Medium:** <url>` line, trailing `**Tags:** a, b, c` line.
+ */
+function parse_post_file(string $file): ?array
+{
+    $name = basename($file, '.md');
+    if (!preg_match('/^(\d{4}-\d{2}-\d{2})-(.+)$/', $name, $m)) {
+        return null;
+    }
+    [, $date, $slug] = $m;
+
+    $lines = preg_split('/\r?\n/', (string) file_get_contents($file));
+    $title = $subtitle = '';
+    $medium = null;
+    $tags = [];
+    $body = [];
+
+    foreach ($lines as $line) {
+        if ($title === '' && preg_match('/^#\s+(.*)$/', $line, $mm)) { $title = trim($mm[1]); continue; }
+        $bodyStarted = (bool) array_filter($body, fn($l) => trim($l) !== '');
+        if ($title !== '' && $subtitle === '' && !$bodyStarted
+            && preg_match('/^\*([^*].*)\*\s*$/', trim($line), $mm)) {
+            $subtitle = trim($mm[1]);
+            continue;
+        }
+        if (preg_match('/^\*\*Medium:\*\*\s*(\S+)\s*$/', trim($line), $mm)) {
+            $medium = $mm[1];
+            while ($body && in_array(trim(end($body)), ['', '---'], true)) array_pop($body);
+            continue;
+        }
+        if (preg_match('/^\*\*Tags:\*\*\s*(.+)$/', trim($line), $mm)) {
+            $tags = array_map('trim', explode(',', $mm[1]));
+            // drop a trailing hr that only separated the tag line
+            while ($body && in_array(trim(end($body)), ['', '---'], true)) array_pop($body);
+            continue;
+        }
+        if ($title !== '') $body[] = $line;
+    }
+
+    $plain = trim(preg_replace('/\s+/', ' ', strip_tags(md_to_html($body))));
+    $words = str_word_count($plain);
+
+    return [
+        'slug'     => $slug,
+        'date'     => $date,
+        'title'    => $title,
+        'subtitle' => $subtitle,
+        'tags'     => $tags,
+        'medium'   => $medium,
+        'words'    => $words,
+        'minutes'  => max(1, (int) ceil($words / 215)),
+        'html'     => md_to_html($body),
+        'md'       => trim(implode("\n", $body)),
+    ];
+}
+
+/** All posts from content/posts/, newest first. */
+function load_posts(): array
+{
+    $posts = [];
+    foreach (glob(CONTENT_DIR . '/posts/*.md') as $file) {
+        $post = parse_post_file($file);
+        if ($post === null) {
+            fwrite(STDERR, 'skip (bad name): ' . basename($file, '.md') . "\n");
+            continue;
+        }
+        $posts[] = $post;
+    }
+    usort($posts, fn($a, $b) => strcmp($b['date'], $a['date']));
+    return $posts;
 }
 
 /** tag name => list of posts (posts stay in reverse-chron order) */
@@ -102,6 +149,9 @@ function collect_tags(array $posts): array
     return $tags;
 }
 
+/* ---------------- hero images ---------------- */
+
+/** Image metadata for a post's hero, or null when no image exists. */
 function hero_meta(string $slug): ?array
 {
     static $credits = null;
@@ -130,20 +180,7 @@ function hero_meta(string $slug): ?array
     ];
 }
 
-function hero_figure(array $h, string $alt): string
-{
-    $credit = 'Photo';
-    if ($h['creator'] !== '' && strtolower($h['creator']) !== 'unknown') $credit .= ': ' . e($h['creator']);
-    if ($h['license'] !== '') {
-        $credit .= ' · ' . ($h['license'] === 'CC0' || $h['license'] === 'PDM' ? e($h['license']) : 'CC ' . e($h['license']));
-    }
-    // no creator/license recorded: fall back to the stored caption (e.g. "Image from the Medium original")
-    if ($credit === 'Photo' && $h['caption'] !== '') $credit = e($h['caption']);
-    $link = $h['source'] !== '' ? ' · <a href="' . e($h['source']) . '" rel="noopener nofollow">source</a>' : '';
-    $dims = $h['w'] ? ' width="' . $h['w'] . '" height="' . $h['h'] . '"' : '';
-    return '<figure class="post-hero"><img src="' . e($h['src']) . '" alt="' . e($alt) . '"' . $dims . ' loading="eager" decoding="async" fetchpriority="high">'
-         . '<figcaption>' . $credit . $link . '</figcaption></figure>';
-}
+/* ---------------- plain-text renderings ---------------- */
 
 /** raw-markdown mirror of a post — friendly to AI agents and plain-text readers */
 function render_md(array $p): string
@@ -152,9 +189,9 @@ function render_md(array $p): string
     $medium = $p['medium'] ? "- Also on Medium: {$p['medium']}\n" : '';
     return "# {$p['title']}\n\n"
         . "*{$p['subtitle']}*\n\n"
-        . "- Author: " . cfg('author') . "\n"
+        . '- Author: ' . cfg('author') . "\n"
         . "- Published: {$p['date']}\n"
-        . "- Canonical: " . cfg('site_url') . "/blog/{$p['slug']}/\n"
+        . '- Canonical: ' . post_url($p['slug']) . "\n"
         . $medium
         . "- Tags: {$tags}\n\n---\n\n"
         . $p['md'] . "\n";
@@ -162,9 +199,9 @@ function render_md(array $p): string
 
 function render_llms_full(array $posts): string
 {
-    $out = "# Field Notes by Bartosz Frąckowiak: full content\n\n"
-         . "> Weekly essays on software architecture, the people around it, and the corporate machine they form together. "
-         . "Canonical HTML lives at " . cfg('site_url') . "/blog/ and each essay also has a markdown mirror at its URL + index.md. "
+    $out = '# Field Notes by ' . cfg('author') . ": full content\n\n"
+         . '> Weekly essays on software architecture, the people around it, and the corporate machine they form together. '
+         . 'Canonical HTML lives at ' . cfg('site_url') . '/blog/ and each essay also has a markdown mirror at its URL + index.md. '
          . "This file concatenates all essays for LLM ingestion.\n\n";
     foreach ($posts as $p) {
         $out .= "\n\n============================================================\n\n" . render_md($p);
