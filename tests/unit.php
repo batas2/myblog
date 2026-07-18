@@ -1,6 +1,7 @@
 <?php
 /**
- * tests/unit.php — unit tests for tools/build.php and comments.php functions.
+ * tests/unit.php — unit tests for the build pipeline, content model,
+ * analytics core, geoip, admin core, and comments.php functions.
  * Run via tests/run.php (or standalone: php tests/unit.php).
  */
 
@@ -10,6 +11,8 @@ require __DIR__ . '/bootstrap.php';
 
 define('BUILD_NO_RUN', true);
 require dirname(__DIR__) . '/tools/build.php';
+require_once dirname(__DIR__) . '/lib/analytics.php';
+require_once dirname(__DIR__) . '/lib/admin.php';
 require dirname(__DIR__) . '/comments.php';
 
 /* ---------------- markdown: inline ---------------- */
@@ -64,23 +67,71 @@ section('dates');
 t_eq('2026.07.13', log_date('2026-07-13'), 'log date format');
 t_eq('Jul 13, 2026', nice_date('2026-07-13'), 'nice date format');
 
+/* ---------------- post status model ---------------- */
+section('post status');
+$mkpost = function (string $name, string $extra = '') {
+    $dir = sys_get_temp_dir() . '/bf-unit-posts';
+    @mkdir($dir);
+    $f = $dir . '/' . $name;
+    file_put_contents($f, "# Fixture Title\n\n*Fixture subtitle line.*\n\nBody paragraph one with enough words to count.\n"
+        . ($extra !== '' ? "\n{$extra}\n" : '') . "\n---\n\n**Tags:** One, Two\n");
+    return $f;
+};
+$p = parse_post_file($mkpost('2020-01-05-fixture-past.md'));
+t_eq('published', $p['status'], 'past date without markers = published');
+t_eq(post_publish_ts('2020-01-05'), $p['publish_ts'], 'default publish ts from filename date');
+$expect = (new DateTimeImmutable('2020-01-05 09:00', site_tz()))->getTimestamp();
+t_eq($expect, $p['publish_ts'], 'default publish moment is 09:00 site time');
+t_contains('+', $p['publish_iso'], 'publish_iso carries a timezone offset');
+
+$p = parse_post_file($mkpost('2099-01-05-fixture-future.md'));
+t_eq('scheduled', $p['status'], 'future date = scheduled');
+
+$p = parse_post_file($mkpost('2020-01-05-fixture-draft.md', '**Status:** draft'));
+t_eq('draft', $p['status'], 'Status: draft wins over past date');
+t_not_contains('Status', $p['html'], 'status line stripped from body');
+
+$p = parse_post_file($mkpost('2020-01-05-fixture-explicit.md', '**Publish:** 2099-06-01 22:15'));
+t_eq('scheduled', $p['status'], 'explicit future Publish overrides filename date');
+t_eq((new DateTimeImmutable('2099-06-01 22:15', site_tz()))->getTimestamp(), $p['publish_ts'], 'explicit publish ts exact');
+t_not_contains('Publish', $p['html'], 'publish line stripped from body');
+
+$p = parse_post_file($mkpost('2020-01-05-fixture-explicit-past.md', '**Publish:** 2020-06-01 07:30'));
+t_eq('published', $p['status'], 'explicit past Publish = published');
+
+$p = parse_post_file($mkpost('2020-01-05-fixture-badpublish.md', '**Publish:** not-a-date'));
+t_eq('published', $p['status'], 'unparseable Publish falls back to filename date');
+t_eq(post_publish_ts('2020-01-05'), $p['publish_ts'], 'fallback ts = filename default');
+
+// meta markers inside code fences are examples, not metadata
+$f = sys_get_temp_dir() . '/bf-unit-posts/2020-01-05-fixture-fenced.md';
+file_put_contents($f, "# Fenced\n\n*Sub.*\n\nHow to schedule:\n\n```\n**Status:** draft\n**Publish:** 2099-01-01 00:00\n```\n\nAfter the fence.\n\n**Tags:** One\n");
+$p = parse_post_file($f);
+t_eq('published', $p['status'], 'fenced Status/Publish examples ignored');
+t_contains('**Status:** draft', $p['html'], 'fenced example survives into rendered body');
+t_contains('After the fence.', $p['html'], 'body continues after fence');
+
 /* ---------------- load_posts against real content ---------------- */
 section('load_posts');
+$all = load_posts(true);
+t_eq(25, count($all), '25 posts on disk (all statuses)');
+t_eq('a-feature-is-not-a-service', $all[0]['slug'], 'newest post first in all-mode');
 $posts = load_posts();
-t_eq(23, count($posts), '23 posts loaded');
-t_eq('mathematicians-vs-lawyers', $posts[0]['slug'], 'newest post first');
+t_eq(count(array_filter($all, fn($p) => $p['status'] === 'published')), count($posts), 'default load = published subset of all');
+foreach ($posts as $p) if ($p['status'] !== 'published') { t_assert(false, 'published-only load leaked ' . $p['slug']); }
+t_assert((bool) $posts, 'at least one published post');
 $sorted = true;
-for ($i = 1; $i < count($posts); $i++) if ($posts[$i - 1]['date'] < $posts[$i]['date']) $sorted = false;
-t_assert($sorted, 'posts sorted descending by date');
+for ($i = 1; $i < count($all); $i++) if ($all[$i - 1]['publish_ts'] < $all[$i]['publish_ts']) $sorted = false;
+t_assert($sorted, 'posts sorted descending by publish moment');
 $allOk = true;
-foreach ($posts as $p) {
+foreach ($all as $p) {
     if ($p['title'] === '' || $p['subtitle'] === '' || count($p['tags']) !== 5 || $p['minutes'] < 1 || $p['html'] === '') {
         $allOk = false;
         echo "    problem post: {$p['slug']}\n";
     }
 }
 t_assert($allOk, 'every post has title, subtitle, exactly 5 tags, minutes, html');
-$bySlug = array_column($posts, null, 'slug');
+$bySlug = array_column($all, null, 'slug');
 foreach (['stop-calling-it-legacy-code', 'the-automerger', 'technical-leader-identity-disorder'] as $s) {
     t_assert(!empty($bySlug[$s]['medium']), "medium link parsed for {$s}");
 }
@@ -88,8 +139,29 @@ t_eq(null, $bySlug['mathematicians-vs-lawyers']['medium'], 'no medium link where
 t_not_contains('**Tags:**', $bySlug['data-driven-theater']['html'], 'tags line stripped from body');
 t_not_contains('**Medium:**', $bySlug['the-automerger']['html'], 'medium line stripped from body');
 t_not_contains($bySlug['data-driven-theater']['subtitle'], $bySlug['data-driven-theater']['html'], 'subtitle not duplicated into body');
+
+/* ---------------- llms.txt selected-posts refresh ---------------- */
+section('llms_selected');
+$tmp = tempnam(sys_get_temp_dir(), 'llms');
+file_put_contents($tmp, "# Header\n\nSelected posts:\n\n- Old Post: https://example.com/blog/old/\n\nTrailing prose stays.\n");
+t_assert(update_llms_selected($tmp, [
+    ['title' => 'Newest', 'slug' => 'newest'],
+    ['title' => 'Older', 'slug' => 'older'],
+]), 'selected-posts block found and rewritten');
+$llmsOut = (string) file_get_contents($tmp);
+t_contains('- Newest: ' . post_url('newest'), $llmsOut, 'new post listed with canonical URL');
+t_not_contains('Old Post', $llmsOut, 'stale entry replaced');
+t_contains('Trailing prose stays.', $llmsOut, 'prose after the block untouched');
+t_assert(!update_llms_selected($tmp . '.missing', []), 'missing file returns false');
+// list block at EOF without trailing newline must be replaced, not duplicated
+file_put_contents($tmp, "Head\n\nSelected posts:\n\n- Old A: https://x/a/\n- Old B: https://x/b/");
+t_assert(update_llms_selected($tmp, [['title' => 'New', 'slug' => 'new']]), 'EOF list block matched');
+$llmsOut = (string) file_get_contents($tmp);
+t_not_contains('Old B', $llmsOut, 'unterminated last entry replaced too');
+t_eq(1, substr_count($llmsOut, '- New: '), 'no duplicated entries at EOF');
+unlink($tmp);
 $noDash = true;
-foreach ($posts as $p) {
+foreach ($all as $p) {
     $clean = str_replace('Technical Leader — Identity Disorder', '', $p['html']);
     if (str_contains($clean, ' — ')) { $noDash = false; echo "    dash in: {$p['slug']}\n"; }
 }
@@ -121,6 +193,7 @@ $rss = render_rss(array_slice($posts, 0, 3));
 t_assert(simplexml_load_string($rss) !== false, 'rss is valid xml');
 t_contains('<atom:link', $rss, 'rss has atom self link');
 t_contains('<content:encoded>', $rss, 'rss carries full content');
+t_contains(date('D, d M Y', $posts[0]['publish_ts']), $rss, 'rss pubDate from publish moment');
 $sm = render_sitemap($posts);
 t_assert(simplexml_load_string($sm) !== false, 'sitemap is valid xml');
 t_contains(cfg('site_url') . '/blog/mathematicians-vs-lawyers/', $sm, 'sitemap has post url');
@@ -135,15 +208,186 @@ t_not_contains('<a class="tag"', $card, 'no nested anchors inside card link');
 $nl = newsletter_box();
 t_contains('buttondown.com/api/emails/embed-subscribe', $nl, 'newsletter posts to buttondown');
 t_contains('type="email"', $nl, 'newsletter has email field');
+$bs = beacon_script();
+t_contains("sendBeacon('/a.php'", $bs, 'beacon targets a.php');
+t_contains('doNotTrack', $bs, 'beacon honors DNT');
+t_contains('pagehide', $bs, 'beacon sends engagement on pagehide');
+
+/* ---------------- analytics: enrichment ---------------- */
+section('analytics enrichment');
+$uaChrome = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
+$uaIphone = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1';
+$uaTablet = 'Mozilla/5.0 (Linux; Android 14; SM-X910) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
+$uaEdge   = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 Edg/126.0.0.0';
+$uaFfLin  = 'Mozilla/5.0 (X11; Linux x86_64; rv:127.0) Gecko/20100101 Firefox/127.0';
+t_eq(['browser' => 'Chrome', 'os' => 'Windows', 'device' => 'desktop'], an_ua_parse($uaChrome), 'chrome/windows/desktop');
+t_eq(['browser' => 'Safari', 'os' => 'iOS', 'device' => 'mobile'], an_ua_parse($uaIphone), 'safari/ios/mobile');
+t_eq('tablet', an_ua_parse($uaTablet)['device'], 'android without Mobile = tablet');
+t_eq('Edge', an_ua_parse($uaEdge)['browser'], 'edge detected before chrome');
+t_eq(['browser' => 'Firefox', 'os' => 'Linux', 'device' => 'desktop'], an_ua_parse($uaFfLin), 'firefox/linux/desktop');
+t_assert(an_is_bot('Googlebot/2.1'), 'googlebot is a bot');
+t_assert(an_is_bot(''), 'empty UA is a bot');
+t_assert(!an_is_bot($uaChrome), 'chrome is not a bot');
+t_eq('search', an_ref_group('www.google.com'), 'google = search');
+t_eq('news', an_ref_group('news.ycombinator.com'), 'HN = news');
+t_eq('social', an_ref_group('www.linkedin.com'), 'linkedin = social');
+t_eq('ai', an_ref_group('chatgpt.com'), 'chatgpt = ai');
+t_eq('blogs', an_ref_group('medium.com'), 'medium = blogs');
+t_eq('direct', an_ref_group(''), 'empty = direct');
+t_eq('other', an_ref_group('example.org'), 'unknown = other');
+t_eq('phone', an_screen_bucket(390), 'phone bucket');
+t_eq('laptop', an_screen_bucket(1440), 'laptop bucket');
+t_eq('desktop', an_screen_bucket(2560), 'desktop bucket');
+t_eq('', an_screen_bucket(0), 'zero width = empty');
+t_eq('en', an_lang('en-US'), 'language primary subtag');
+t_eq('pl', an_lang('PL'), 'language lowercased');
+t_eq('', an_lang('!!'), 'garbage language rejected');
+$utm = an_utm('?utm_source=newsletter&utm_medium=email&utm_campaign=july<script>');
+t_eq('newsletter', $utm['source'], 'utm source parsed');
+t_eq('email', $utm['medium'], 'utm medium parsed');
+t_eq('julyscript', $utm['campaign'], 'utm campaign sanitized');
+t_eq('Europe/Warsaw', an_tz('Europe/Warsaw'), 'valid tz kept');
+t_eq('', an_tz('java script:x()'), 'bad tz rejected');
+t_eq('🇵🇱', an_flag('PL'), 'flag emoji from country code');
+t_eq('', an_flag('x1'), 'no flag for junk');
+t_eq('1m 35s', an_fmt_secs(95), 'seconds formatted');
+t_eq('–', an_fmt_secs(0), 'zero seconds is a dash');
+
+/* ---------------- analytics: db + queries ---------------- */
+section('analytics db');
+$adb = sys_get_temp_dir() . '/bf-unit-analytics-' . getmypid() . '.db';
+@unlink($adb);
+// v1 schema first — an_db() must migrate it in place
+$old = new PDO('sqlite:' . $adb);
+$old->exec('CREATE TABLE hits (day TEXT NOT NULL, ts INTEGER NOT NULL, path TEXT NOT NULL, ref TEXT NOT NULL DEFAULT "", visitor TEXT NOT NULL)');
+$old->exec("INSERT INTO hits VALUES ('2020-01-01', 1577871000, '/old/', '', 'legacyvis')");
+$old = null;
+$db = an_db($adb);
+$cols = array_column($db->query('PRAGMA table_info(hits)')->fetchAll(PDO::FETCH_ASSOC), 'name');
+foreach (['country', 'browser', 'duration', 'utm_campaign'] as $c) {
+    t_assert(in_array($c, $cols, true), "migration added column {$c}");
+}
+t_eq('1', (string) $db->query("SELECT COUNT(*) FROM hits WHERE visitor='legacyvis'")->fetchColumn(), 'v1 rows survive migration');
+
+$today = gmdate('Y-m-d');
+$rec = fn(array $o) => an_record($db, array_merge([
+    'day' => $today, 'ts' => time(), 'path' => '/blog/x/', 'ref' => '', 'visitor' => 'v1',
+    'ref_group' => 'direct', 'country' => 'PL', 'browser' => 'Chrome', 'os' => 'Linux',
+    'device' => 'desktop', 'lang' => 'en', 'screen' => 'laptop', 'tz' => 'Europe/Warsaw',
+    'utm_source' => '', 'utm_medium' => '', 'utm_campaign' => '',
+], $o));
+$rec([]);
+$rec(['visitor' => 'v2', 'country' => 'DE', 'path' => '/']);
+$rec(['visitor' => 'v2', 'path' => '/blog/x/']);
+t_assert(an_engage($db, $today, 'v1', '/blog/x/', 120), 'engage matches its pageview row');
+t_assert(!an_engage($db, $today, 'nobody', '/blog/x/', 99), 'engage without a matching row reports false (day-rollover retry signal)');
+an_engage($db, $today, 'v1', '/blog/x/', 60);   // cumulative reports keep the max
+$v = an_visitor('seed', '2026-01-01', '1.2.3.4', 'UA');
+t_eq($v, an_visitor('seed', '2026-01-01', '1.2.3.4', 'UA'), 'visitor hash deterministic');
+t_assert($v !== an_visitor('seed', '2026-01-02', '1.2.3.4', 'UA'), 'visitor hash rotates across days');
+$since = gmdate('Y-m-d', time() - 7 * 86400);
+$sum = an_summary($db, $since);
+t_eq(3, $sum['pv'], 'summary pageviews');
+t_eq(2, $sum['uv'], 'summary uniques');
+t_eq(2, $sum['countries'], 'summary distinct countries');
+t_eq(1, $sum['multi'], 'one multi-page reader');
+t_eq(120, $sum['avg_time'], 'avg engaged time from engaged rows only, max kept');
+$bd = an_breakdown($db, $since, 'country');
+t_eq('PL', $bd[0]['v'], 'top country');
+$tp = an_top_pages($db, $since);
+t_eq('/blog/x/', $tp[0]['path'], 'top page');
+t_eq(2, (int) $tp[0]['pv'], 'top page views');
+$sumPath = an_summary($db, $since, '/');
+t_eq(1, $sumPath['pv'], 'path drilldown narrows summary');
+try { an_breakdown($db, $since, 'visitor; DROP TABLE hits'); t_assert(false, 'bad column rejected'); }
+catch (InvalidArgumentException) { t_assert(true, 'bad column rejected'); }
+
+// source groups classified at query time; campaign = utm without referrer
+$rec(['visitor' => 'g1', 'path' => '/sg/', 'ref' => 'www.google.com']);
+$rec(['visitor' => 'g1', 'path' => '/sg/', 'ref' => 'news.ycombinator.com']);
+$rec(['visitor' => 'g2', 'path' => '/sg/', 'ref' => '', 'utm_source' => 'newsletter']);
+$sg = an_source_groups($db, $since, '/sg/');
+$byGroup = array_column($sg, null, 'v');
+t_eq(1, $byGroup['search']['pv'] ?? 0, 'google classified as search at read time');
+t_eq(1, $byGroup['campaign']['pv'] ?? 0, 'utm without referrer = campaign group');
+t_eq(1, $byGroup['news']['uv'] ?? 0, 'per-group uniques exact');
+
+// hour-of-day buckets respect each day's own DST offset (Warsaw: +01 winter, +02 summer)
+$winter = (new DateTimeImmutable('2026-01-15 13:00', new DateTimeZone('UTC')))->getTimestamp();
+$summer = (new DateTimeImmutable('2026-07-15 13:00', new DateTimeZone('UTC')))->getTimestamp();
+$rec(['visitor' => 'w', 'path' => '/dst/', 'ts' => $winter, 'day' => '2026-01-15']);
+$rec(['visitor' => 's', 'path' => '/dst/', 'ts' => $summer, 'day' => '2026-07-15']);
+$hours = an_hours($db, '2026-01-01', '/dst/');
+t_eq(1, $hours[14], 'winter 13:00 UTC lands at 14:00 Warsaw (+01)');
+t_eq(1, $hours[15], 'summer 13:00 UTC lands at 15:00 Warsaw (+02)');
+@unlink($adb);
+
+/* ---------------- geoip ---------------- */
+section('geoip');
+$csv = tempnam(sys_get_temp_dir(), 'gcsv');
+// deliberately unsorted (83.x before 1.x) to exercise the fallback sort
+file_put_contents($csv,
+    "83.0.0.0,83.15.255.255,PL\n" .
+    "1.0.0.0,1.0.0.255,AU\n" .
+    "not,a,line,at all\n" .
+    "2001:4860::,2001:4860:ffff:ffff:ffff:ffff:ffff:ffff,US\n" .
+    "9.9.9.0,9.9.9.255,ZZ\n");
+$gdb = tempnam(sys_get_temp_dir(), 'gdat');
+[$n4, $n6] = geoip_compile($csv, $gdb);
+t_eq(2, $n4, 'two ipv4 ranges compiled (ZZ dropped)');
+t_eq(1, $n6, 'one ipv6 range compiled');
+t_eq('AU', geoip_country('1.0.0.1', $gdb), 'v4 hit inside range');
+t_eq('AU', geoip_country('1.0.0.255', $gdb), 'v4 hit on range end boundary');
+t_eq('PL', geoip_country('83.9.1.2', $gdb), 'v4 hit second range');
+t_eq('', geoip_country('1.0.1.0', $gdb), 'v4 miss just past range');
+t_eq('', geoip_country('9.9.9.9', $gdb), 'ZZ range not stored');
+t_eq('US', geoip_country('2001:4860:4860::8888', $gdb), 'v6 hit');
+t_eq('AU', geoip_country('::ffff:1.0.0.1', $gdb), 'v4-mapped v6 normalized');
+t_eq('', geoip_country('192.168.1.1', $gdb), 'private v4 never resolves');
+t_eq('', geoip_country('nonsense', $gdb), 'garbage ip is empty');
+t_eq('', geoip_country('1.0.0.1', $gdb . '.missing'), 'missing db is empty, no error');
+unlink($csv);
+unlink($gdb);
+
+/* ---------------- admin core ---------------- */
+section('admin core');
+t_eq('', admin_countdown(time() - 5), 'no countdown for past moments');
+t_contains('in ', admin_countdown(time() + 90), 'minute countdown');
+t_contains('d ', admin_countdown(time() + 3 * 86400 + 7200), 'day countdown');
+$tok = admin_csrf_token();
+t_assert(strlen($tok) >= 32, 'csrf token generated');
+t_eq($tok, admin_csrf_token(), 'csrf token stable per session');
+t_assert(admin_csrf_check($tok), 'csrf token verifies');
+t_assert(!admin_csrf_check('wrong'), 'wrong csrf rejected');
+t_assert(!admin_csrf_check(null), 'missing csrf rejected');
+t_assert(!c_store_mutate('../../etc/passwd', fn($l) => $l), 'store rejects traversal slugs');
+t_assert(str_ends_with(c_store_path('some-post'), '/content/comments/some-post.json'), 'store path shape');
+$c1 = ['date' => '2026-01-01 10:00', 'email' => 'a@x.com', 'text' => 'first'];
+t_eq(admin_comment_key($c1), admin_comment_key($c1), 'comment key stable');
+t_assert(admin_comment_key($c1) !== admin_comment_key(['date' => '2026-01-01 10:00', 'email' => 'a@x.com', 'text' => 'second']), 'comment key differs by content');
+$fakeIp = '203.0.113.77';
+@unlink(admin_rl_file($fakeIp));
+t_eq(0, admin_lockout_remaining($fakeIp), 'fresh ip not locked');
+for ($i = 0; $i < ADMIN_MAX_FAILS; $i++) admin_note_login($fakeIp, false);
+t_assert(admin_lockout_remaining($fakeIp) > 0, 'ip locked after max fails');
+admin_note_login($fakeIp, true);
+t_eq(0, admin_lockout_remaining($fakeIp), 'successful login clears the lock');
+@unlink(admin_rl_file($fakeIp));
 
 /* ---------------- comments: pure functions ---------------- */
 section('comments');
 t_eq('j***@example.com', c_mask_email('john@example.com'), 'email masked');
 t_eq('anonymous', c_mask_email('not-an-email'), 'invalid email masks to anonymous');
-t_assert(c_valid_slug('mathematicians-vs-lawyers'), 'real slug validates');
+t_assert(c_valid_slug('mathematicians-vs-lawyers'), 'real published slug validates');
 t_assert(!c_valid_slug('tag'), 'tag pseudo-slug rejected');
 t_assert(!c_valid_slug('../../etc/passwd'), 'traversal rejected');
 t_assert(!c_valid_slug('no-such-post'), 'unknown slug rejected');
+foreach ($all as $p) {
+    if ($p['status'] !== 'published') {
+        t_assert(!c_valid_slug($p['slug']), "unpublished post rejects comments ({$p['slug']})");
+        break;
+    }
+}
 
 [$a, $b, $token] = c_challenge();
 t_assert($a >= 2 && $a <= 9 && $b >= 2 && $b <= 9, 'challenge operands in range');
@@ -156,7 +400,6 @@ t_assert(!c_verify_challenge($forged, '4'), 'forged hmac rejected');
 $expiredPayload = '3|4|' . (time() - 100);
 $expired = base64_encode($expiredPayload) . '.' . hash_hmac('sha256', $expiredPayload, c_secret());
 t_assert(!c_verify_challenge($expired, '7'), 'expired token rejected');
-
 
 /* ---------------- refactor helpers ---------------- */
 section('urls & series');
@@ -180,9 +423,10 @@ t_contains('class="featured2', $fc, 'featured card class');
 t_contains('Latest signal', $fc, 'featured card eyebrow');
 
 section('schema builders');
-$bp = schema_blog_posting($posts[0], hero_meta($posts[0]['slug']), post_url($posts[0]['slug']), '2026-07-13T09:00:00+01:00');
+$bp = schema_blog_posting($posts[0], hero_meta($posts[0]['slug']), post_url($posts[0]['slug']), $posts[0]['publish_iso']);
 t_eq('BlogPosting', $bp['@type'], 'blog posting type');
 t_assert(isset($bp['image']['width']), 'posting image has dimensions');
+t_eq($posts[0]['publish_iso'], $bp['datePublished'], 'posting datePublished = publish moment');
 $bc = schema_breadcrumbs(['Home' => 'https://x/', 'Blog' => 'https://x/blog/']);
 t_eq(2, count($bc['itemListElement']), 'breadcrumb items');
 t_eq(1, $bc['itemListElement'][0]['position'], 'breadcrumb positions start at 1');

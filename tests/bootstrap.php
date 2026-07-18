@@ -54,7 +54,7 @@ function t_summary(): int
     return $t['fail'] === 0 ? 0 : 1;
 }
 
-/** minimal HTTP client on PHP streams; returns [status, body, location] */
+/** minimal HTTP client on PHP streams; returns [status, body, location, headers[]] */
 function http_req(string $method, string $url, array $opt = []): array
 {
     $headers = $opt['headers'] ?? "User-Agent: Mozilla/5.0 (X11; Linux x86_64) TestChrome/126\r\n";
@@ -72,9 +72,10 @@ function http_req(string $method, string $url, array $opt = []): array
     $body = @file_get_contents($url, false, $ctx);
     $code = 0;
     $loc = '';
-    foreach ($http_response_header ?? [] as $h) {
+    $resp = $http_response_header ?? [];
+    foreach ($resp as $h) {
         if (preg_match('#^HTTP/\S+\s+(\d+)#', $h, $m)) $code = (int) $m[1];
         if (stripos($h, 'Location:') === 0) $loc = trim(substr($h, 9));
     }
-    return [$code, (string) $body, $loc];
+    return [$code, (string) $body, $loc, $resp];
 }

@@ -28,6 +28,8 @@ declare -A Q=(
   [prompt-driven-architecture]="computer terminal code screen|command line programming"
   [multi-agent-is-an-org-chart]="starling murmuration|flock of starlings sky"
   [pricing-the-invisible]="iceberg ocean|iceberg"
+  [the-model-is-the-easy-part]="revolving door glass entrance|turnstile gate entrance"
+  [a-feature-is-not-a-service]="library card catalog drawers|card catalog wooden drawers"
 )
 
 TMP=$(mktemp -d)

@@ -64,6 +64,8 @@ HTML;
 function site_footer(): string
 {
     $y = date('Y');
+    $gc = goatcounter_script();
+    $beacon = beacon_script();
     return <<<HTML
 <footer class="footer">
   <div class="footer-inner">
@@ -77,11 +79,7 @@ function site_footer(): string
     </nav>
   </div>
 </footer>
-<script>
-if (navigator.doNotTrack !== '1' && navigator.sendBeacon) {
-  navigator.sendBeacon('/a.php', JSON.stringify({p: location.pathname, r: document.referrer}));
-}
-</script>
+{$beacon}{$gc}
 </body>
 </html>
 HTML;

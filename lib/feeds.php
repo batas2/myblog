@@ -11,7 +11,7 @@ function render_rss(array $posts): string
     $items = '';
     foreach ($posts as $p) {
         $url = post_url($p['slug']);
-        $pub = date('r', strtotime($p['date'] . ' 09:00:00'));
+        $pub = date('r', $p['publish_ts']);
         $cats = '';
         foreach ($p['tags'] as $t) $cats .= '      <category>' . e($t) . "</category>\n";
         $content = str_replace(']]>', ']]&gt;', $p['html']);

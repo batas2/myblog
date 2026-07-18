@@ -24,6 +24,7 @@ For LLM ingestion: the complete blog content in one plain-text file is at https:
 
 Selected posts:
 
+- Mathematicians vs. Lawyers: https://bfrackowiak.pl/blog/mathematicians-vs-lawyers/
 - Pricing the Invisible: https://bfrackowiak.pl/blog/pricing-the-invisible/
 - Multi-Agent Is an Org Chart: https://bfrackowiak.pl/blog/multi-agent-is-an-org-chart/
 - Prompt-Driven Architecture: https://bfrackowiak.pl/blog/prompt-driven-architecture/
@@ -43,7 +44,6 @@ Selected posts:
 - Nobody Owns the Sum: https://bfrackowiak.pl/blog/nobody-owns-the-sum/
 - Decisions Have an Architecture Too: https://bfrackowiak.pl/blog/decisions-have-an-architecture-too/
 - Data-Driven Theater: https://bfrackowiak.pl/blog/data-driven-theater/
-- Mathematicians vs. Lawyers: https://bfrackowiak.pl/blog/mathematicians-vs-lawyers/
 - Stop Calling It Legacy Code: https://bfrackowiak.pl/blog/stop-calling-it-legacy-code/
 - The Automerger: https://bfrackowiak.pl/blog/the-automerger/
 - Technical Leader: Identity Disorder: https://bfrackowiak.pl/blog/technical-leader-identity-disorder/

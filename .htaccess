@@ -6,7 +6,7 @@ Options -Indexes
 
 # ---- access control: nothing internal is ever served -------------------------
 # private/internal directories → 404 (not 403, no information leak)
-RedirectMatch 404 ^/(lib|tools|tests|docs|content|vendor|_archive|_remote-backup|\.git)(/|$)
+RedirectMatch 404 ^/(lib|tools|tests|docs|drafts|content|vendor|_archive|_remote-backup|\.git)(/|$)
 
 # sensitive root files → 404
 <FilesMatch "^(config\.php|config\.example\.php|deploy\.sh|\.gitignore|\.htaccess)$">
@@ -25,7 +25,7 @@ RedirectMatch 404 ^/(lib|tools|tests|docs|content|vendor|_archive|_remote-backup
   Header always set Referrer-Policy "strict-origin-when-cross-origin"
   Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
   Header always set Strict-Transport-Security "max-age=15552000"
-  Header always set Content-Security-Policy "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self' https://buttondown.com"
+  Header always set Content-Security-Policy "default-src 'self'; img-src 'self' data: https://stats.bfrackowiak.pl; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://stats.bfrackowiak.pl; connect-src 'self' https://stats.bfrackowiak.pl; frame-ancestors 'self'; base-uri 'self'; form-action 'self' https://buttondown.com"
 </IfModule>
 
 # ---- compression ----------------------------------------------------------------

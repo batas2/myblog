@@ -195,6 +195,72 @@ function newsletter_box(string $variant = ''): string
 HTML;
 }
 
+/** Shared look of the private dashboards (stats.php, admin.php): cards + tables. */
+function dash_base_css(): string
+{
+    return <<<'CSS'
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .9rem; margin: 1.2rem 0 1.8rem; }
+.scard { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: .95rem 1.15rem; }
+.scard b { display: block; font-size: 1.45rem; font-weight: 800; color: var(--ink); }
+.scard span { font-family: 'JetBrains Mono', monospace; font-size: .62rem; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; font-size: .86rem; }
+th, td { text-align: left; padding: .5rem .8rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+th { font-family: 'JetBrains Mono', monospace; font-size: .62rem; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+td.r, th.r { text-align: right; }
+td.n { font-family: 'JetBrains Mono', monospace; font-size: .78rem; }
+td.dim, .dim { color: var(--muted); }
+CSS;
+}
+
+/** Self-hosted GoatCounter loader ('' when unconfigured). DNT-respecting. */
+function goatcounter_script(): string
+{
+    $url = e((string) cfg('goatcounter_url', ''));
+    if ($url === '') return '';
+    return <<<HTML
+
+<script>
+if (navigator.doNotTrack !== '1') {
+  var s = document.createElement('script'); s.async = true;
+  s.dataset.goatcounter = '{$url}/count'; s.src = '{$url}/count.js';
+  document.body.appendChild(s);
+}
+</script>
+HTML;
+}
+
+/**
+ * First-party analytics beacon (a.php). Sends one pageview with coarse
+ * client context, then cumulative engaged-seconds pings whenever the tab
+ * hides (the server keeps the maximum). Respects Do Not Track.
+ */
+function beacon_script(): string
+{
+    return <<<'HTML'
+<script>
+(function () {
+  if (navigator.doNotTrack === '1' || !navigator.sendBeacon) return;
+  var send = function (o) { navigator.sendBeacon('/a.php', JSON.stringify(o)); };
+  var tz = '';
+  try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) {}
+  send({ p: location.pathname, r: document.referrer, q: location.search,
+         l: navigator.language || '', w: (screen && screen.width) || 0, tz: tz });
+  var t0 = Date.now(), acc = 0, vis = !document.hidden;
+  var tick = function () { if (vis) acc += Date.now() - t0; t0 = Date.now(); };
+  document.addEventListener('visibilitychange', function () {
+    tick(); vis = !document.hidden;
+    if (document.hidden && acc > 999) send({ e: 1, p: location.pathname, d: Math.round(acc / 1000) });
+  });
+  addEventListener('pagehide', function () {
+    tick();
+    if (acc > 999) send({ e: 1, p: location.pathname, d: Math.round(acc / 1000) });
+  });
+})();
+</script>
+HTML;
+}
+
 /** IntersectionObserver stagger; no-JS and reduced-motion stay fully visible */
 function reveal_script(): string
 {

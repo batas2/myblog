@@ -1,0 +1,8 @@
+services:
+  site:
+    build: .
+    container_name: bfrackowiak-pl
+    ports:
+      - "${PORT:-8080}:8080"
+    volumes:
+      - .:/app

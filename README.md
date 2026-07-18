@@ -13,12 +13,24 @@ form, and first-party analytics.
 - **Static blog generator** — markdown posts in `content/posts/` become pre-rendered
   pages, tag archives, an RSS feed with full content, a sitemap, and per-post markdown
   mirrors (`/blog/<slug>/index.md`) plus a single `llms-full.txt` for AI crawlers.
+- **Draft / scheduled / published workflow** — `**Status:** draft` keeps a post out of
+  the build; a future date (filename, or an explicit `**Publish:** YYYY-MM-DD HH:MM`
+  line) schedules it. A server cron re-runs the generator so scheduled posts go live
+  on time, everywhere at once: page, index, tags, RSS, sitemap, `llms-full.txt`.
+- **Admin control room** — `/admin.php` (password-protected, sessions + CSRF): the
+  publishing pipeline with countdowns, one-click "rebuild now", comment moderation,
+  analytics overview, system health.
 - **Comments without a database** — JSON files per post, stateless HMAC math captcha,
   honeypot, time trap, per-IP rate limit. Commenter emails are stored but rendered
   masked (`j***@example.com`).
 - **First-party analytics** — a `sendBeacon` endpoint writing to SQLite. No cookies;
   visitors are counted via a daily-rotating salted hash, so raw IPs are never stored
-  and visitors are unlinkable across days. Private dashboard at `/stats.php?key=…`.
+  and visitors are unlinkable across days. v2 records coarse, privacy-safe context:
+  country (offline GeoIP — no external calls), referrer + source group (search /
+  social / AI assistants / news / campaigns), browser, OS, device class, language,
+  screen bucket, visitor timezone, UTM tags, and engaged reading time per view.
+  Dashboard at `/stats.php` (access key or admin session) with daily + hour-of-day
+  charts, per-page drilldown, and a recent-visits feed.
 - **Newsletter capture** — plain HTML form posting to a Buttondown embed endpoint
   (configurable; hidden entirely when unconfigured).
 - **SEO / AI-ready** — canonical URLs, OpenGraph + article meta, JSON-LD
@@ -30,17 +42,23 @@ form, and first-party analytics.
 ```
 ├── index.php            homepage (the only hand-written page)
 ├── comments.php         comment endpoint + rendered thread (dynamic island)
-├── a.php                analytics beacon
-├── stats.php            analytics dashboard (key-protected)
+├── a.php                analytics beacon (pageviews + engaged-time pings)
+├── stats.php            analytics dashboard (key or admin session)
+├── admin.php            admin control room (publishing pipeline, moderation)
 ├── config.example.php   copy to config.php and fill in — all secrets live there
-├── lib/                 config loader, helpers, markdown, content model, templates
-├── tools/               build.php (generator), fetch_images.sh (CC image fetcher)
+├── lib/                 config, helpers, markdown, content model, templates,
+│                        analytics, geoip, admin core
+├── tools/               build.php (generator), geoip_update.php (country db),
+│                        fetch_images.sh (CC image fetcher)
+├── docs/                strategy: improvement plan, action plan, topic engine, post prompt
+├── drafts/              working area: unpublished drafts, diagrams, review docs (never deployed)
 ├── content/posts/       markdown sources: YYYY-MM-DD-slug.md
 ├── content/comments/    runtime comment JSON (gitignored)
+├── content/geoip.dat    compiled IP→country db (gitignored; tools/geoip_update.php)
 ├── assets/              css + post images (+ credits.json with licenses)
 ├── blog/                generated output (gitignored)
 ├── tests/               dependency-free unit + integration suite
-└── deploy.sh            build → backup remote → rsync to shared hosting
+└── deploy.sh            tests → build → backup remote → rsync to shared hosting
 ```
 
 ## Quickstart
@@ -72,6 +90,50 @@ Body in markdown (h2, lists, quotes, code fences, links)…
 
 Optionally drop a hero image at `assets/img/posts/my-slug.jpg` (the build picks it up,
 generates dimensions and uses the `.thumb.jpg` variant in lists), then `php tools/build.php`.
+
+## Drafts, scheduling, publishing
+
+A post is in exactly one of three states, derived from the markdown itself:
+
+| State | How | Behavior |
+|---|---|---|
+| **draft** | `**Status:** draft` line | never built, never listed; visible in `/admin.php` |
+| **scheduled** | publish moment in the future | built + listed automatically once the time passes |
+| **published** | publish moment in the past | live everywhere |
+
+The publish moment is the filename date at **09:00** (site timezone, config
+`timezone`), or an explicit line:
+
+```markdown
+**Publish:** 2026-08-17 08:30
+```
+
+`tools/build.php` renders only published posts and prints the waiting queue.
+For scheduled posts to flip live unattended, run the generator on the server
+via cron (MyDevil panel or `crontab -e`):
+
+```
+*/15 * * * * cd ~/domains/bfrackowiak.pl/public_html && php tools/build.php >/dev/null 2>&1
+```
+
+The admin **"Rebuild site now"** button does the same on demand. `deploy.sh`
+prints the queue after every deploy so nothing waits unnoticed.
+
+## Admin & analytics
+
+- `/admin.php` — publishing pipeline (statuses, go-live countdowns), one-click
+  rebuild, comment moderation, 7-day analytics cards, system health. Password:
+  `admin_password_hash` in config (`php -r "echo password_hash('pw', PASSWORD_DEFAULT), PHP_EOL;"`).
+  Sessions are cookie-hardened; login is rate-limited; actions are CSRF-protected.
+- `/stats.php` — the full dashboard: daily + hour-of-day charts, top pages with
+  engaged reading time, source groups (search / social / AI / news / campaigns),
+  referrers, countries (offline GeoIP), browsers/OS/devices/screens, languages,
+  timezones, UTM campaigns, and a recent-visits feed. Every table narrows to a
+  single page via the path drilldown. Access: `?key=<stats_key>` or an admin session.
+- GeoIP: `php tools/geoip_update.php` downloads the free DB-IP country database
+  (CC BY 4.0, ~15 MB compiled) into `content/geoip.dat`. Re-run monthly — locally
+  before a deploy, or straight on the server. Lookups are offline `fseek` binary
+  search; no extension, no external calls, no IP ever stored.
 
 ## Deploying
 

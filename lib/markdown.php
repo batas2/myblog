@@ -20,6 +20,8 @@ function md_inline(string $s): string
         return "\x1A" . (count($codes) - 1) . "\x1A";
     }, $s);
 
+    // images (before links so ![alt](src) is not parsed as a link)
+    $s = preg_replace('/!\[([^\]]*)\]\(([^)\s]+)\)/', '<img src="$2" alt="$1" loading="lazy" style="max-width:100%;height:auto">', $s);
     // links
     $s = preg_replace('/\[([^\]]+)\]\(([^)\s]+)\)/', '<a href="$2">$1</a>', $s);
     // bold, then italic
@@ -68,6 +70,16 @@ function md_to_html(array $lines): string
         $t = rtrim($line);
 
         if ($t === '') { $flushPara(); $flushList(); $flushQuote(); continue; }
+        if (preg_match('/^!\[([^\]]*)\]\(([^)\s]+)\)\s*$/', $t, $m)) {
+            $flushPara(); $flushList(); $flushQuote();
+            $src = htmlspecialchars($m[2], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $cap = md_inline($m[1]);
+            $alt = htmlspecialchars($m[1], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $html .= '<figure class="post-figure"><img src="' . $src . '" alt="' . $alt . '" loading="lazy" style="max-width:100%;height:auto">'
+                   . ($m[1] !== '' ? '<figcaption style="font-size:.85em;color:#666;margin-top:.4em">' . $cap . '</figcaption>' : '')
+                   . "</figure>\n";
+            continue;
+        }
         if (preg_match('/^#{2}\s+(.*)$/', $t, $m)) {
             $flushPara(); $flushList(); $flushQuote();
             $html .= '<h2>' . md_inline($m[1]) . "</h2>\n";

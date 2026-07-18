@@ -21,9 +21,12 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/lib/config.php';
+require_once __DIR__ . '/lib/helpers.php';
+require_once __DIR__ . '/lib/markdown.php';
+require_once __DIR__ . '/lib/blog.php';
+require_once __DIR__ . '/lib/comment_store.php';
 
-if (!defined('C_DIR')) {
-    define('C_DIR', CONTENT_DIR . '/comments');
+if (!defined('C_MAX_TEXT')) {
     define('C_MAX_TEXT', 2000);
     define('C_MIN_GAP', 15);   // seconds between posts from one IP
 }
@@ -33,18 +36,19 @@ function c_secret(): string { return (string) cfg('comments_secret'); }
 
 function c_valid_slug($slug): bool
 {
-    // a slug is valid only if a real post source exists for it
-    return is_string($slug)
-        && preg_match('/^[a-z0-9-]{3,80}$/', $slug)
-        && glob(CONTENT_DIR . '/posts/*-' . $slug . '.md') !== [];
+    if (!is_string($slug) || !preg_match('/^[a-z0-9-]{3,80}$/', $slug)) return false;
+    // the generated page is the source of truth for "public right now":
+    // comments stay in lockstep with what visitors can actually see
+    // (two stat calls on the hot path — tag archives have no index.md)
+    $dir = APP_ROOT . '/blog/' . $slug;
+    if (is_file($dir . '/index.php') && is_file($dir . '/index.md')) return true;
+    // fallback for a not-yet-built site (fresh clone, tests before first build)
+    return post_is_public($slug);
 }
 
 function c_load(string $slug): array
 {
-    $f = C_DIR . '/' . $slug . '.json';
-    if (!is_file($f)) return [];
-    $j = json_decode((string) file_get_contents($f), true);
-    return is_array($j) ? $j : [];
+    return c_store_load($slug);
 }
 
 /** j***@example.com — identity without handing addresses to harvesters */
@@ -100,27 +104,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['c_submit']) && !isset
     if ($text === '') { header("Location: {$back}?cerr=empty#comment-form"); exit; }
     if (mb_strlen($text) > C_MAX_TEXT || mb_strlen($email) > 254) { header("Location: {$back}?cerr=long#comment-form"); exit; }
 
-    $iph = substr(sha1(($_SERVER['REMOTE_ADDR'] ?? '') . '|bfrackowiak-comments'), 0, 16);
-    $rl  = sys_get_temp_dir() . '/c_rl_' . $iph;
+    $rl = throttle_path('c_rl_', 'bfrackowiak-comments', (string) ($_SERVER['REMOTE_ADDR'] ?? ''));
     if (is_file($rl) && time() - (int) filemtime($rl) < C_MIN_GAP) { header("Location: {$back}?cerr=slow#comment-form"); exit; }
 
-    if (!is_dir(C_DIR)) @mkdir(C_DIR, 0755, true);
-    $f  = C_DIR . '/' . $slug . '.json';
-    $fh = fopen($f, 'c+');
-    if ($fh && flock($fh, LOCK_EX)) {
-        $list   = json_decode(stream_get_contents($fh) ?: '[]', true) ?: [];
-        $list[] = [
-            'email' => mb_substr(strip_tags($email), 0, 254),
-            'text'  => mb_substr(strip_tags($text), 0, C_MAX_TEXT),
-            'date'  => date('Y-m-d H:i'),
-        ];
-        ftruncate($fh, 0);
-        rewind($fh);
-        fwrite($fh, json_encode($list, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
-        fflush($fh);
-        flock($fh, LOCK_UN);
-    }
-    if ($fh) fclose($fh);
+    c_store_mutate($slug, fn(array $list): array => [...$list, [
+        'email' => mb_substr(strip_tags($email), 0, 254),
+        'text'  => mb_substr(strip_tags($text), 0, C_MAX_TEXT),
+        'date'  => date('Y-m-d H:i'),
+    ]]);
     touch($rl);
     header("Location: {$back}#comments");
     exit;
@@ -161,10 +152,10 @@ $c_msgs = [
       <?php foreach ($c_list as $c): ?>
       <li class="comment">
         <div class="comment-meta">
-          <span class="comment-name"><?= htmlspecialchars(c_mask_email($c['email'] ?? ($c['name'] ?? '')), ENT_QUOTES, 'UTF-8') ?></span>
-          <span class="comment-date"><?= htmlspecialchars($c['date'] ?? '', ENT_QUOTES, 'UTF-8') ?></span>
+          <span class="comment-name"><?= e(c_mask_email($c['email'] ?? ($c['name'] ?? ''))) ?></span>
+          <span class="comment-date"><?= e($c['date'] ?? '') ?></span>
         </div>
-        <p><?= nl2br(htmlspecialchars($c['text'] ?? '', ENT_QUOTES, 'UTF-8')) ?></p>
+        <p><?= nl2br(e($c['text'] ?? '')) ?></p>
       </li>
       <?php endforeach; ?>
     </ol>
@@ -173,12 +164,12 @@ $c_msgs = [
   <div class="comment-form" id="comment-form">
     <h3>Leave a comment</h3>
     <?php if (isset($c_msgs[$c_err])): ?>
-      <div class="form-err"><?= htmlspecialchars($c_msgs[$c_err]) ?></div>
+      <div class="form-err"><?= e($c_msgs[$c_err]) ?></div>
     <?php endif; ?>
     <form method="POST" action="/comments.php">
-      <input type="hidden" name="c_slug" value="<?= htmlspecialchars($COMMENT_SLUG) ?>">
+      <input type="hidden" name="c_slug" value="<?= e($COMMENT_SLUG) ?>">
       <input type="hidden" name="c_ts" value="<?= time() ?>">
-      <input type="hidden" name="c_chal" value="<?= htmlspecialchars($c_token) ?>">
+      <input type="hidden" name="c_chal" value="<?= e($c_token) ?>">
       <p class="c-website-row" aria-hidden="true"><label>Website<input type="text" name="c_website" tabindex="-1" autocomplete="off"></label></p>
       <div class="two-col">
         <div class="field">

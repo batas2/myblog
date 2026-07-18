@@ -24,7 +24,22 @@ return [
     'comments_secret' => 'CHANGE-ME-openssl-rand-hex-24',
 
     // access key for the analytics dashboard: /stats.php?key=<this>
+    // (a logged-in admin session also opens stats.php without the key)
     'stats_key' => 'CHANGE-ME-openssl-rand-hex-24',
+
+    // admin.php password as a PHP password hash; empty = admin disabled
+    // generate: php -r "echo password_hash('your-password', PASSWORD_DEFAULT), PHP_EOL;"
+    'admin_password_hash' => '',
+
+    // publish times ("**Publish:**" lines and filename dates) are read in this zone
+    'timezone' => 'Europe/Warsaw',
+
+    // CLI php used by the admin "Rebuild site now" button
+    'php_bin' => 'php',
+
+    // self-hosted GoatCounter base URL, e.g. 'https://stats.bfrackowiak.pl'
+    // (see docs/ANALYTICS-SETUP.md); leave '' to omit the tracker snippet
+    'goatcounter_url' => '',
 
     // contact form (PHPMailer over SMTP); leave 'pass' empty to disable sending
     'smtp' => [

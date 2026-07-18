@@ -24,7 +24,7 @@ function render_post(array $p, ?array $prev, ?array $next): string
 {
     $url = post_url($p['slug']);
     $hero = hero_meta($p['slug']);
-    $published = $p['date'] . 'T09:00:00+01:00';
+    $published = $p['publish_iso'];
 
     $extra  = ld_script(schema_blog_posting($p, $hero, $url, $published)) . "\n";
     $extra .= ld_script(schema_breadcrumbs([

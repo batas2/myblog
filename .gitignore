@@ -9,6 +9,7 @@ llms-full.txt
 
 # runtime data written by the live site
 content/analytics.db
+content/geoip.dat
 content/analytics.db-*
 content/analytics.seed
 content/comments/*.json

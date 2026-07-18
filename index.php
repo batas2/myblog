@@ -2,6 +2,8 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/lib/config.php';
+require_once __DIR__ . '/lib/helpers.php';
+require_once __DIR__ . '/lib/components.php';
 require_once __DIR__ . '/lib/contact.php';
 
 $form = handle_contact_form();
@@ -377,11 +379,7 @@ $form_message = $form['message'];
   </div>
 </footer>
 
-<script>
-if (navigator.doNotTrack !== '1' && navigator.sendBeacon) {
-  navigator.sendBeacon('/a.php', JSON.stringify({p: location.pathname, r: document.referrer}));
-}
-</script>
+<?= beacon_script() ?><?= goatcounter_script() ?>
 
 </body>
 </html>

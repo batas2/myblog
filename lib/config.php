@@ -23,6 +23,8 @@ function cfg(string $key, $default = null)
             exit('Missing config.php — copy config.example.php and fill it in.');
         }
         $config = require $file;
+        // one clock everywhere: dates render in the site timezone on any host
+        date_default_timezone_set((string) ($config['timezone'] ?? 'Europe/Warsaw'));
     }
     if (str_contains($key, '.')) {
         [$a, $b] = explode('.', $key, 2);
