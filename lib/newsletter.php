@@ -21,6 +21,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/mail.php';
 
 function nl_db_path(): string
 {
@@ -240,31 +241,16 @@ function nl_send_new(array $posts, bool $dryRun = false, ?PDO $db = null): array
 /** Mail is configured at all? Empty SMTP password = disabled (tests, fresh clones). */
 function nl_mail_enabled(): bool
 {
-    return ((array) cfg('smtp', []))['pass'] !== '';
+    return mail_enabled();
 }
 
-/** One SMTP delivery via PHPMailer; List-Unsubscribe headers included. */
+/** One SMTP delivery via the shared mailer; List-Unsubscribe headers included. */
 function nl_smtp_send(string $to, string $subject, string $html, string $text, string $unsubUrl): bool
 {
-    if (!nl_mail_enabled()) return false;
-    $smtp = (array) cfg('smtp', []);
-
-    require_once APP_ROOT . '/vendor/phpmailer/Exception.php';
-    require_once APP_ROOT . '/vendor/phpmailer/PHPMailer.php';
-    require_once APP_ROOT . '/vendor/phpmailer/SMTP.php';
-
-    $mail = new PHPMailer\PHPMailer\PHPMailer(true);
+    $mail = smtp_mailer();
+    if ($mail === null) return false;
     try {
-        $mail->isSMTP();
-        $mail->Host       = (string) $smtp['host'];
-        $mail->SMTPAuth   = true;
-        $mail->Username   = (string) $smtp['user'];
-        $mail->Password   = (string) $smtp['pass'];
-        $mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
-        $mail->Port       = (int) ($smtp['port'] ?? 587);
-        $mail->CharSet    = 'UTF-8';
-        $mail->setFrom((string) $smtp['from'], 'Bartosz Frąckowiak · Field Notes');
-        $mail->addReplyTo('kontakt@bfrackowiak.pl', 'Bartosz Frąckowiak');
+        $mail->addReplyTo(mail_reply_to());
         $mail->addAddress($to);
         $mail->addCustomHeader('List-Unsubscribe', '<' . $unsubUrl . '>');
         $mail->addCustomHeader('List-Unsubscribe-Post', 'List-Unsubscribe=One-Click');

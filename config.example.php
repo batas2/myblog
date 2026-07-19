@@ -50,14 +50,16 @@ return [
         'secret'  => '',
     ],
 
-    // contact form (PHPMailer over SMTP); leave 'pass' empty to disable sending
+    // outbound mail (contact form + newsletter, via lib/mail.php);
+    // leave 'pass' empty to disable all sending
     'smtp' => [
         'host'      => 'smtp.example.com',
         'port'      => 587,
         'user'      => '',
         'pass'      => '',
-        'from'      => '',
-        'from_name' => '',
-        'to'        => '',
+        'from'      => '',            // envelope From for everything sent
+        'from_name' => '',            // display name on all outbound mail
+        'to'        => '',            // where contact-form messages land
+        'reply_to'  => '',            // Reply-To on newsletter mail ('' = same as from)
     ],
 ];

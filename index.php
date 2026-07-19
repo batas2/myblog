@@ -415,6 +415,7 @@ $form_message = $form['message'];
               <div class="form-err"><?= e($form_message) ?></div>
             <?php endif; ?>
             <form method="POST" action="/#contact" novalidate>
+              <input type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px">
               <div class="two-col">
                 <div class="field">
                   <label for="name">Name</label>

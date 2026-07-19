@@ -584,6 +584,30 @@ t_contains('first', (string) file_get_contents($corrupt), 'damaged bytes left in
 t_assert(!c_store_mutate('unit-abort-thread', fn($l) => null), 'abort returns false');
 t_assert(!is_file(c_store_path('unit-abort-thread')), 'aborted mutate leaves no empty thread file');
 
+/* ---------------- contact form + captcha ---------------- */
+section('contact & captcha');
+require_once dirname(__DIR__) . '/lib/contact.php';
+
+$SRV = $_SERVER; $G = $_GET; $P = $_POST;
+$_SERVER['REQUEST_METHOD'] = 'GET'; $_GET = []; $_POST = [];
+t_eq(['sent' => false, 'error' => false, 'message' => ''], handle_contact_form(), 'plain GET is a no-op');
+$_GET = ['sent' => '1'];
+t_eq(true, handle_contact_form()['sent'], 'PRG landing (?sent=1) reports success');
+$_GET = [];
+$_SERVER['REQUEST_METHOD'] = 'POST';
+$_POST = ['contact_submit' => '1', 'name' => '', 'email' => 'x', 'subject' => '', 'message' => ''];
+$r = handle_contact_form();
+t_eq(true, $r['error'], 'missing fields rejected');
+t_contains('valid email', $r['message'], 'validation message is actionable');
+$_SERVER = $SRV; $_GET = $G; $_POST = $P;
+
+if (turnstile_enabled()) {
+    t_contains('data-sitekey=', turnstile_widget('x'), 'widget carries the sitekey');
+    t_contains('data-action="a&quot;b"', turnstile_widget('a"b'), 'widget action attribute is escaped');
+} else {
+    t_eq(false, turnstile_enabled(), 'turnstile disabled without keys');
+}
+
 /* ---------------- newsletter core ---------------- */
 section('newsletter');
 require_once dirname(__DIR__) . '/lib/newsletter.php';

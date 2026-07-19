@@ -1,19 +1,22 @@
 <?php
 /**
- * lib/contact.php — contact form handler (PHPMailer over SMTP).
- * All credentials come from config.php ('smtp' block).
+ * lib/contact.php — contact form handler (PHPMailer over SMTP via lib/mail.php).
+ *
+ * Defense parity with the other write endpoints: honeypot field, per-IP
+ * throttle, optional Turnstile — and POST/redirect/GET so a refresh never
+ * resubmits (index.php shows the success state from ?sent=1).
  */
 
 declare(strict_types=1);
 
-use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/captcha.php';
-require_once APP_ROOT . '/vendor/phpmailer/Exception.php';
-require_once APP_ROOT . '/vendor/phpmailer/PHPMailer.php';
-require_once APP_ROOT . '/vendor/phpmailer/SMTP.php';
+require_once __DIR__ . '/mail.php';
+
+const CONTACT_MIN_GAP = 30;   // seconds between messages per IP
 
 /**
  * Process a contact-form POST if present.
@@ -23,8 +26,19 @@ function handle_contact_form(): array
 {
     $result = ['sent' => false, 'error' => false, 'message' => ''];
 
+    // PRG landing: the redirect target after a successful send
+    if (($_SERVER['REQUEST_METHOD'] ?? '') === 'GET' && isset($_GET['sent'])) {
+        return ['sent' => true, 'error' => false, 'message' => ''];
+    }
+
     if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST' || !isset($_POST['contact_submit'])) {
         return $result;
+    }
+
+    // honeypot: bots that fill the invisible field get a fake success
+    if (trim((string) ($_POST['website'] ?? '')) !== '') {
+        header('Location: /?sent=1#contact');
+        exit;
     }
 
     $name    = trim((string) ($_POST['name'] ?? ''));
@@ -36,32 +50,33 @@ function handle_contact_form(): array
         return ['sent' => false, 'error' => true, 'message' => 'Please fill in all fields with a valid email address.'];
     }
 
+    $rl = throttle_path('ct_', 'bfrackowiak-contact', (string) ($_SERVER['REMOTE_ADDR'] ?? ''));
+    if (is_file($rl) && time() - (int) filemtime($rl) < CONTACT_MIN_GAP) {
+        return ['sent' => false, 'error' => true, 'message' => 'That was quick — give it half a minute and send again.'];
+    }
+
     if (turnstile_enabled() && !turnstile_verify_post()) {
         return ['sent' => false, 'error' => true, 'message' => 'The spam check did not pass. Please try again.'];
     }
 
-    $smtp = (array) cfg('smtp', []);
-    $mail = new PHPMailer(true);
+    $mail = smtp_mailer();
+    if ($mail === null) {
+        return ['sent' => false, 'error' => true, 'message' => 'Something went wrong. Please try emailing me directly.'];
+    }
+
+    // header values are plain text — PHPMailer encodes them; just keep CRLF out
+    $clean = fn(string $v): string => str_replace(["\r", "\n"], ' ', $v);
     try {
-        $mail->isSMTP();
-        $mail->Host       = (string) ($smtp['host'] ?? '');
-        $mail->SMTPAuth   = true;
-        $mail->Username   = (string) ($smtp['user'] ?? '');
-        $mail->Password   = (string) ($smtp['pass'] ?? '');
-        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-        $mail->Port       = (int) ($smtp['port'] ?? 587);
-        $mail->CharSet    = 'UTF-8';
-
-        $mail->setFrom((string) ($smtp['from'] ?? ''), (string) ($smtp['from_name'] ?? ''));
-        $mail->addReplyTo($email, htmlspecialchars($name, ENT_QUOTES));
-        $mail->addAddress((string) ($smtp['to'] ?? ''));
-
-        $mail->Subject = '[' . cfg('site_name') . '] ' . htmlspecialchars($subject, ENT_QUOTES);
+        $mail->addReplyTo($email, $clean($name));
+        $mail->addAddress((string) (((array) cfg('smtp', []))['to'] ?? ''));
+        $mail->Subject = '[' . cfg('site_name') . '] ' . $clean($subject);
         $mail->Body    = "Name: {$name}\nEmail: {$email}\n\nMessage:\n{$message}";
-
         $mail->send();
-        return ['sent' => true, 'error' => false, 'message' => ''];
     } catch (Exception $e) {
         return ['sent' => false, 'error' => true, 'message' => 'Something went wrong. Please try emailing me directly.'];
     }
+
+    touch($rl);
+    header('Location: /?sent=1#contact');
+    exit;
 }

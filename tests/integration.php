@@ -288,6 +288,23 @@ t_eq('OK', trim($body), 'RFC 8058 POST body is bare OK');
 t_eq('', sbx_php('require "lib/config.php"; require "lib/newsletter.php";
     echo (string) nl_db()->query("SELECT token FROM subscribers WHERE email = \'reader@example.com\'")->fetchColumn();'), 'unsubscribe deletes the row');
 
+/* ---------------- contact form ---------------- */
+section('contact form');
+[$code, $body] = http_req('POST', "$BASE/", [
+    'headers' => "Content-Type: application/x-www-form-urlencoded\r\n",
+    'body' => 'contact_submit=1&name=Jane&email=jane%40example.com&subject=Hi&message=Hello+there',
+]);
+t_eq(200, $code, 'valid contact POST with mail disabled does not 500');
+t_contains('Something went wrong', $body, 'friendly error when SMTP is unconfigured');
+[$code, , $loc] = http_req('POST', "$BASE/", [
+    'headers' => "Content-Type: application/x-www-form-urlencoded\r\n",
+    'body' => 'contact_submit=1&website=spam&name=B&email=b%40example.com&subject=s&message=m',
+]);
+t_eq(302, $code, 'honeypot contact POST fake-succeeds');
+t_contains('/?sent=1', (string) $loc, 'honeypot redirected to the PRG landing');
+[$code, $body] = http_req('GET', "$BASE/?sent=1");
+t_contains('Message sent.', $body, 'PRG landing renders the success card');
+
 /* ---------------- analytics v2 ---------------- */
 section('analytics');
 $beacon = fn(string $ua, string $payload) => http_req('POST', "$BASE/a.php", [
