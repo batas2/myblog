@@ -42,7 +42,7 @@ function build_cleanup_stale(array $keepSlugs, array $keepTagSlugs): array
     $sweep = function (string $parent, array $keep, string $label, bool $needPair) use (&$removed): void {
         foreach (glob($parent . '/*', GLOB_ONLYDIR) ?: [] as $dir) {
             $slug = basename($dir);
-            if ($slug === 'tag' || in_array($slug, $keep, true)) continue;
+            if ($slug === 'tag' || $slug === 'start' || in_array($slug, $keep, true)) continue;
             if ($needPair && !(is_file("$dir/index.php") && is_file("$dir/index.md"))) continue;
             foreach (['index.php', 'index.md'] as $f) {
                 if (is_file("$dir/$f")) unlink("$dir/$f");
@@ -69,12 +69,15 @@ foreach ($posts as $i => $p) {
     $next = $i > 0 ? $posts[$i - 1] : null;      // newer
     $dir = APP_ROOT . '/blog/' . $p['slug'];
     @mkdir($dir, 0755, true);
-    file_put_contents($dir . '/index.php', render_post($p, $prev, $next));
+    file_put_contents($dir . '/index.php', render_post($p, $prev, $next, $posts));
     file_put_contents($dir . '/index.md', render_md($p));
 }
 
 file_put_contents(APP_ROOT . '/blog/index.php', render_index($posts));
 file_put_contents(APP_ROOT . '/blog/_latest.php', render_latest_partial($posts));
+@mkdir(APP_ROOT . '/blog/start', 0755, true);
+file_put_contents(APP_ROOT . '/blog/start/index.php', render_start_page($posts));
+file_put_contents(APP_ROOT . '/404.php', render_404_page($posts));
 
 $tags = collect_tags($posts);
 foreach ($tags as $tag => $tagged) {

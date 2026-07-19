@@ -19,8 +19,8 @@ function listing_page(string $title, string $desc, string $canonical, string $ex
     return $html . site_footer();
 }
 
-/** Article page: SEO head, hero, syndication badge, prose, tags, pager, author, comments. */
-function render_post(array $p, ?array $prev, ?array $next): string
+/** Article page: SEO head, hero, syndication badge, prose, tags, pager, related, author, comments. */
+function render_post(array $p, ?array $prev, ?array $next, array $all = []): string
 {
     $url = post_url($p['slug']);
     $hero = hero_meta($p['slug']);
@@ -77,6 +77,14 @@ function render_post(array $p, ?array $prev, ?array $next): string
         $html .= '</nav>';
     }
 
+    // keep the reader in the archive: closest essays by shared tags
+    if ($all && ($rel = related_posts($p, $all))) {
+        $html .= '<div class="related-wrap">';
+        $html .= '<div class="related-head">' . eyebrow('Keep reading') . '<h2>Related field notes</h2></div>';
+        $html .= log_rows($rel);
+        $html .= '</div>';
+    }
+
     $html .= author_box();
     $html .= '<div class="newsletter-wrap">' . newsletter_box() . '</div>';
 
@@ -96,7 +104,7 @@ function render_index(array $posts): string
     $header  = eyebrow('The blog', true);
     $header .= '<h1 style="font-size:clamp(2.2rem,5vw,3.2rem)">Field Notes</h1>';
     $header .= '<p>Weekly essays on software architecture, the people around it, and the corporate machine they form together.</p>';
-    $header .= '<p class="meta" style="margin-top:1rem">' . $count . ' essays · new signal most Mondays · <a href="/feed.xml">RSS</a></p>';
+    $header .= '<p class="meta" style="margin-top:1rem">' . $count . ' essays · new signal most Mondays · <a href="/blog/start/">new here? start here</a> · <a href="/feed.xml">RSS</a></p>';
 
     $content  = featured_card($posts[0]);
     $content .= post_grid(array_slice($posts, 1));
@@ -137,6 +145,181 @@ function render_tag_page(string $tag, array $posts, int $allCount): string
         $header,
         post_grid($posts)
     );
+}
+
+/**
+ * Branded 404 (generated to /404.php, wired via .htaccess ErrorDocument).
+ * A dead link becomes an entrance: start-here CTA + the newest essays.
+ */
+function render_404_page(array $posts): string
+{
+    $extra = '<meta name="robots" content="noindex, follow">';
+    $html  = "<?php http_response_code(404); ?>\n";
+    $html .= page_head(
+        'Signal lost · bfrackowiak.pl',
+        'That page does not exist — but the archive does.',
+        cfg('site_url') . '/404',
+        $extra
+    );
+    $html .= site_nav();
+    $html .= '<main class="wrap" style="padding:6rem 24px 5rem;max-width:880px;margin-inline:auto">';
+    $html .= eyebrow('404 · signal lost');
+    $html .= '<h1 class="display" style="font-size:clamp(2rem,4.5vw,3rem);margin:1rem 0">No signal on this frequency.</h1>';
+    $html .= '<p style="color:var(--muted);max-width:56ch">The page you\'re after doesn\'t exist. Maybe the link aged, maybe a slug changed — or the essay is scheduled and not live yet. The archive, however, is very much alive:</p>';
+    $html .= '<p style="margin:1.8rem 0 3rem"><a class="btn btn-primary" href="/blog/start/">Start here ' . arrow_icon() . '</a> ';
+    $html .= '<a class="btn btn-ghost" href="/blog/" style="margin-left:.6rem">All essays</a></p>';
+    $html .= '<div class="related-head">' . eyebrow('Newest signals', true) . '</div>';
+    $html .= log_rows(array_slice($posts, 0, 3));
+    $html .= '</main>';
+    return $html . site_footer();
+}
+
+/**
+ * "Start here" page (/blog/start/): the guided entrance to the archive.
+ * Hook essay ("read only one") + three doors matching the blog's pillars,
+ * follow strip, newsletter, one soft services link. Built from the live
+ * post list, so titles, read times, and counts never go stale; a slug
+ * missing from $posts (unpublished) is skipped silently.
+ */
+function render_start_page(array $posts): string
+{
+    $by = array_column($posts, null, 'slug');
+    $pick = fn(string $slug): ?array => $by[$slug] ?? null;
+
+    $hook = $pick('mathematicians-vs-lawyers');
+    $doors = [
+        [
+            'k'       => 'Architecture & orgs',
+            'icon'    => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/></svg>',
+            'promise' => 'Systems fail where ownership does. For architects and leads who keep meeting people problems wearing technical costumes.',
+            'flag'    => ['nobody-owns-the-sum', 'The sharpest org observation on this blog.'],
+            'more'    => ['decisions-have-an-architecture-too', 'the-anti-corruption-layer-is-for-people-too'],
+        ],
+        [
+            'k'       => 'The AI transformation',
+            'icon'    => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z"/></svg>',
+            'promise' => 'Running AI adoption across fifteen squads — the radar, the metrics, the practice. For leaders asked to "do AI" without a map.',
+            'flag'    => ['from-signals-to-blips', 'How a tech radar became the engine of a transformation.'],
+            'more'    => ['probabilistic-metrics', 'prompt-driven-architecture'],
+            'note'    => 'These three are the “Tools That Scale” series — best read in order.',
+        ],
+        [
+            'k'       => 'Building in the open',
+            'icon'    => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"/></svg>',
+            'promise' => 'One person, several shipping products, AI-staffed. For anyone building alone — or pricing work nobody can see.',
+            'flag'    => ['a-company-of-one-staffed-by-agents', 'The field report on what AI actually changes about building.'],
+            'more'    => ['the-diagram-that-cannot-lie', 'edge-cases-written-by-parliament'],
+        ],
+    ];
+
+    $n = count($posts);
+    $url = cfg('site_url') . '/blog/start/';
+
+    // structured data: a CollectionPage over the featured picks
+    $featured = array_values(array_filter(array_merge(
+        [$hook],
+        ...array_map(fn($d) => array_map($pick, array_merge([$d['flag'][0]], $d['more'])), $doors)
+    )));
+    $extra  = ld_script([
+        '@context' => 'https://schema.org',
+        '@type' => 'CollectionPage',
+        'name' => 'Start here · Field Notes',
+        'url' => $url,
+        'description' => 'The guided entrance to Field Notes: where to start reading, by interest.',
+        'isPartOf' => ['@type' => 'Blog', '@id' => cfg('site_url') . '/blog/#blog'],
+        'mainEntity' => ['@type' => 'ItemList', 'itemListElement' => schema_item_list_elements($featured)],
+    ]) . "\n";
+    $extra .= ld_script(schema_breadcrumbs([
+        'Home' => cfg('site_url') . '/',
+        'Field Notes' => cfg('site_url') . '/blog/',
+        'Start here' => $url,
+    ]));
+
+    $html  = page_head(
+        'Start here · Field Notes · Bartosz Frąckowiak',
+        "New to Field Notes? The shortest path into {$n} essays on software architecture, AI transformation, and building products — picked by the author.",
+        $url,
+        $extra
+    );
+    $html .= site_nav('start');
+    $html .= '<main class="wrap start">';
+
+    // ---- intro: who writes this, and why trust him
+    $html .= '<div class="section-head blog-hero rise start-intro">';
+    $html .= '<img class="start-face" src="/mysefl.jpeg" alt="Bartosz Frąckowiak" width="76" height="76" loading="lazy" decoding="async">';
+    $html .= eyebrow('Start here', true);
+    $html .= '<h1 style="font-size:clamp(2.1rem,4.6vw,3rem)">' . $n . ' essays in. Here is the map.</h1>';
+    $html .= '<p>I\'m <strong>Bartosz Frąckowiak</strong> — solution architect, currently leading an AI transformation across several hundred engineers. Every week I publish one field note about systems, the people around them, and the corporate machine they form together. This page is the shortest path to the good stuff.</p>';
+    $html .= '<p class="proof" style="margin-top:1.1rem"><span>Solution Architect @ EcoVadis</span><span>PhD research, University of Warsaw</span><span>Top 3% on Toptal</span><span>' . $n . ' essays and counting</span></p>';
+    $html .= '</div>';
+
+    // ---- the hook: if you read only one
+    if ($hook) {
+        $html .= '<div class="start-hook rise-2">';
+        $html .= '<a class="featured2" href="' . e(post_path($hook['slug'])) . '">';
+        $html .= '<span class="f2-body">';
+        $html .= eyebrow('If you read only one');
+        $html .= '<h2>' . e($hook['title']) . '</h2>';
+        $html .= '<p>' . e($hook['subtitle']) . '</p>';
+        $html .= '<span class="meta">' . $hook['minutes'] . ' min read · the essay I\'d hand you first</span>';
+        $html .= '<span class="f2-go">Read it ' . arrow_icon() . '</span>';
+        $html .= '</span>';
+        if ($h = hero_meta($hook['slug'])) {
+            $html .= '<span class="f2-media">' . img_lazy($h['src'], $hook['title'], $h['w'], $h['h']) . '</span>';
+        }
+        $html .= '</a></div>';
+    }
+
+    // ---- three doors
+    $html .= '<div class="section-head" style="margin-top:4rem">' . eyebrow('The map') . '<h2>Then pick your door</h2>';
+    $html .= '<p>Three threads run through everything here. Follow the one that sounds like your week.</p></div>';
+    $html .= '<div class="grid-3 start-doors">';
+    foreach ($doors as $d) {
+        $flag = $pick($d['flag'][0]);
+        $html .= '<article class="card door reveal">';
+        $html .= '<div class="card-top"><div class="icon-tile">' . $d['icon'] . '</div><span class="k">' . e($d['k']) . '</span></div>';
+        $html .= '<p class="d-promise">' . e($d['promise']) . '</p>';
+        if ($flag) {
+            $html .= '<a class="d-flag" href="' . e(post_path($flag['slug'])) . '">';
+            $html .= thumb_span(hero_meta($flag['slug']), 'd-thumb');
+            $html .= '<span class="d-ftxt">';
+            $html .= '<span class="d-why">' . e($d['flag'][1]) . '</span>';
+            $html .= '<span class="d-title">' . e($flag['title']) . '</span>';
+            $html .= '<span class="meta">' . $flag['minutes'] . ' min read</span>';
+            $html .= '</span></a>';
+        }
+        $more = array_values(array_filter(array_map($pick, $d['more'])));
+        if ($more) {
+            $html .= '<span class="d-then">then</span><ul class="d-more">';
+            foreach ($more as $m) {
+                $html .= '<li><a href="' . e(post_path($m['slug'])) . '">' . e($m['title'])
+                       . ' <span class="meta">· ' . $m['minutes'] . ' min</span></a></li>';
+            }
+            $html .= '</ul>';
+        }
+        if (!empty($d['note'])) $html .= '<p class="d-note">' . e($d['note']) . '</p>';
+        $html .= '</article>';
+    }
+    $html .= '</div>';
+    $html .= '<p style="margin-top:1.8rem"><a class="btn btn-ghost" href="/blog/">Browse all ' . $n . ' essays &rarr;</a></p>';
+
+    // ---- how to follow
+    $html .= '<div class="start-follow">';
+    $html .= '<span class="lbl">Follow along</span>';
+    $html .= '<a href="#newsletter">Newsletter — one essay, most Mondays</a>';
+    $html .= '<a href="/feed.xml">RSS</a>';
+    $html .= '<a href="https://www.linkedin.com/in/bartoszfrackowiak/" rel="me">LinkedIn</a>';
+    $html .= '<a href="/llms.txt">for AI agents: llms.txt</a>';
+    $html .= '</div>';
+
+    $html .= '<div style="margin-top:2.6rem">' . newsletter_box() . '</div>';
+
+    // ---- one soft services door, as the plan prescribes
+    $html .= '<p class="start-services">If this is the kind of thinking you want inside your organization — architecture consulting and AI training are what I do in daylight. <a href="/#services">Work with me &rarr;</a></p>';
+
+    $html .= '</main>';
+    $html .= reveal_script();
+    return $html . site_footer();
 }
 
 /** Homepage partial: featured newest essay + the next three as compact rows. */

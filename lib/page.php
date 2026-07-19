@@ -31,11 +31,10 @@ function page_head(string $title, string $desc, string $canonical, string $extra
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<meta name="theme-color" content="#fbfbfd">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#fbfbfd">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0f1014">
 <link rel="alternate" type="application/rss+xml" title="Field Notes · RSS" href="{$feed}">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/fonts.css">
 <link rel="stylesheet" href="/assets/site.css">
 {$extra}
 </head>
@@ -43,15 +42,18 @@ function page_head(string $title, string $desc, string $canonical, string $extra
 HTML;
 }
 
+/** Site navigation. $active: 'blog' | 'start' | 'home' | '' — marks the current place. */
 function site_nav(string $active = ''): string
 {
-    $blog = $active === 'blog' ? ' aria-current="page"' : '';
+    $blog  = $active === 'blog' ? ' aria-current="page"' : '';
+    $start = $active === 'start' ? ' aria-current="page"' : '';
     return <<<HTML
 <header class="nav">
   <div class="nav-inner">
     <a class="wordmark" href="/">bfrackowiak<span class="tld">.pl</span></a>
     <ul class="nav-links">
       <li><a href="/blog/"{$blog}>Writing</a></li>
+      <li><a href="/blog/start/"{$start}>Start here</a></li>
       <li class="optional"><a href="/#journey">Journey</a></li>
       <li class="optional"><a href="/#services">Services</a></li>
       <li><a class="nav-cta" href="/#contact">Work with me</a></li>

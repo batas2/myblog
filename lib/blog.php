@@ -291,6 +291,20 @@ function post_write_status(string $file, string $action, string $when = ''): boo
     return rename($tmp, $file);
 }
 
+/** Up to $n other posts sharing the most tags with $post; recency breaks ties. */
+function related_posts(array $post, array $pool, int $n = 3): array
+{
+    $scored = [];
+    foreach ($pool as $p) {
+        if ($p['slug'] === $post['slug']) continue;
+        $shared = count(array_intersect($post['tags'], $p['tags']));
+        if ($shared === 0) continue;
+        $scored[] = [$shared, $p['publish_ts'], $p];
+    }
+    usort($scored, fn($a, $b) => [$b[0], $b[1]] <=> [$a[0], $a[1]]);
+    return array_column(array_slice($scored, 0, $n), 2);
+}
+
 /** tag name => list of posts (posts stay in reverse-chron order) */
 function collect_tags(array $posts): array
 {

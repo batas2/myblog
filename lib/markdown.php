@@ -76,7 +76,7 @@ function md_to_html(array $lines): string
             $cap = md_inline($m[1]);
             $alt = htmlspecialchars($m[1], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
             $html .= '<figure class="post-figure"><img src="' . $src . '" alt="' . $alt . '" loading="lazy" style="max-width:100%;height:auto">'
-                   . ($m[1] !== '' ? '<figcaption style="font-size:.85em;color:#666;margin-top:.4em">' . $cap . '</figcaption>' : '')
+                   . ($m[1] !== '' ? '<figcaption style="font-size:.85em;color:var(--muted);margin-top:.4em">' . $cap . '</figcaption>' : '')
                    . "</figure>\n";
             continue;
         }

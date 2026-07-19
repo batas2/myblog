@@ -460,6 +460,68 @@ $fc = featured_card($posts[0]);
 t_contains('class="featured2', $fc, 'featured card class');
 t_contains('Latest signal', $fc, 'featured card eyebrow');
 
+section('related posts');
+$mk = fn(string $slug, array $tags, int $ts) => ['slug' => $slug, 'tags' => $tags, 'publish_ts' => $ts];
+$pool = [
+    $mk('self', ['A', 'B', 'C'], 100),
+    $mk('two-shared-old', ['A', 'B', 'X'], 50),
+    $mk('two-shared-new', ['A', 'B', 'Y'], 90),
+    $mk('one-shared', ['C', 'Z', 'W'], 99),
+    $mk('none-shared', ['Q', 'Z', 'W'], 999),
+];
+$rel = related_posts($pool[0], $pool, 3);
+t_eq(['two-shared-new', 'two-shared-old', 'one-shared'], array_column($rel, 'slug'), 'ranked by shared tags, then recency');
+t_not_contains('self', implode(',', array_column($rel, 'slug')), 'post never relates to itself');
+t_eq([], related_posts($mk('lonely', ['QQ'], 1), $pool, 3), 'no shared tags, no related');
+t_eq(1, count(related_posts($pool[0], $pool, 1)), 'limit respected');
+$withRel = render_post($all[0], null, null, load_posts());
+t_contains('Related field notes', $withRel, 'post page carries related block');
+$noRel = render_post($all[0], null, null);
+t_not_contains('Related field notes', $noRel, 'no related block without a pool');
+
+section('404 page');
+$nf = render_404_page($posts);
+t_contains('http_response_code(404)', $nf, '404 page sets the status code');
+t_contains('No signal on this frequency', $nf, '404 copy present');
+t_contains('href="/blog/start/"', $nf, '404 routes to start here');
+t_contains(e($posts[0]['title']), $nf, '404 shows the newest essay');
+t_contains('noindex', $nf, '404 is noindex');
+
+section('fonts & theme');
+$head = page_head('T', 'D', 'https://x/');
+t_contains('/assets/fonts.css', $head, 'pages load self-hosted fonts');
+t_not_contains('fonts.googleapis.com', $head, 'no external font CSS');
+t_not_contains('fonts.gstatic.com', $head, 'no external font host');
+t_contains('prefers-color-scheme: dark', $head, 'dark theme-color meta present');
+$css = (string) file_get_contents(dirname(__DIR__) . '/assets/site.css');
+t_contains('@media (prefers-color-scheme: dark)', $css, 'dark palette defined');
+t_assert(count(glob(dirname(__DIR__) . '/assets/fonts/*.woff2')) >= 10, 'woff2 files shipped');
+$fcss = (string) file_get_contents(dirname(__DIR__) . '/assets/fonts.css');
+t_contains('/assets/fonts/', $fcss, 'fonts.css points at local files');
+t_not_contains('gstatic', $fcss, 'fonts.css has no external URLs');
+t_contains('latin-ext', $fcss, 'Polish glyph subset included');
+
+section('start page');
+$sp = render_start_page($posts);
+t_contains('rel="canonical" href="https://bfrackowiak.pl/blog/start/"', $sp, 'start page canonical');
+t_contains('href="/blog/mathematicians-vs-lawyers/"', $sp, 'hook essay linked');
+foreach (['nobody-owns-the-sum', 'from-signals-to-blips', 'a-company-of-one-staffed-by-agents'] as $s) {
+    t_contains('href="/blog/' . $s . '/"', $sp, "door flagship linked: {$s}");
+}
+t_contains('Then pick your door', $sp, 'doors section present');
+t_contains('Tools That Scale', $sp, 'series map note present');
+t_contains('embed-subscribe', $sp, 'newsletter form on start page');
+t_contains('/#services', $sp, 'soft services link present');
+t_contains('llms.txt', $sp, 'AI-agent follow link present');
+t_contains(count($posts) . ' essays in', $sp, 'live essay count in headline');
+preg_match_all('#<script type="application/ld\+json">(.*?)</script>#s', $sp, $ldS);
+$ldOk = count($ldS[1]) >= 2;
+foreach ($ldS[1] as $j) if (json_decode($j) === null) $ldOk = false;
+t_assert($ldOk, 'start page JSON-LD parses');
+$spEmpty = render_start_page([]);
+t_contains('essays in', $spEmpty, 'renders without any posts (no fatal)');
+t_not_contains('class="d-flag"', $spEmpty, 'missing curated slugs skipped silently');
+
 section('schema builders');
 $bp = schema_blog_posting($posts[0], hero_meta($posts[0]['slug']), post_url($posts[0]['slug']), $posts[0]['publish_iso']);
 t_eq('BlogPosting', $bp['@type'], 'blog posting type');

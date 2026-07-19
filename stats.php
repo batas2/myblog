@@ -115,7 +115,7 @@ function s_table(string $title, array $rows, ?callable $fmt = null, string $unit
 <meta name="robots" content="noindex, nofollow">
 <title>Stats · bfrackowiak.pl</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/fonts.css">
 <link rel="stylesheet" href="/assets/site.css">
 <style>
 <?= dash_base_css() ?>
@@ -133,6 +133,17 @@ h3 { font-size: .92rem; font-weight: 600; color: var(--ink); margin: 1.4rem 0 .5
 .seg a:hover { color: var(--ink); }
 .pathchip { font-family: 'JetBrains Mono', monospace; font-size: .78rem; background: var(--surface); border: 1px solid var(--accent); border-radius: 999px; padding: .35rem .95rem; display: inline-block; margin-top: .9rem; }
 .pathchip a { margin-left: .6rem; text-decoration: none; }
+/* tabbed panes: one concern per screen; no-JS falls back to everything stacked */
+.tabs { display: flex; gap: .15rem; overflow-x: auto; position: sticky; top: 0; z-index: 5;
+  background: var(--bg, #fbfbfd); padding: .7rem 0 0; margin: 1.5rem 0 1.4rem; border-bottom: 1px solid var(--line); }
+.tabs a { padding: .5rem 1.15rem; font-weight: 600; font-size: .87rem; color: var(--muted); text-decoration: none;
+  border: 1px solid transparent; border-bottom: none; border-radius: 10px 10px 0 0; white-space: nowrap; }
+.tabs a:hover { color: var(--ink); }
+.tabs a.active { color: var(--ink); background: var(--surface); border-color: var(--line); position: relative; top: 1px; }
+html:not(.js) .tabs { display: none; }
+.js .pane { display: none; }
+.js .pane.on { display: block; }
+.pane > h2:first-child { margin-top: .4rem; }
 .scard { position: relative; }
 .delta { font-family: 'JetBrains Mono', monospace; font-size: .68rem; font-weight: 500; margin-left: .45rem; vertical-align: .35em; }
 .delta.up { color: #0a7a45; } .delta.down { color: #b91c1c; } .delta.flat { color: var(--muted); }
@@ -179,6 +190,15 @@ a.plink { text-decoration: none; }
     <p class="pathchip">page: <?= e($path) ?> <a href="<?= e(s_url(['path' => null])) ?>">× all pages</a></p>
   <?php endif; ?>
 
+  <nav class="tabs">
+    <a href="#overview" class="active">Overview</a>
+    <?php if ($path === ''): ?><a href="#content">Content</a><?php endif; ?>
+    <a href="#acquisition">Acquisition</a>
+    <a href="#audience">Audience</a>
+    <a href="#activity">Activity</a>
+  </nav>
+
+  <div class="pane on" id="overview">
   <div class="cards">
     <div class="scard"><b><?= number_format($sum['pv']) ?><?= s_delta($prev, 'pv', $sum['pv']) ?></b><span>Pageviews</span></div>
     <div class="scard"><b><?= number_format($sum['uv']) ?><?= s_delta($prev, 'uv', $sum['uv']) ?></b><span>Visitors (daily-unlinkable)</span></div>
@@ -214,9 +234,10 @@ a.plink { text-decoration: none; }
       <div class="axis"><span>00</span><span>06</span><span>12</span><span>18</span><span>23</span></div>
     </div>
   </div>
+  </div><!-- /overview -->
 
   <?php if ($path === ''): ?>
-  <div class="wide">
+  <div class="pane wide" id="content">
     <h2>Content <span class="dim">— click a path to drill down</span></h2>
     <table><tr><th>Path</th><th class="r">Views</th><th class="r">Share</th><th class="r">Visitors</th><th class="r">Avg time</th></tr>
     <?php $topPage = max(1, ...array_map(fn($p) => (int) $p['pv'], $pages ?: [['pv' => 1]])); ?>
@@ -235,6 +256,7 @@ a.plink { text-decoration: none; }
   </div>
   <?php endif; ?>
 
+  <div class="pane" id="acquisition">
   <h2>Acquisition <span class="dim">— where readers come from</span></h2>
   <div class="grid">
     <?php
@@ -244,7 +266,9 @@ a.plink { text-decoration: none; }
     if ($dims['utm_campaign']) s_table('Campaigns · utm_campaign', $dims['utm_campaign']);
     ?>
   </div>
+  </div><!-- /acquisition -->
 
+  <div class="pane" id="audience">
   <h2>Audience <span class="dim">— who and from where</span></h2>
   <div class="grid">
     <?php
@@ -257,8 +281,9 @@ a.plink { text-decoration: none; }
     s_table('Screens', $dims['screen']);
     ?>
   </div>
+  </div><!-- /audience -->
 
-  <div class="wide recent">
+  <div class="pane wide recent" id="activity">
     <h2>Recent visits <span class="dim">— last <?= count($recent) ?></span></h2>
     <table><tr><th>When</th><th></th><th>Path</th><th>From</th><th>Client</th><th class="r">Read</th></tr>
     <?php foreach ($recent as $r): ?>
@@ -273,10 +298,33 @@ a.plink { text-decoration: none; }
     <?php endforeach; ?>
     <?php if (!$recent): ?><tr><td colspan="6" class="dim">nothing yet</td></tr><?php endif; ?>
     </table>
-  </div>
+  </div><!-- /activity -->
 
   <p class="foot">No cookies for visitors, no external services. Visitor hashes rotate daily. IP geolocation by <a href="https://db-ip.com">DB-IP</a> (CC BY 4.0)<?= geoip_db_age_days() === null ? ' — <strong>geoip.dat missing: run php tools/geoip_update.php</strong>' : ', database ' . geoip_db_age_days() . ' days old' ?>.<br>
   <strong>This browser is excluded from the stats</strong> (owner cookie, refreshed on every visit here) — re-enable via <a href="/a.php?me=on">/a.php?me=on</a>, exclude another device by opening <a href="/a.php?me=off">/a.php?me=off</a> on it or just logging into admin.</p>
 </div>
+<script>
+// tabbed panes; the hash is the state, so views are deep-linkable.
+// Without JS the .js class never lands and everything stays stacked.
+document.documentElement.classList.add('js');
+(function () {
+  var tabs = [].slice.call(document.querySelectorAll('.tabs a'));
+  var ids = tabs.map(function (a) { return a.hash.slice(1); });
+  function show(id) {
+    if (ids.indexOf(id) < 0) id = 'overview';
+    tabs.forEach(function (a) { a.classList.toggle('active', a.hash.slice(1) === id); });
+    ids.forEach(function (p) {
+      var el = document.getElementById(p);
+      if (el) el.classList.toggle('on', p === id);
+    });
+  }
+  addEventListener('hashchange', function () { show(location.hash.slice(1)); scrollTo(0, 0); });
+  show(location.hash.slice(1));
+  // switching the date range keeps you on the same tab
+  [].forEach.call(document.querySelectorAll('.seg a'), function (a) {
+    a.addEventListener('click', function () { if (location.hash) this.href += location.hash; });
+  });
+})();
+</script>
 </body>
 </html>

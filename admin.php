@@ -127,7 +127,7 @@ $lockout = admin_lockout_remaining($ip);
 <meta name="robots" content="noindex, nofollow">
 <title>Admin · bfrackowiak.pl</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/fonts.css">
 <link rel="stylesheet" href="/assets/site.css">
 <style>
 <?= dash_base_css() ?>

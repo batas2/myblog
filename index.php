@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/lib/config.php';
 require_once __DIR__ . '/lib/helpers.php';
 require_once __DIR__ . '/lib/components.php';
+require_once __DIR__ . '/lib/page.php';
 require_once __DIR__ . '/lib/contact.php';
 
 $form = handle_contact_form();
@@ -97,29 +98,18 @@ $form_message = $form['message'];
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<meta name="theme-color" content="#fbfbfd">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#fbfbfd">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0f1014">
 <meta property="og:image:width" content="460">
 <meta property="og:image:height" content="460">
 <meta property="og:image:alt" content="Bartosz Frąckowiak">
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/fonts.css">
 <link rel="stylesheet" href="/assets/site.css">
 </head>
 <body>
 
-<header class="nav">
-  <div class="nav-inner">
-    <a class="wordmark" href="/">bfrackowiak<span class="tld">.pl</span></a>
-    <ul class="nav-links">
-      <li><a href="/blog/">Writing</a></li>
-      <li class="optional"><a href="#journey">Journey</a></li>
-      <li class="optional"><a href="#services">Services</a></li>
-      <li><a class="nav-cta" href="#contact">Work with me</a></li>
-    </ul>
-  </div>
-</header>
+<?= site_nav('home') ?>
 
 <main>
 
@@ -450,20 +440,4 @@ $form_message = $form['message'];
 
 </main>
 
-<footer class="footer">
-  <div class="footer-inner">
-    <span>© <?= date('Y') ?> Bartosz Frąckowiak</span>
-    <nav>
-      <a href="/blog/">Writing</a>
-      <a href="/feed.xml">RSS</a>
-      <a href="https://www.linkedin.com/in/bartoszfrackowiak/" rel="me">LinkedIn</a>
-      <a href="https://medium.com/@bfrackowiak" rel="me">Medium</a>
-      <a href="https://github.com/batas2" rel="me">GitHub</a>
-    </nav>
-  </div>
-</footer>
-
-<?= beacon_script() ?><?= goatcounter_script() ?>
-
-</body>
-</html>
+<?= site_footer() ?>
