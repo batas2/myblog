@@ -29,3 +29,4 @@ _archive/
 .DS_Store
 *.log
 .claude/
+content/newsletter.lock

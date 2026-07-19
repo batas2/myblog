@@ -256,8 +256,36 @@ $nlDry = implode("\n", $nlO3);
 t_contains('would send "itest-past-post" to 1 subscribers', $nlDry, 'dry-run plans the unsent essay for the confirmed list');
 t_contains('1 confirmed', $nlDry, 'sender reports list size');
 
+// per-IP rate limit: a third quick POST (honeypot skipped the limiter) is refused
+[$code, $body] = http_req('POST', "$BASE/n.php", [
+    'headers' => "Content-Type: application/x-www-form-urlencoded\r\n",
+    'body' => 'email=fast%40example.com&website=',
+]);
+t_contains('One at a time', $body, 'per-IP rate limit kicks in');
+
+// sender resilience: mail "enabled" but failing → slug released for retry
+sbx_php('require "lib/config.php"; require "lib/newsletter.php"; $db = nl_db();
+    $db->exec("UPDATE subscribers SET status = \'confirmed\' WHERE email = \'reader@example.com\'");');
+$nlRetry = sbx_php('require "lib/config.php"; require "lib/helpers.php"; require "lib/newsletter.php";
+    $p = ["slug" => "itest-fresh", "title" => "T", "subtitle" => "s", "html" => "<p>x</p>", "publish_ts" => time(), "minutes" => 1];
+    echo implode("|", nl_send_new([$p], false));');
+t_contains('send failed for "itest-fresh"', $nlRetry, 'unreachable SMTP releases the claim');
+t_eq('', sbx_php('require "lib/config.php"; require "lib/newsletter.php";
+    echo (string) nl_db()->query("SELECT slug FROM sends WHERE slug = \'itest-fresh\'")->fetchColumn();'), 'failed essay not ledgered — will retry');
+
+// overlap guard: a held lock turns a second sender run into a no-op
+$nlLock = sbx_php('require "lib/config.php"; require "lib/helpers.php"; require "lib/newsletter.php";
+    $l = fopen(CONTENT_DIR . "/newsletter.lock", "c"); flock($l, LOCK_EX);
+    echo implode("|", nl_send_new([], false));');
+t_contains('another send is in progress', $nlLock, 'concurrent sender run skipped under lock');
+
+// one-click unsubscribe: browser GET shows the branded page…
 [$code, $body] = http_req('GET', "$BASE/n.php?u={$nlTok}");
 t_contains('You\'re out', $body, 'one-click unsubscribe page served');
+// …and the RFC 8058 POST variant stays a bare 200/OK, idempotent on a gone token
+[$code, $body] = http_req('POST', "$BASE/n.php?u={$nlTok}");
+t_eq(200, $code, 'RFC 8058 POST unsubscribe answers 200');
+t_eq('OK', trim($body), 'RFC 8058 POST body is bare OK');
 t_eq('', sbx_php('require "lib/config.php"; require "lib/newsletter.php";
     echo (string) nl_db()->query("SELECT token FROM subscribers WHERE email = \'reader@example.com\'")->fetchColumn();'), 'unsubscribe deletes the row');
 

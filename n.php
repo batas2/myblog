@@ -20,11 +20,13 @@ require_once __DIR__ . '/lib/page.php';
 require_once __DIR__ . '/lib/newsletter.php';
 require_once __DIR__ . '/lib/captcha.php';
 
-const NL_MIN_GAP = 30;   // seconds between subscribe attempts per IP
+const NL_MIN_GAP  = 30;    // seconds between subscribe attempts per IP
+const NL_MAIL_GAP = 900;   // seconds between confirmation mails per address
 
-/** Small branded status page. */
+/** Small branded status page. Token-bearing pages must never be cached. */
 function nl_page(string $title, string $heading, string $body, string $cta = ''): void
 {
+    header('Cache-Control: no-store');
     echo page_head($title . ' · bfrackowiak.pl', $body, cfg('site_url') . '/n.php');
     echo site_nav();
     echo '<main class="wrap" style="padding:7rem 24px 4rem;max-width:44rem">';
@@ -37,7 +39,13 @@ function nl_page(string $title, string $heading, string $body, string $cta = '')
     exit;
 }
 
-$db = nl_db();
+try {
+    $db = nl_db();
+} catch (Throwable $e) {
+    http_response_code(503);
+    nl_page('Temporarily unavailable', 'The list is taking a nap.',
+        'Something is wrong with the subscriber store right now. Try again in a few minutes — the essays aren\'t going anywhere.');
+}
 $uTok = (string) ($_GET['u'] ?? '');
 $cTok = (string) ($_GET['confirm'] ?? '');
 
@@ -96,7 +104,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $status = $db->prepare('SELECT status FROM subscribers WHERE token = ?');
     $status->execute([$token]);
     if ($status->fetchColumn() === 'pending') {
-        nl_send_confirmation(mb_strtolower(trim((string) $_POST['email'])), $token);
+        $addr = mb_strtolower(trim((string) $_POST['email']));
+        // per-address cooldown: a pending address can't be used to stream
+        // confirmation mail at someone (the per-IP limit doesn't stop a botnet)
+        $mailGate = throttle_path('nlm_', 'bfrackowiak-newsletter-mail', $addr);
+        if (nl_mail_enabled() && (!is_file($mailGate) || time() - (int) filemtime($mailGate) >= NL_MAIL_GAP)) {
+            if (nl_send_confirmation($addr, $token)) {
+                touch($mailGate);
+            } else {
+                nl_page('Mail delivery hiccup', 'The confirmation mail didn\'t go out.',
+                    'Your address is saved, but the mail server refused to cooperate just now. Try the form again in a few minutes.',
+                    '<a class="btn btn-ghost" href="/#newsletter">Back to the form &rarr;</a>');
+            }
+        }
     }
     nl_page('Almost there', 'Check your inbox.',
         'A confirmation email is on its way (look in spam the first time). Click the link inside and you\'re in — one essay most Mondays, unsubscribe any time with one click.');
@@ -104,3 +124,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 /* plain GET with no token: nothing to see */
 header('Location: /#newsletter');
+exit;

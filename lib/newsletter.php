@@ -63,10 +63,13 @@ function nl_subscribe(PDO $db, string $email): ?string
     $row->execute([$email]);
     if ($token = $row->fetchColumn()) return (string) $token;
 
+    // ON CONFLICT: two concurrent first-time POSTs must not 500 on UNIQUE(email)
     $token = bin2hex(random_bytes(16));
-    $db->prepare("INSERT INTO subscribers (email, status, token, created_ts) VALUES (?, 'pending', ?, ?)")
+    $db->prepare("INSERT INTO subscribers (email, status, token, created_ts) VALUES (?, 'pending', ?, ?)
+                  ON CONFLICT(email) DO NOTHING")
        ->execute([$email, $token, time()]);
-    return $token;
+    $row->execute([$email]);   // read whichever token actually landed
+    return (string) $row->fetchColumn();
 }
 
 /** True when the token matched a subscriber (now confirmed). */
@@ -124,12 +127,13 @@ function nl_compose(array $p): array
     $body = nl_absolutize($p['html']);
     $sub = e($p['subtitle']);
 
+    $title = e($p['title']);
     $html = <<<HTML
 <!doctype html>
 <html><body style="margin:0;padding:0;background:#fbfbfd">
 <div style="max-width:640px;margin:0 auto;padding:28px 20px;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#2a2a33;line-height:1.65">
   <p style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#8a8a96;margin:0 0 18px">Field Notes · bfrackowiak.pl</p>
-  <h1 style="font-size:26px;line-height:1.25;color:#17171e;margin:0 0 6px">{$p['title']}</h1>
+  <h1 style="font-size:26px;line-height:1.25;color:#17171e;margin:0 0 6px">{$title}</h1>
   <p style="font-size:15px;color:#6b6b77;margin:0 0 22px"><em>{$sub}</em></p>
   {$body}
   <p style="margin:28px 0 0"><a href="{$url}" style="color:#4f52e5">Read and comment on the site &rarr;</a></p>
@@ -156,12 +160,29 @@ HTML;
  * First run on an empty ledger only seeds it (nothing is mailed).
  * $dryRun prints what would happen and touches nothing.
  * Returns human-readable log lines.
+ *
+ * Concurrency: an exclusive lock on content/newsletter.lock makes overlapping
+ * cron runs a no-op, and each slug is claimed in the ledger BEFORE its send
+ * loop — a crash mid-list can lose at most that one run's remaining sends,
+ * never double-mail people who already got the essay. A run where nobody
+ * could be mailed (SMTP down) releases the claim so the next run retries.
+ *
+ * Caveat: the ledger is keyed by slug — renaming an already-sent essay makes
+ * it look new and re-mails the list. Rename in sends first:
+ *   UPDATE sends SET slug='new-name' WHERE slug='old-name';
  */
 function nl_send_new(array $posts, bool $dryRun = false, ?PDO $db = null): array
 {
     $db ??= nl_db();
     $out = [];
 
+    $lock = @fopen(CONTENT_DIR . '/newsletter.lock', 'c');
+    if ($lock === false || !flock($lock, LOCK_EX | LOCK_NB)) {
+        if ($lock) fclose($lock);
+        return ['another send is in progress — skipping'];
+    }
+
+    try {
     $ledgerEmpty = ((int) $db->query('SELECT COUNT(*) FROM sends')->fetchColumn()) === 0;
     if ($ledgerEmpty) {
         foreach ($posts as $p) {
@@ -186,6 +207,9 @@ function nl_send_new(array $posts, bool $dryRun = false, ?PDO $db = null): array
             $out[] = 'would send "' . $p['slug'] . '" to ' . count($subs) . ' subscribers';
             continue;
         }
+        // claim before mailing — a crash mid-loop must never re-blast the list
+        $db->prepare("INSERT OR IGNORE INTO sends (slug, sent_ts, recipients, note) VALUES (?, ?, 0, 'sending')")
+           ->execute([$p['slug'], time()]);
         $ok = 0;
         [$subject, $html, $text] = nl_compose($p);
         foreach ($subs as $s) {
@@ -197,18 +221,33 @@ function nl_send_new(array $posts, bool $dryRun = false, ?PDO $db = null): array
             }
             usleep(250000);   // gentle on the shared host's rate limits
         }
-        $db->prepare("INSERT INTO sends (slug, sent_ts, recipients, note) VALUES (?, ?, ?, '')")
-           ->execute([$p['slug'], time(), $ok]);
+        if ($ok === 0 && $subs) {
+            // nobody was reachable (SMTP outage): release the claim, retry next run
+            $db->prepare("DELETE FROM sends WHERE slug = ? AND note = 'sending'")->execute([$p['slug']]);
+            $out[] = 'send failed for "' . $p['slug'] . '" — released for retry next run';
+            continue;
+        }
+        $db->prepare("UPDATE sends SET recipients = ?, note = '' WHERE slug = ?")->execute([$ok, $p['slug']]);
         $out[] = 'sent "' . $p['slug'] . '" to ' . $ok . '/' . count($subs) . ' subscribers';
     }
     return $out;
+    } finally {
+        flock($lock, LOCK_UN);
+        fclose($lock);
+    }
+}
+
+/** Mail is configured at all? Empty SMTP password = disabled (tests, fresh clones). */
+function nl_mail_enabled(): bool
+{
+    return ((array) cfg('smtp', []))['pass'] !== '';
 }
 
 /** One SMTP delivery via PHPMailer; List-Unsubscribe headers included. */
 function nl_smtp_send(string $to, string $subject, string $html, string $text, string $unsubUrl): bool
 {
+    if (!nl_mail_enabled()) return false;
     $smtp = (array) cfg('smtp', []);
-    if (($smtp['pass'] ?? '') === '') return false;   // mail disabled (tests, fresh clones)
 
     require_once APP_ROOT . '/vendor/phpmailer/Exception.php';
     require_once APP_ROOT . '/vendor/phpmailer/PHPMailer.php';
