@@ -31,6 +31,8 @@ require_once __DIR__ . '/lib/admin.php';
 
 header('Cache-Control: no-store');
 header('X-Robots-Tag: noindex, nofollow');
+header('X-Frame-Options: DENY');
+header('X-Content-Type-Options: nosniff');
 
 $ip = (string) ($_SERVER['REMOTE_ADDR'] ?? '');
 
@@ -42,6 +44,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && admin_enabled()) {
 
     if ($action === 'login') {
         $ok = admin_login((string) ($_POST['password'] ?? ''), $ip);
+        // the owner's browser never counts itself: set the exclusion cookie on login
+        if ($ok) an_optout_cookie(true);
         header('Location: /admin.php' . ($ok ? '' : '?err=login'));
         exit;
     }
@@ -90,6 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && admin_enabled()) {
 $loggedIn = admin_session_active();
 $flash = $flashC = '';
 if ($loggedIn) {
+    an_optout_cookie(true);   // sliding 1-year refresh: admin visits keep this browser out of the stats
     $flash  = (string) ($_SESSION['flash'] ?? '');
     $flashC = (string) ($_SESSION['flash_c'] ?? '');
     unset($_SESSION['flash'], $_SESSION['flash_c']);

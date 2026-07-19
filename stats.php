@@ -17,6 +17,11 @@ require_once __DIR__ . '/lib/components.php';
 require_once __DIR__ . '/lib/analytics.php';
 require_once __DIR__ . '/lib/admin.php';
 
+header('Cache-Control: no-store');
+header('X-Robots-Tag: noindex, nofollow');
+header('X-Frame-Options: DENY');
+header('X-Content-Type-Options: nosniff');
+
 $key = (string) cfg('stats_key');
 if ($key !== '' && hash_equals($key, (string) ($_GET['key'] ?? ''))) {
     // one-time key → stats session, so every link below stays keyless
@@ -25,6 +30,7 @@ if ($key !== '' && hash_equals($key, (string) ($_GET['key'] ?? ''))) {
     http_response_code(404);
     exit('Not found');
 }
+an_optout_cookie(true);   // whoever reads the stats shouldn't be in them
 
 /* ---------------- inputs ---------------- */
 
@@ -269,7 +275,8 @@ a.plink { text-decoration: none; }
     </table>
   </div>
 
-  <p class="foot">No cookies, no external services. Visitor hashes rotate daily. IP geolocation by <a href="https://db-ip.com">DB-IP</a> (CC BY 4.0)<?= geoip_db_age_days() === null ? ' — <strong>geoip.dat missing: run php tools/geoip_update.php</strong>' : ', database ' . geoip_db_age_days() . ' days old' ?>.</p>
+  <p class="foot">No cookies for visitors, no external services. Visitor hashes rotate daily. IP geolocation by <a href="https://db-ip.com">DB-IP</a> (CC BY 4.0)<?= geoip_db_age_days() === null ? ' — <strong>geoip.dat missing: run php tools/geoip_update.php</strong>' : ', database ' . geoip_db_age_days() . ' days old' ?>.<br>
+  <strong>This browser is excluded from the stats</strong> (owner cookie, refreshed on every visit here) — re-enable via <a href="/a.php?me=on">/a.php?me=on</a>, exclude another device by opening <a href="/a.php?me=off">/a.php?me=off</a> on it or just logging into admin.</p>
 </div>
 </body>
 </html>

@@ -215,6 +215,8 @@ function load_posts(bool $withUnpublished = false): array
 /** Source .md path for a slug, or null. */
 function post_source_file(string $slug): ?string
 {
+    // callers validate, but never let a malformed slug reach the glob
+    if (!preg_match('/^[a-z0-9-]{3,80}$/', $slug)) return null;
     // the glob is a suffix match ("service" also hits "…-not-a-service.md"),
     // so verify the parsed slug before trusting a file
     foreach (glob(CONTENT_DIR . '/posts/*-' . $slug . '.md') as $file) {

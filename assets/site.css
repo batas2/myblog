@@ -201,39 +201,88 @@ textarea:focus-visible, select:focus-visible {
 
 /* ---- journey timeline ------------------------------------------------------ */
 
-.timeline { list-style: none; position: relative; max-width: 860px; }
+.timeline { list-style: none; position: relative; max-width: 1000px; }
 .timeline::before {
-  content: ""; position: absolute; left: 3px; top: 6px; bottom: 6px;
+  content: ""; position: absolute; left: calc(172px + 1.1rem); top: 6px; bottom: 6px;
   width: 1px; background: var(--line);
 }
-.timeline li { position: relative; padding: 0 0 2.4rem 2.2rem; }
+.timeline li {
+  position: relative; display: grid;
+  grid-template-columns: 172px 1fr; gap: 0 2.6rem;
+  padding: 0 0 3rem 0;
+}
 .timeline li:last-child { padding-bottom: 0; }
 .timeline li::before {
-  content: ""; position: absolute; left: 0; top: 7px;
+  content: ""; position: absolute; left: calc(172px + 1.1rem - 3px); top: 7px;
   width: 7px; height: 7px; border-radius: 50%;
   background: var(--accent);
   box-shadow: 0 0 0 3px rgba(79, 82, 229, 0.16);
 }
-.timeline .when {
+
+/* left rail: the era's coordinates and its headline evidence */
+.tl-rail { text-align: right; display: flex; flex-direction: column; gap: 0.18rem; }
+.tl-when {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.72rem; letter-spacing: 0.12em; color: var(--accent);
 }
-.timeline h3 {
-  font-size: 1.06rem; font-weight: 600; color: var(--ink);
-  margin: 0.25rem 0 0.3rem;
+.tl-place {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.64rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted);
 }
-.timeline p { font-size: 0.95rem; color: var(--muted); max-width: 56ch; }
+.tl-metric { margin-top: 0.6rem; }
+.tl-metric b {
+  display: block; font-family: 'JetBrains Mono', monospace; font-weight: 500;
+  font-size: 1.45rem; line-height: 1.1; color: var(--ink);
+}
+.tl-metric i {
+  font-style: normal; font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted);
+}
+
+.timeline h3 {
+  font-size: 1.1rem; font-weight: 600; color: var(--ink);
+  margin: 0 0 0.35rem;
+}
+.timeline p { font-size: 0.95rem; line-height: 1.65; color: var(--muted); max-width: 60ch; }
+.timeline p strong { color: var(--ink); font-weight: 600; }
+
+@media (max-width: 780px) {
+  .timeline::before { left: 3px; }
+  .timeline li { grid-template-columns: 1fr; gap: 0.5rem 0; padding: 0 0 2.4rem 2.2rem; }
+  .timeline li::before { left: 0; }
+  .tl-rail { text-align: left; flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 0.2rem 0.9rem; }
+  .tl-metric { margin-top: 0; display: flex; align-items: baseline; gap: 0.4rem; }
+  .tl-metric b { font-size: 0.95rem; display: inline; }
+}
+
+/* fact chips + essay links under a timeline entry */
+.tl-facts { display: flex; flex-wrap: wrap; gap: 0.35rem 0.5rem; margin-top: 0.7rem; }
+.tl-facts span {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.66rem; letter-spacing: 0.04em;
+  color: var(--muted); background: var(--surface);
+  border: 1px solid var(--line); border-radius: 999px; padding: 0.18rem 0.6rem;
+}
+.tl-notes { margin-top: 0.7rem; display: flex; flex-wrap: wrap; gap: 0.2rem 1rem; align-items: baseline; font-size: 0.82rem; }
+.tl-notes .lbl {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--muted);
+}
+.tl-notes a { color: var(--accent-deep); text-decoration: none; }
+.tl-notes a:hover { text-decoration: underline; text-underline-offset: 3px; }
 
 .aim {
   margin-top: 4.5rem; padding: 2.2rem 2.4rem;
   background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
-  max-width: 860px;
+  border-left: 3px solid var(--accent);
+  max-width: 1000px;
 }
 .aim p {
   font-family: 'Inter', system-ui, sans-serif; font-style: italic;
   font-size: 1.35rem; line-height: 1.45; color: var(--ink);
+  max-width: 46ch;
 }
 .aim .who { margin-top: 1rem; font-family: 'JetBrains Mono', monospace; font-style: normal; font-size: 0.72rem; letter-spacing: 0.12em; color: var(--muted); text-transform: uppercase; }
+.aim-cta { margin-top: 1.6rem; display: flex; flex-wrap: wrap; gap: 0.7rem; }
 
 /* ---- cards (services / building) ------------------------------------------- */
 

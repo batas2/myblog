@@ -25,6 +25,8 @@ function admin_enabled(): bool
 function admin_session_start(): void
 {
     if (session_status() === PHP_SESSION_ACTIVE) return;
+    // reject attacker-supplied session ids (fixation defense beyond the login-time regenerate)
+    ini_set('session.use_strict_mode', '1');
     session_name('bfadmin');
     session_set_cookie_params([
         'lifetime' => 0,
@@ -240,7 +242,7 @@ function admin_run_build(): array
     }
     $bin = (string) cfg('php_bin', 'php');
     if (!preg_match('#^[A-Za-z0-9_./-]+$#', $bin)) $bin = 'php';
-    $cmd = 'cd ' . escapeshellarg(APP_ROOT) . ' && ' . $bin . ' tools/build.php 2>&1';
+    $cmd = 'cd ' . escapeshellarg(APP_ROOT) . ' && ' . escapeshellarg($bin) . ' tools/build.php 2>&1';
     exec($cmd, $out, $rc);
     return [$rc, implode("\n", $out)];
 }

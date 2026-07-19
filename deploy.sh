@@ -24,7 +24,23 @@ BACKUP_STAGE="${BACKUP_DIR}/${TIMESTAMP}"
 BACKUP_ARCHIVE="${BACKUP_DIR}/${TIMESTAMP}.tar.gz"
 
 # --- colors ---
-RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; BOLD='\033[1m'; NC='\033[0m'
+
+# --- output helpers ---
+STEP_NUM=0
+STEP_TOTAL=4
+STEP_START=0
+step() {
+  STEP_NUM=$((STEP_NUM + 1))
+  STEP_START=$SECONDS
+  echo
+  echo -e "${BLUE}${BOLD}[${STEP_NUM}/${STEP_TOTAL}] $1${NC}"
+}
+step_done() {
+  local elapsed=$((SECONDS - STEP_START))
+  echo -e "${GREEN}✓ $1 (${elapsed}s)${NC}"
+}
+die() { echo -e "${RED}✗ $1${NC}"; exit 1; }
 
 DELETE_FLAG=()
 RSYNC_MODE=()
@@ -32,13 +48,18 @@ for arg in "$@"; do
   case "$arg" in
     --clean)   DELETE_FLAG=(--delete) ;;
     --dry-run) RSYNC_MODE=(--dry-run) ;;
-    *) echo -e "${RED}Unknown option: ${arg}${NC}"; exit 1 ;;
+    *) die "Unknown option: ${arg}" ;;
   esac
 done
+[ ${#RSYNC_MODE[@]} -eq 0 ] || STEP_TOTAL=3   # --dry-run skips the backup step
+
+echo -e "${BOLD}Deploying bfrackowiak.pl${NC}"
+echo -e "  target: ${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}"
+echo -e "  mode:   $([ ${#RSYNC_MODE[@]} -eq 0 ] && echo 'live' || echo 'dry-run')$([ ${#DELETE_FLAG[@]} -eq 0 ] || echo ', clean (deletes stale remote files)')"
 
 # --- sanity: config must exist (endpoints read it at runtime) ---
 if [ ! -f "${LOCAL_DIR}config.php" ]; then
-  echo -e "${RED}Missing config.php — copy config.example.php and fill it in.${NC}"; exit 1
+  die "Missing config.php — copy config.example.php and fill it in."
 fi
 
 # geoip.dat may live only on the server (generated there by tools/geoip_update.php);
@@ -46,22 +67,25 @@ fi
 GEOIP_PROTECT=()
 if [ ! -f "${LOCAL_DIR}content/geoip.dat" ]; then
   GEOIP_PROTECT=(--exclude='content/geoip.dat')
+  echo -e "  ${YELLOW}note: no local content/geoip.dat — remote copy protected from --clean${NC}"
 fi
 
-# --- 0. tests ---
-echo -e "${YELLOW}Running test suite${NC}"
+# --- 1. tests ---
+step "Running test suite"
 php "${LOCAL_DIR}tests/run.php"
+step_done "Tests passed"
 
-# --- 1. build ---
-echo -e "${YELLOW}Building site (php tools/build.php)${NC}"
+# --- 2. build ---
+step "Building site (php tools/build.php)"
 php "${LOCAL_DIR}tools/build.php"
+step_done "Build complete"
 
-# --- 2. backup remote -> local archive (skipped on --dry-run) ---
+# --- 3. backup remote -> local archive (skipped on --dry-run) ---
 if [ ${#RSYNC_MODE[@]} -eq 0 ]; then
+  step "Backing up remote -> ${BACKUP_ARCHIVE}"
   mkdir -p "${BACKUP_STAGE}"
-  echo -e "${YELLOW}Backing up ${SSH_USER}@${SSH_HOST}:${REMOTE_DIR} -> ${BACKUP_ARCHIVE}${NC}"
 
-  rsync -avz --progress \
+  rsync -az --progress \
     -e "ssh -p ${SSH_PORT}" \
     "${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}/" \
     "${BACKUP_STAGE}/"
@@ -69,13 +93,12 @@ if [ ${#RSYNC_MODE[@]} -eq 0 ]; then
   tar -czf "${BACKUP_ARCHIVE}" -C "${BACKUP_DIR}" "${TIMESTAMP}"
   rm -rf "${BACKUP_STAGE}"
 
-  echo -e "${GREEN}Backup saved: ${BACKUP_ARCHIVE}${NC}"
-else
-  echo -e "${YELLOW}--dry-run: skipping remote backup${NC}"
+  BACKUP_SIZE="$(du -h "${BACKUP_ARCHIVE}" | cut -f1)"
+  step_done "Backup saved (${BACKUP_SIZE})"
 fi
 
-# --- 3. deploy ---
-echo -e "${YELLOW}Deploying to ${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}${NC}"
+# --- 4. deploy ---
+step "Syncing to ${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}"
 
 # What ships: index.php, comments.php, a.php, stats.php, admin.php, .htaccess,
 # robots.txt, llms*.txt, sitemap.xml, feed.xml, favicons, photo, assets/, blog/,
@@ -83,7 +106,8 @@ echo -e "${YELLOW}Deploying to ${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}${NC}"
 # content/posts/ (the generator + comment-slug validation read it),
 # content/geoip.dat (offline IP→country db) and content/.htaccess.
 # What never ships: docs, drafts, tests, archives, backups, git, runtime data.
-rsync -avz --progress "${RSYNC_MODE[@]}" "${DELETE_FLAG[@]}" "${GEOIP_PROTECT[@]}" \
+RSYNC_LOG="$(mktemp)"
+rsync -az --progress --stats "${RSYNC_MODE[@]}" "${DELETE_FLAG[@]}" "${GEOIP_PROTECT[@]}" \
   --exclude='.git/' \
   --exclude='.gitignore' \
   --exclude='.claude/' \
@@ -105,16 +129,26 @@ rsync -avz --progress "${RSYNC_MODE[@]}" "${DELETE_FLAG[@]}" "${GEOIP_PROTECT[@]
   --exclude='.DS_Store' \
   -e "ssh -p ${SSH_PORT}" \
   "${LOCAL_DIR}" \
-  "${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}"
+  "${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}" \
+  | tee "${RSYNC_LOG}"
 
-echo -e "${GREEN}Deploy done: https://bfrackowiak.pl${NC}"
+XFERRED="$(grep -m1 'Number of regular files transferred' "${RSYNC_LOG}" | grep -oE '[0-9,]+$' || echo '?')"
+rm -f "${RSYNC_LOG}"
+step_done "Synced (${XFERRED} files transferred)"
+
+echo
+if [ ${#RSYNC_MODE[@]} -eq 0 ]; then
+  echo -e "${GREEN}${BOLD}Deploy done: https://bfrackowiak.pl${NC}"
+else
+  echo -e "${GREEN}${BOLD}Dry run done — nothing was touched.${NC}"
+fi
 echo -e "Post-deploy checks:"
 echo -e "  curl -s -o /dev/null -w '%{http_code}' https://bfrackowiak.pl/"
 echo -e "  curl -s -o /dev/null -w '%{http_code}' https://bfrackowiak.pl/blog/"
 echo -e "  stats: https://bfrackowiak.pl/stats.php?key=<STATS_KEY>"
 echo -e "  admin: https://bfrackowiak.pl/admin.php"
 
-# --- 4. scheduled-posts reminder ---
+# --- scheduled-posts reminder ---
 # A scheduled post only goes live when tools/build.php runs on the server after
 # its publish time — via the cron below, or the admin "Rebuild site now" button.
 QUEUE="$(cd "${LOCAL_DIR}" && php -r '
@@ -123,8 +157,12 @@ foreach (load_posts(true) as $p) if ($p["status"] === "scheduled")
     echo "  " . $p["slug"] . " -> " . date("Y-m-d H:i", $p["publish_ts"]) . "\n";
 ' 2>/dev/null || true)"
 if [ -n "${QUEUE}" ]; then
+  echo
   echo -e "${YELLOW}Scheduled posts waiting to go live:${NC}"
   echo "${QUEUE}"
   echo -e "Make sure the server cron is set (MyDevil panel or crontab -e):"
   echo -e "  */15 * * * * cd ${REMOTE_DIR} && php tools/build.php >/dev/null 2>&1"
 fi
+
+echo
+echo -e "${BOLD}Total time: $((SECONDS))s${NC}"

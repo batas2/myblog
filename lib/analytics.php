@@ -19,6 +19,33 @@ require_once __DIR__ . '/geoip.php';
 /** Beacon path contract — shared by the writer (a.php) and the drilldown filter (stats.php). */
 const AN_PATH_RE = '#^/[a-zA-Z0-9\-_/.]{0,200}$#';
 
+/**
+ * Self-exclusion cookie: browsers carrying it are never counted. Set and
+ * refreshed (1-year sliding) by every authenticated admin/stats view, and
+ * togglable by hand via /a.php?me=off|on. Deliberately JS-readable so the
+ * beacon can skip sending at the source; a.php drops carried-over hits as
+ * a second line of defense. Not a secret — forging it only removes the
+ * forger from the stats.
+ */
+const AN_OPTOUT_COOKIE = 'bfx';
+
+function an_is_opted_out(): bool
+{
+    return ($_COOKIE[AN_OPTOUT_COOKIE] ?? '') === '1';
+}
+
+/** Set ($on) or clear the exclusion cookie on the current response. */
+function an_optout_cookie(bool $on): void
+{
+    setcookie(AN_OPTOUT_COOKIE, $on ? '1' : '', [
+        'expires'  => $on ? time() + 31536000 : time() - 3600,
+        'path'     => '/',
+        'secure'   => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+        'httponly' => false,   // the beacon JS reads it to skip sending
+        'samesite' => 'Lax',
+    ]);
+}
+
 /** Bump when the schema below changes; an_db() fast-paths matching databases. */
 const AN_SCHEMA_VERSION = 2;
 

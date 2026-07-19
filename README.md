@@ -130,6 +130,10 @@ prints the queue after every deploy so nothing waits unnoticed.
   referrers, countries (offline GeoIP), browsers/OS/devices/screens, languages,
   timezones, UTM campaigns, and a recent-visits feed. Every table narrows to a
   single page via the path drilldown. Access: `?key=<stats_key>` or an admin session.
+- Self-exclusion: logging into `/admin.php` (or opening `/stats.php`) plants a
+  1-year `bfx` cookie that keeps that browser out of the analytics — refreshed
+  on every admin visit. Manual toggle per device: `/a.php?me=off` / `/a.php?me=on`.
+  Enforced twice: the beacon doesn't send, and the endpoint drops carried hits.
 - GeoIP: `php tools/geoip_update.php` downloads the free DB-IP country database
   (CC BY 4.0, ~15 MB compiled) into `content/geoip.dat`. Re-run monthly — locally
   before a deploy, or straight on the server. Lookups are offline `fseek` binary

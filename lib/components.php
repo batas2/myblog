@@ -145,8 +145,8 @@ function post_card(array $p): string
     return $out;
 }
 
-/** Featured split card for the newest essay. */
-function featured_card(array $p): string
+/** Featured split card for the newest essay. $eager only where it is the LCP image. */
+function featured_card(array $p, bool $eager = true): string
 {
     $hero = hero_meta($p['slug']);
     $html  = '<a class="featured2 rise-2" href="' . e(post_path($p['slug'])) . '">';
@@ -158,7 +158,9 @@ function featured_card(array $p): string
     $html .= '<span class="f2-go">Read the essay ' . arrow_icon() . '</span>';
     $html .= '</span>';
     if ($hero) {
-        $html .= '<span class="f2-media">' . img_eager($hero['src'], $p['title'], $hero['w'], $hero['h']) . '</span>';
+        $img = $eager ? img_eager($hero['src'], $p['title'], $hero['w'], $hero['h'])
+                      : img_lazy($hero['src'], $p['title'], $hero['w'], $hero['h']);
+        $html .= '<span class="f2-media">' . $img . '</span>';
     }
     return $html . '</a>';
 }
@@ -241,6 +243,7 @@ function beacon_script(): string
 <script>
 (function () {
   if (navigator.doNotTrack === '1' || !navigator.sendBeacon) return;
+  if (/(^|; )bfx=1/.test(document.cookie)) return;   // site owner opted out
   var send = function (o) { navigator.sendBeacon('/a.php', JSON.stringify(o)); };
   var tz = '';
   try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) {}

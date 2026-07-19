@@ -12,6 +12,7 @@ content/analytics.db
 content/geoip.dat
 content/analytics.db-*
 content/analytics.seed
+content/.ratelimit/
 content/comments/*.json
 
 # remote backups pulled by deploy.sh

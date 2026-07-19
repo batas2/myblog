@@ -4,7 +4,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 CMD="${1:-start}"
-PORT="${PORT:-8080}"
+PORT="${PORT:-8090}"
 
 if [ ! -f config.php ]; then
     echo "config.php missing — copying from config.example.php"

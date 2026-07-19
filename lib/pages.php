@@ -139,8 +139,14 @@ function render_tag_page(string $tag, array $posts, int $allCount): string
     );
 }
 
-/** Homepage partial: the three newest posts as compact rows. */
+/** Homepage partial: featured newest essay + the next three as compact rows. */
 function render_latest_partial(array $posts): string
 {
-    return log_rows(array_slice($posts, 0, 3));
+    // below the fold on the homepage — never compete with the hero portrait for priority
+    $html = featured_card($posts[0], false);
+    $more = array_slice($posts, 1, 3);
+    if ($more) {
+        $html .= "\n" . '<div style="margin-top:1.6rem">' . log_rows($more) . '</div>';
+    }
+    return $html;
 }

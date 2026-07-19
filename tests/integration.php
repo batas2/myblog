@@ -173,6 +173,7 @@ t_assert($ready, "php -S serving on :{$PORT}");
 t_eq(200, $code, 'homepage 200');
 t_contains('Get the next field note', $body, 'newsletter on homepage');
 t_contains('pagehide', $body, 'engagement beacon on homepage');
+t_contains('bfx=1', $body, 'beacon script honors the owner exclusion cookie');
 [$code, $body] = http_req('GET', "$BASE/blog/");
 t_eq(200, $code, 'blog index 200');
 [$code, $body] = http_req('GET', "$BASE/blog/tag/software-architecture/");
@@ -204,8 +205,22 @@ $beacon($chromeUa, '{"p":"javascript:alert(1)","r":""}');
 t_eq(204, $code, 'engagement beacon accepted');
 t_assert(is_file($SANDBOX . '/content/analytics.db'), 'analytics db created in sandbox');
 
+/* owner self-exclusion */
+[$code, $body, , $meHdrs] = http_req('GET', "$BASE/a.php?me=off");
+t_eq(200, $code, 'exclusion toggle responds');
+t_contains('excluded from analytics', $body, 'toggle confirms exclusion');
+t_assert((bool) array_filter($meHdrs, fn($h) => stripos($h, 'Set-Cookie: bfx=1') === 0), 'toggle sets the bfx cookie');
+[$code] = http_req('POST', "$BASE/a.php", [
+    'headers' => "User-Agent: {$chromeUa}\r\nContent-Type: text/plain\r\nCookie: bfx=1\r\n",
+    'body' => '{"p":"/owner-visit/","r":""}',
+]);
+t_eq(204, $code, 'excluded beacon still answers 204');
+[, , , $meHdrs] = http_req('GET', "$BASE/a.php?me=on");
+t_assert((bool) array_filter($meHdrs, fn($h) => stripos($h, 'Set-Cookie: bfx=;') === 0 || stripos($h, 'Set-Cookie: bfx=deleted') === 0), 'toggle clears the cookie');
+
 $adb = new PDO('sqlite:' . $SANDBOX . '/content/analytics.db');
-t_eq('3', (string) $adb->query('SELECT COUNT(*) FROM hits')->fetchColumn(), '3 rows stored (bot + junk dropped)');
+t_eq('3', (string) $adb->query('SELECT COUNT(*) FROM hits')->fetchColumn(), '3 rows stored (bot + junk + owner dropped)');
+t_eq('0', (string) $adb->query("SELECT COUNT(*) FROM hits WHERE path = '/owner-visit/'")->fetchColumn(), 'opted-out browser never lands in the db');
 $row = $adb->query("SELECT * FROM hits WHERE path = '/blog/data-driven-theater/'")->fetch(PDO::FETCH_ASSOC);
 t_eq('news.ycombinator.com', $row['ref'], 'referrer host stored');
 t_eq('news', $row['ref_group'], 'referrer classified as news');
@@ -249,8 +264,9 @@ t_eq('1', $m[1] ?? '?', 'drilldown narrows to one view');
 
 /* ---------------- comments flow ---------------- */
 section('comments flow');
-// clear the per-IP rate-limit residue from earlier runs (same derivation as comments.php)
-@unlink(sys_get_temp_dir() . '/c_rl_' . substr(sha1('127.0.0.1|bfrackowiak-comments'), 0, 16));
+// clear per-IP rate-limit residue (markers live in the sandbox's content/.ratelimit)
+$rlDir = $SANDBOX . '/content/.ratelimit';
+@unlink($rlDir . '/c_rl_' . substr(sha1('127.0.0.1|bfrackowiak-comments'), 0, 16));
 
 $postUrl = "$BASE/blog/nobody-owns-the-sum/";
 [, $page] = http_req('GET', $postUrl);
@@ -302,11 +318,12 @@ t_contains('Integration test comment.', $page2, 'comment text rendered');
 
 [, , $loc] = $postC($form(['c_text' => 'second, too fast']));
 t_contains('cerr=slow', $loc, 'rate limit blocks immediate second post');
-@unlink(sys_get_temp_dir() . '/c_rl_' . substr(sha1('127.0.0.1|bfrackowiak-comments'), 0, 16));
+t_assert(is_file($rlDir . '/c_rl_' . substr(sha1('127.0.0.1|bfrackowiak-comments'), 0, 16)), 'rate-limit marker lives in content/.ratelimit, not shared /tmp');
+@unlink($rlDir . '/c_rl_' . substr(sha1('127.0.0.1|bfrackowiak-comments'), 0, 16));
 
 /* ---------------- admin flow ---------------- */
 section('admin flow');
-@unlink(sys_get_temp_dir() . '/adm_rl_' . substr(sha1('127.0.0.1|bfrackowiak-admin'), 0, 16));
+@unlink($rlDir . '/adm_rl_' . substr(sha1('127.0.0.1|bfrackowiak-admin'), 0, 16));
 
 [$code, $body] = http_req('GET', "$BASE/admin.php");
 t_eq(200, $code, 'admin login page 200');
@@ -320,6 +337,7 @@ t_contains('err=login', $loc, 'wrong password flagged');
 [$code, , $loc, $hdrs] = http_req('POST', "$BASE/admin.php", ['body' => http_build_query(['action' => 'login', 'password' => ADMIN_PW])]);
 t_eq(302, $code, 'correct password redirects');
 t_assert(!str_contains($loc, 'err'), 'no error on correct password');
+t_assert((bool) array_filter($hdrs, fn($h) => stripos($h, 'Set-Cookie: bfx=1') === 0), 'login excludes the owner browser from stats');
 $cookie = '';
 foreach ($hdrs as $h) {
     if (stripos($h, 'Set-Cookie: bfadmin=') === 0 && preg_match('/bfadmin=([^;]+)/', $h, $m)) $cookie = 'bfadmin=' . $m[1];
@@ -403,6 +421,11 @@ t_not_contains('Integration test comment.', $page3, 'deleted comment gone from t
 t_eq(302, $code, 'logout redirects');
 [$code, $body] = $asAdmin('GET', "$BASE/admin.php");
 t_contains('Sign in', $body, 'session gone after logout');
-@unlink(sys_get_temp_dir() . '/adm_rl_' . substr(sha1('127.0.0.1|bfrackowiak-admin'), 0, 16));
+@unlink($rlDir . '/adm_rl_' . substr(sha1('127.0.0.1|bfrackowiak-admin'), 0, 16));
+
+/* dashboards send private-page headers */
+[, , , $h1] = http_req('GET', "$BASE/admin.php");
+t_assert((bool) array_filter($h1, fn($h) => stripos($h, 'X-Frame-Options: DENY') === 0), 'admin sends X-Frame-Options');
+t_assert((bool) array_filter($h1, fn($h) => stripos($h, 'Cache-Control: no-store') === 0), 'admin sends no-store');
 
 if (basename($_SERVER['SCRIPT_NAME'] ?? '') === 'integration.php') exit(t_summary());

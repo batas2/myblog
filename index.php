@@ -157,51 +157,150 @@ $form_message = $form['message'];
     </div>
   </section>
 
+  <!-- ================= WRITING ================= -->
+  <section id="writing" class="section">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow"><span class="blip blip-live"></span>Field Notes</span>
+        <h2>The latest signals</h2>
+        <p>Weekly essays on architecture, people, and the corporate machine. New signal most Mondays.</p>
+      </div>
+
+      <?php include __DIR__ . '/blog/_latest.php'; ?>
+
+      <p style="margin-top:2rem">
+        <a class="btn btn-ghost" href="/blog/">All essays &rarr;</a>
+        <a class="btn btn-ghost" href="https://medium.com/@bfrackowiak" target="_blank" rel="noopener" style="margin-left:0.6rem">Also on Medium ↗</a>
+      </p>
+    </div>
+  </section>
+
   <!-- ================= JOURNEY ================= -->
   <section id="journey" class="section">
     <div class="wrap">
       <div class="section-head">
         <span class="eyebrow"><span class="blip"></span>The journey</span>
-        <h2>Systems since 2008, one recurring lesson</h2>
-        <p>Every technical problem I've been hired to solve eventually turned out to have an organizational problem standing behind it, holding its coat.</p>
+        <h2>From proving architectures to shipping them — and now teaching machines to help.</h2>
+        <p>I started by trying to formalize architecture in a PhD, learned in production why people bend every formal model, and now lead an AI transformation across hundreds of engineers. The essays below are the receipts from each stage.</p>
       </div>
 
       <ol class="timeline">
         <li>
-          <span class="when">2008–2017</span>
-          <h3>Learning the theory, then testing it</h3>
-          <p>Computer science in Toruń, then doctoral research at the University of Warsaw (2013–2017), building a formal language for validating software architecture. First .NET jobs taught me how little of production survives contact with theory.</p>
+          <div class="tl-rail">
+            <span class="tl-when">2008–2013</span>
+            <span class="tl-place">Toruń</span>
+          </div>
+          <div class="tl-body">
+            <h3>Computer science, then the production shock</h3>
+            <p><strong>University taught elegant models. Production taught their price.</strong> A CS degree in Toruń, the first .NET jobs, the first incident — and the lasting discovery that no theory survives deployment unchanged.</p>
+            <div class="tl-facts"><span>.NET</span><span>first production systems</span></div>
+          </div>
         </li>
         <li>
-          <span class="when">2015–2017</span>
-          <h3>Consulting years at Cybercom</h3>
-          <p>Senior consultant and team leader across client projects and offshore teams. First lesson in reading organizations, not just codebases.</p>
+          <div class="tl-rail">
+            <span class="tl-when">2013–2017</span>
+            <span class="tl-place">University of Warsaw</span>
+            <span class="tl-metric"><b>4 yrs</b><i>doctoral research</i></span>
+          </div>
+          <div class="tl-body">
+            <h3>Doctoral research: can architecture be proven?</h3>
+            <p><strong>Built a formal language for validating software architecture.</strong> The honest result: boxes and arrows can be formalized — the forces that bend them are organizational. That tension powers every essay on this site.</p>
+            <div class="tl-facts"><span>formal methods</span><span>architecture validation</span></div>
+          </div>
         </li>
         <li>
-          <span class="when">2017–2022</span>
-          <h3>Technical Leader @ EcoVadis</h3>
-          <p>Took a 15-year legacy monolith and led its migration toward microservices: CI/CD, domain-driven design, and a lot of hard conversations. Wrote about the identity crisis that role creates.</p>
+          <div class="tl-rail">
+            <span class="tl-when">2015–2017</span>
+            <span class="tl-place">Cybercom</span>
+          </div>
+          <div class="tl-body">
+            <h3>Consulting years</h3>
+            <p><strong>Every engagement was two systems: the codebase, and the organization around it.</strong> Senior consultant and team leader across client projects and offshore teams. The second system was never in the repository — and usually mattered more.</p>
+            <div class="tl-facts"><span>consulting</span><span>team leadership</span><span>offshore delivery</span></div>
+          </div>
         </li>
         <li>
-          <span class="when">2022–today</span>
-          <h3>Solution Architect / Senior Staff Engineer</h3>
-          <p>Architecture across 20+ bounded contexts on an event-driven Azure platform. Decision records, governance, and the discovery that most architecture work is deciding who decides.</p>
+          <div class="tl-rail">
+            <span class="tl-when">2017–2022</span>
+            <span class="tl-place">EcoVadis</span>
+            <span class="tl-metric"><b>15-yr</b><i>monolith moved</i></span>
+          </div>
+          <div class="tl-body">
+            <h3>Technical Leader: a fifteen-year monolith, moved</h3>
+            <p><strong>Led a 15-year legacy monolith toward microservices.</strong> CI/CD where there was none, domain-driven design as the shared language, repositories that merged themselves — and the hard conversations no diagram captures. Also the era that taught me "technical leader" is two jobs wearing one badge.</p>
+            <div class="tl-facts"><span>legacy migration</span><span>domain-driven design</span><span>CI/CD</span><span>microservices</span></div>
+            <div class="tl-notes"><span class="lbl">Field notes from this era</span>
+              <a href="/blog/technical-leader-identity-disorder/">Technical Leader: Identity Disorder</a>
+              <a href="/blog/the-automerger/">The Automerger</a>
+              <a href="/blog/stop-calling-it-legacy-code/">Stop Calling It Legacy Code</a>
+            </div>
+          </div>
         </li>
         <li>
-          <span class="when">2025–today</span>
-          <h3>Leading an AI transformation at scale</h3>
-          <p>Driving AI-native engineering across fifteen squads and several hundred developers: an agentic tech radar, probabilistic metrics, and prompt-driven architecture practice. The field notes from this work became this blog.</p>
+          <div class="tl-rail">
+            <span class="tl-when">2022–today</span>
+            <span class="tl-place">EcoVadis</span>
+            <span class="tl-metric"><b>20+</b><i>bounded contexts</i></span>
+          </div>
+          <div class="tl-body">
+            <h3>Solution Architect / Senior Staff Engineer</h3>
+            <p><strong>Architecture across 20+ bounded contexts on an event-driven Azure platform.</strong> Decision records, governance, integration design — and the discovery that most architecture work is deciding who decides. The sharpest tool at this altitude is a well-aimed question, not a diagram.</p>
+            <div class="tl-facts"><span>event-driven</span><span>Azure</span><span>ADRs &amp; governance</span></div>
+            <div class="tl-notes"><span class="lbl">Field notes from this era</span>
+              <a href="/blog/decisions-have-an-architecture-too/">Decisions Have an Architecture Too</a>
+              <a href="/blog/nobody-owns-the-sum/">Nobody Owns the Sum</a>
+              <a href="/blog/questions-are-an-architects-sharpest-tool/">Questions Are an Architect's Sharpest Tool</a>
+            </div>
+          </div>
         </li>
         <li>
-          <span class="when">Nights &amp; weekends</span>
-          <h3>Building my own products</h3>
-          <p>An invoicing SaaS for the Polish market, an architecture-modeling tool where the diagram is the code, and a self-hosted scheduler in Go. Proof that I still ship, and an endless source of material.</p>
+          <div class="tl-rail">
+            <span class="tl-when">2025–today</span>
+            <span class="tl-place">EcoVadis</span>
+            <span class="tl-metric"><b>15</b><i>squads, AI-native</i></span>
+          </div>
+          <div class="tl-body">
+            <h3>Leading an AI transformation at scale</h3>
+            <p><strong>AI-native engineering across fifteen squads and several hundred developers.</strong> An agentic tech radar that turns signals into decisions, probabilistic metrics for work no database records, and a prompt-driven architecture practice. This blog exists because that work keeps producing field notes worth publishing.</p>
+            <div class="tl-facts"><span>Claude Code</span><span>agentic tech radar</span><span>probabilistic metrics</span></div>
+            <div class="tl-notes"><span class="lbl">Field notes from this era</span>
+              <a href="/blog/from-signals-to-blips/">From Signals to Blips</a>
+              <a href="/blog/probabilistic-metrics/">Probabilistic Metrics</a>
+              <a href="/blog/prompt-driven-architecture/">Prompt-Driven Architecture</a>
+              <a href="/blog/multi-agent-is-an-org-chart/">Multi-Agent Is an Org Chart</a>
+            </div>
+          </div>
+        </li>
+        <li>
+          <div class="tl-rail">
+            <span class="tl-when">nights &amp; weekends</span>
+            <span class="tl-place">own products</span>
+            <span class="tl-metric"><b>×3</b><i>shipped solo</i></span>
+          </div>
+          <div class="tl-body">
+            <h3>Building my own products</h3>
+            <p><strong>Three products, one person, all in production.</strong> An invoicing SaaS wrestling the government e-invoicing spec and its parliament-written edge cases, an architecture-modeling tool where the diagram cannot lie because it <em>is</em> the code, and a self-hosted scheduler in Go. Proof of shipping — and an endless source of material.</p>
+            <div class="tl-facts"><span>SaaS</span><span>Go</span><span>product design</span></div>
+            <div class="tl-notes"><span class="lbl">Field notes from this era</span>
+              <a href="/blog/a-company-of-one-staffed-by-agents/">A Company of One, Staffed by Agents</a>
+              <a href="/blog/the-diagram-that-cannot-lie/">The Diagram That Cannot Lie</a>
+              <a href="/blog/edge-cases-written-by-parliament/">Edge Cases Written by Parliament</a>
+              <a href="/blog/anti-personas-the-users-i-refuse-to-serve/">Anti-Personas</a>
+            </div>
+          </div>
         </li>
       </ol>
 
       <div class="aim">
-        <p>"My aim is simple: to be the architect who connects classic distributed-systems discipline with an AI-native way of working, and to show, in public, one essay a week, how systems and the people who build them actually behave."</p>
-        <div class="who">— what I'm aiming for</div>
+        <span class="eyebrow"><span class="blip blip-live"></span>The goal</span>
+        <p style="margin-top:0.9rem">"To be the architect who connects classic distributed-systems discipline with an AI-native way of working — and to show, in public, one essay a week, how systems and the people who build them actually behave."</p>
+        <div class="who">— where all of this is heading</div>
+        <div class="aim-cta">
+          <a class="btn btn-primary" href="/blog/">Read the field notes
+            <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+          </a>
+          <a class="btn btn-ghost" href="#contact">Work with me</a>
+        </div>
       </div>
     </div>
   </section>
@@ -263,36 +362,21 @@ $form_message = $form['message'];
     </div>
   </section>
 
-  <!-- ================= WRITING ================= -->
-  <section id="writing" class="section">
+  <!-- ================= NEWSLETTER ================= -->
+  <section class="section">
     <div class="wrap">
-      <div class="section-head">
-        <span class="eyebrow"><span class="blip"></span>Field Notes</span>
-        <h2>The latest signals</h2>
-        <p>Weekly essays on architecture, people, and the corporate machine. New signal most Mondays.</p>
-      </div>
-
-      <?php include __DIR__ . '/blog/_latest.php'; ?>
-
-      <p style="margin-top:2rem">
-        <a class="btn btn-ghost" href="/blog/">All essays &rarr;</a>
-        <a class="btn btn-ghost" href="https://medium.com/@bfrackowiak" target="_blank" rel="noopener" style="margin-left:0.6rem">Also on Medium ↗</a>
-      </p>
-
-      <div style="margin-top:3rem">
-        <div class="newsletter" id="newsletter">
-          <div class="nl-text">
-            <span class="eyebrow"><span class="blip blip-live"></span>The signal</span>
-            <h3>Get the next field note</h3>
-            <p>One essay on architecture, the people around it, and the corporate machine. Most Mondays, straight to your inbox.</p>
-          </div>
-          <form action="<?= htmlspecialchars((string) cfg('newsletter_action')) ?>" method="post" class="nl-form">
-            <label class="visually-hidden" for="nl-email-home">Email address</label>
-            <input type="email" id="nl-email-home" name="email" required placeholder="you@example.com" autocomplete="email">
-            <button type="submit">Subscribe</button>
-            <span class="nl-note">No spam. Unsubscribe anytime.</span>
-          </form>
+      <div class="newsletter" id="newsletter">
+        <div class="nl-text">
+          <span class="eyebrow"><span class="blip blip-live"></span>The signal</span>
+          <h3>Get the next field note</h3>
+          <p>One essay on architecture, the people around it, and the corporate machine. Most Mondays, straight to your inbox.</p>
         </div>
+        <form action="<?= htmlspecialchars((string) cfg('newsletter_action')) ?>" method="post" class="nl-form">
+          <label class="visually-hidden" for="nl-email-home">Email address</label>
+          <input type="email" id="nl-email-home" name="email" required placeholder="you@example.com" autocomplete="email">
+          <button type="submit">Subscribe</button>
+          <span class="nl-note">No spam. Unsubscribe anytime.</span>
+        </form>
       </div>
     </div>
   </section>

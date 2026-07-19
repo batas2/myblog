@@ -3,6 +3,6 @@ services:
     build: .
     container_name: bfrackowiak-pl
     ports:
-      - "${PORT:-8080}:8080"
+      - "${PORT:-8090}:8080"
     volumes:
       - .:/app
