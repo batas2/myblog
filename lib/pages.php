@@ -189,35 +189,23 @@ function render_start_page(array $posts): string
     $hook = $pick('mathematicians-vs-lawyers');
     $doors = [
         [
-            'k'       => 'Architecture & orgs',
-            'icon'    => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/></svg>',
-            'who'     => 'For architects and tech leads meeting people problems dressed as technical ones.',
-            'reads'   => [
-                ['nobody-owns-the-sum',                        'The sharpest org observation on this blog.'],
-                ['decisions-have-an-architecture-too',         ''],
-                ['the-anti-corruption-layer-is-for-people-too', ''],
-            ],
+            'k'     => 'Architecture & orgs',
+            'title' => 'People problems, dressed as technical ones',
+            'desc'  => 'Ownership gaps, decision rights, and the org chart hiding inside your architecture. For architects and tech leads who keep fixing the same "technical" issue that never was one.',
+            'reads' => ['nobody-owns-the-sum', 'decisions-have-an-architecture-too', 'the-anti-corruption-layer-is-for-people-too'],
         ],
         [
-            'k'       => 'The AI transformation',
-            'series'  => 'The “Tools That Scale” series — read in order',
-            'icon'    => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z"/></svg>',
-            'who'     => 'For leaders told to "do AI" — how I run adoption across fifteen squads.',
-            'reads'   => [
-                ['from-signals-to-blips',      'A tech radar becomes the engine of a transformation.'],
-                ['probabilistic-metrics',      ''],
-                ['prompt-driven-architecture', ''],
-            ],
+            'k'      => 'The AI transformation',
+            'title'  => 'Running AI adoption at real scale',
+            'desc'   => 'Fifteen squads, several hundred developers, one transformation: the tech radar that drives it, the metrics that survive contact with reality, and the architecture practice that grew out of both.',
+            'series' => 'The “Tools That Scale” series',
+            'reads'  => ['from-signals-to-blips', 'probabilistic-metrics', 'prompt-driven-architecture'],
         ],
         [
-            'k'       => 'Building in the open',
-            'icon'    => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"/></svg>',
-            'who'     => 'For anyone building alone — my products, shipped with AI agents, receipts included.',
-            'reads'   => [
-                ['a-company-of-one-staffed-by-agents', 'What AI actually changes about building solo.'],
-                ['the-diagram-that-cannot-lie',        ''],
-                ['edge-cases-written-by-parliament',   ''],
-            ],
+            'k'     => 'Building in the open',
+            'title' => 'One person, three products, AI agents',
+            'desc'  => 'Field reports from shipping my own products solo, with AI doing the typing: what actually changes, what breaks, and the receipts to prove it.',
+            'reads' => ['a-company-of-one-staffed-by-agents', 'the-diagram-that-cannot-lie', 'edge-cases-written-by-parliament'],
         ],
     ];
 
@@ -227,7 +215,7 @@ function render_start_page(array $posts): string
     // structured data: a CollectionPage over the featured picks
     $featured = array_values(array_filter(array_merge(
         [$hook],
-        ...array_map(fn($d) => array_map(fn($r) => $pick($r[0]), $d['reads']), $doors)
+        ...array_map(fn($d) => array_map($pick, $d['reads']), $doors)
     )));
     $extra  = ld_script([
         '@context' => 'https://schema.org',
@@ -279,29 +267,34 @@ function render_start_page(array $posts): string
         $html .= '</a></div>';
     }
 
-    // ---- three doors
+    // ---- three reading paths (full-width rows: pitch left, essays right)
     $html .= '<div class="section-head" style="margin-top:4rem">' . eyebrow('The map') . '<h2>Then pick your door</h2>';
-    $html .= '<p>Three threads run through everything here. Follow the one that sounds like your week.</p></div>';
-    $html .= '<div class="grid-3 start-doors">';
-    foreach ($doors as $d) {
-        $html .= '<article class="card door">';
-        $html .= '<div class="card-top"><div class="icon-tile">' . $d['icon'] . '</div><span class="k">' . e($d['k']) . '</span></div>';
-        $html .= '<p class="d-promise">' . e($d['who']) . '</p>';
-        $html .= '<ol class="d-path">';
-        foreach ($d['reads'] as $i => [$slug, $why]) {
-            $p = $pick($slug);
-            if (!$p) continue;
-            $html .= '<li><a href="' . e(post_path($slug)) . '">';
-            $html .= '<span class="d-no">' . sprintf('%02d', $i + 1) . '</span>';
-            $html .= '<span class="d-read"><span class="d-title">' . e($p['title']) . '</span>';
-            if ($why !== '') $html .= '<span class="d-why">' . e($why) . '</span>';
-            $html .= '</span>';
-            $html .= '<span class="d-min">' . $p['minutes'] . ' min</span>';
+    $html .= '<p>Three threads run through all ' . $n . ' essays. Each path below tells you exactly what it covers and where to start.</p></div>';
+    $html .= '<div class="paths">';
+    foreach ($doors as $di => $d) {
+        $reads = array_values(array_filter(array_map($pick, $d['reads'])));
+        if (!$reads) continue;
+        $total = array_sum(array_column($reads, 'minutes'));
+        $html .= '<section class="path">';
+        $html .= '<div class="path-info">';
+        $html .= '<span class="path-k">' . sprintf('%02d', $di + 1) . ' · ' . e($d['k']) . '</span>';
+        $html .= '<h3>' . e($d['title']) . '</h3>';
+        $html .= '<p>' . e($d['desc']) . '</p>';
+        $html .= '<span class="path-meta">' . count($reads) . ' essays · ' . $total . ' min total'
+               . (!empty($d['series']) ? ' · ' . e($d['series']) . ', read in order' : '') . '</span>';
+        $html .= '<a class="btn btn-primary path-cta" href="' . e(post_path($reads[0]['slug'])) . '">Start reading ' . arrow_icon() . '</a>';
+        $html .= '</div>';
+        $html .= '<ol class="path-list">';
+        foreach ($reads as $i => $p) {
+            $html .= '<li><a href="' . e(post_path($p['slug'])) . '">';
+            $html .= '<span class="pl-no">' . sprintf('%02d', $i + 1) . '</span>';
+            $html .= '<span class="pl-txt"><span class="pl-title">' . e($p['title']) . '</span>';
+            $html .= '<span class="pl-sub">' . e($p['subtitle']) . '</span></span>';
+            $html .= '<span class="pl-min">' . $p['minutes'] . ' min</span>';
             $html .= '</a></li>';
         }
         $html .= '</ol>';
-        if (!empty($d['series'])) $html .= '<span class="d-series">' . e($d['series']) . '</span>';
-        $html .= '</article>';
+        $html .= '</section>';
     }
     $html .= '</div>';
     $html .= '<p style="margin-top:1.8rem"><a class="btn btn-ghost" href="/blog/">Browse all ' . $n . ' essays &rarr;</a></p>';
