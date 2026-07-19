@@ -30,3 +30,4 @@ _archive/
 *.log
 .claude/
 content/newsletter.lock
+content/.sessions/

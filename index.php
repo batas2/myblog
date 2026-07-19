@@ -368,7 +368,7 @@ $form_message = $form['message'];
           <h3>Get the next field note</h3>
           <p>One essay on architecture, the people around it, and the corporate machine. Most Mondays, straight to your inbox.</p>
         </div>
-        <form action="<?= htmlspecialchars((string) cfg('newsletter_action')) ?>" method="post" class="nl-form">
+        <form action="<?= e((string) cfg('newsletter_action')) ?>" method="post" class="nl-form">
           <label class="visually-hidden" for="nl-email-home">Email address</label>
           <input type="email" id="nl-email-home" name="email" required placeholder="you@example.com" autocomplete="email">
           <input type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px">
@@ -412,17 +412,17 @@ $form_message = $form['message'];
           <?php else: ?>
             <h3>Send me a message</h3>
             <?php if ($form_error): ?>
-              <div class="form-err"><?= htmlspecialchars($form_message) ?></div>
+              <div class="form-err"><?= e($form_message) ?></div>
             <?php endif; ?>
             <form method="POST" action="/#contact" novalidate>
               <div class="two-col">
                 <div class="field">
                   <label for="name">Name</label>
-                  <input type="text" id="name" name="name" required value="<?= htmlspecialchars($_POST['name'] ?? '') ?>" placeholder="Jane Smith">
+                  <input type="text" id="name" name="name" required value="<?= e((string) ($_POST['name'] ?? '')) ?>" placeholder="Jane Smith">
                 </div>
                 <div class="field">
                   <label for="email">Email</label>
-                  <input type="email" id="email" name="email" required value="<?= htmlspecialchars($_POST['email'] ?? '') ?>" placeholder="jane@company.com">
+                  <input type="email" id="email" name="email" required value="<?= e((string) ($_POST['email'] ?? '')) ?>" placeholder="jane@company.com">
                 </div>
               </div>
               <div class="field">
@@ -437,7 +437,7 @@ $form_message = $form['message'];
               </div>
               <div class="field">
                 <label for="message">Message</label>
-                <textarea id="message" name="message" required placeholder="Tell me about your team, your system, and what you're trying to achieve…"><?= htmlspecialchars($_POST['message'] ?? '') ?></textarea>
+                <textarea id="message" name="message" required placeholder="Tell me about your team, your system, and what you're trying to achieve…"><?= e((string) ($_POST['message'] ?? '')) ?></textarea>
               </div>
               <?php if (turnstile_enabled()): ?>
               <div class="field">

@@ -224,23 +224,6 @@ td.dim, .dim { color: var(--muted); }
 CSS;
 }
 
-/** Self-hosted GoatCounter loader ('' when unconfigured). DNT-respecting. */
-function goatcounter_script(): string
-{
-    $url = e((string) cfg('goatcounter_url', ''));
-    if ($url === '') return '';
-    return <<<HTML
-
-<script>
-if (navigator.doNotTrack !== '1') {
-  var s = document.createElement('script'); s.async = true;
-  s.dataset.goatcounter = '{$url}/count'; s.src = '{$url}/count.js';
-  document.body.appendChild(s);
-}
-</script>
-HTML;
-}
-
 /**
  * First-party analytics beacon (a.php). Sends one pageview with coarse
  * client context, then cumulative engaged-seconds pings whenever the tab

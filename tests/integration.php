@@ -58,7 +58,6 @@ file_put_contents($SANDBOX . '/config.php', '<?php return ' . var_export([
     'newsletter_action'   => '/n.php',
     'comments_secret'     => 'itest-comments-secret',
     'stats_key'           => STATS_KEY,
-    'goatcounter_url'     => '',
     'admin_password_hash' => password_hash(ADMIN_PW, PASSWORD_DEFAULT),
     'timezone'            => 'Europe/Warsaw',
     'php_bin'             => PHP_BINARY,

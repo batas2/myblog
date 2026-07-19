@@ -121,7 +121,10 @@ rsync -az --progress --stats "${RSYNC_MODE[@]}" "${DELETE_FLAG[@]}" "${GEOIP_PRO
   --exclude='_archive/' \
   --exclude='_remote-backup/' \
   --exclude='content/comments/' \
-  --exclude='srvstats/' \
+  --exclude='content/.sessions/' \
+  --exclude='Dockerfile' \
+  --exclude='docker-compose.yml' \
+  --exclude='run.sh' \
   --exclude='content/analytics.db' \
   --exclude='content/analytics.db-*' \
   --exclude='content/analytics.seed' \

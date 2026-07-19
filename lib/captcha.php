@@ -1,6 +1,6 @@
 <?php
 /**
- * lib/captcha.php — Cloudflare Turnstile (shared with desta.pl — same account).
+ * lib/captcha.php — Cloudflare Turnstile.
  *
  * Enabled only when config.php has both keys in the 'turnstile' block:
  *   'turnstile' => ['sitekey' => '0x4AAA…', 'secret' => '0x4AAA…']

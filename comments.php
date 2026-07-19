@@ -100,6 +100,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['c_submit']) && !isset
     // bots: pretend success, store nothing
     if ($trap !== '' || $age < 4 || $age > 86400) { header("Location: {$back}#comments"); exit; }
 
+    // rate limit BEFORE the captcha: siteverify is an outbound call, and the
+    // throttle must price a flood of attempts, not run after them
+    $rl = throttle_path('c_rl_', 'bfrackowiak-comments', (string) ($_SERVER['REMOTE_ADDR'] ?? ''));
+    if (is_file($rl) && time() - (int) filemtime($rl) < C_MIN_GAP) { header("Location: {$back}?cerr=slow#comment-form"); exit; }
+
     // Turnstile when configured, the stateless math captcha otherwise
     if (turnstile_enabled()) {
         if (!turnstile_verify_post()) { header("Location: {$back}?cerr=captcha#comment-form"); exit; }
@@ -109,9 +114,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['c_submit']) && !isset
     if (filter_var($email, FILTER_VALIDATE_EMAIL) === false) { header("Location: {$back}?cerr=email#comment-form"); exit; }
     if ($text === '') { header("Location: {$back}?cerr=empty#comment-form"); exit; }
     if (mb_strlen($text) > C_MAX_TEXT || mb_strlen($email) > 254) { header("Location: {$back}?cerr=long#comment-form"); exit; }
-
-    $rl = throttle_path('c_rl_', 'bfrackowiak-comments', (string) ($_SERVER['REMOTE_ADDR'] ?? ''));
-    if (is_file($rl) && time() - (int) filemtime($rl) < C_MIN_GAP) { header("Location: {$back}?cerr=slow#comment-form"); exit; }
 
     // stored raw, escaped with e() at render — strip_tags here would mangle
     // legitimate text like "for x<10" into "for x2"

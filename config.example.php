@@ -42,10 +42,6 @@ return [
     // CLI php used by the admin "Rebuild site now" button
     'php_bin' => 'php',
 
-    // self-hosted GoatCounter base URL, e.g. 'https://stats.bfrackowiak.pl'
-    // (see docs/ANALYTICS-SETUP.md); leave '' to omit the tracker snippet
-    'goatcounter_url' => '',
-
     // Cloudflare Turnstile captcha (contact form + comments). Both keys set =
     // Turnstile replaces the built-in math captcha; leave empty to keep the
     // dependency-free defenses. Remember to allow this hostname on the widget.

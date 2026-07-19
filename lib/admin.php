@@ -25,6 +25,12 @@ function admin_enabled(): bool
 function admin_session_start(): void
 {
     if (session_status() === PHP_SESSION_ACTIVE) return;
+    // same threat model as the rate-limit markers (helpers.php): the default
+    // save_path can be a world-shared tmp on some hosts — keep session files
+    // in our own 0700 directory instead
+    $sess = CONTENT_DIR . '/.sessions';
+    if (!is_dir($sess)) @mkdir($sess, 0700, true);
+    if (is_dir($sess) && is_writable($sess)) session_save_path($sess);
     // reject attacker-supplied session ids (fixation defense beyond the login-time regenerate)
     ini_set('session.use_strict_mode', '1');
     session_name('bfadmin');
