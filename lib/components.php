@@ -85,7 +85,7 @@ function author_box(): string
 {
     return <<<HTML
 <div class="author-wrap"><div class="author">
-  <img src="/mysefl.jpeg" alt="Bartosz Frąckowiak" loading="lazy">
+  <img src="/myself.jpeg" alt="Bartosz Frąckowiak" loading="lazy">
   <div>
     <div class="name">Bartosz Frąckowiak</div>
     <p>Solution architect. I write weekly about software architecture, the humans around it, and the corporate machine they form together.</p>

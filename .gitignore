@@ -32,3 +32,9 @@ _archive/
 content/newsletter.lock
 content/.sessions/
 content/.buildlock
+
+# never publish: unpublished essays and working drafts
+drafts/
+
+# deployment target (per-machine, holds the SSH coordinates)
+deploy.env

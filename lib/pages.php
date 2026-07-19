@@ -243,7 +243,7 @@ function render_start_page(array $posts): string
 
     // ---- intro: who writes this, and why trust him
     $html .= '<div class="section-head blog-hero rise start-intro">';
-    $html .= '<img class="start-face" src="/mysefl.jpeg" alt="Bartosz Frąckowiak" width="76" height="76" loading="lazy" decoding="async">';
+    $html .= '<img class="start-face" src="/myself.jpeg" alt="Bartosz Frąckowiak" width="76" height="76" loading="lazy" decoding="async">';
     $html .= eyebrow('Start here', true);
     $html .= '<h1 style="font-size:clamp(2.1rem,4.6vw,3rem)">' . $n . ' essays in. Here is the map.</h1>';
     $html .= '<p>I\'m <strong>Bartosz Frąckowiak</strong> — solution architect, currently leading an AI transformation across several hundred engineers. Every week I publish one field note about systems, the people around them, and the corporate machine they form together. This page is the shortest path to the good stuff.</p>';

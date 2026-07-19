@@ -54,7 +54,7 @@ file_put_contents($SANDBOX . '/config.php', '<?php return ' . var_export([
     'site_url'            => 'https://bfrackowiak.pl',
     'site_name'           => 'bfrackowiak.pl',
     'author'              => 'Bartosz Frąckowiak',
-    'og_image'            => 'https://bfrackowiak.pl/mysefl.jpeg',
+    'og_image'            => 'https://bfrackowiak.pl/myself.jpeg',
     'newsletter_action'   => '/n.php',
     'comments_secret'     => 'itest-comments-secret',
     'stats_key'           => STATS_KEY,

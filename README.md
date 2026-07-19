@@ -20,6 +20,9 @@ form, and first-party analytics.
 - **Admin control room** — `/admin.php` (password-protected, sessions + CSRF): the
   publishing pipeline with countdowns, one-click "rebuild now", comment moderation,
   analytics overview, system health.
+- **Optional Cloudflare Turnstile** — one config block arms the widget on the
+  contact form, comments, and newsletter (server-side siteverify, fails closed);
+  without keys every form falls back to the built-in dependency-free defenses.
 - **Comments without a database** — JSON files per post, stateless HMAC math captcha,
   honeypot, time trap, per-IP rate limit. Commenter emails are stored but rendered
   masked (`j***@example.com`).
@@ -46,7 +49,8 @@ form, and first-party analytics.
 ## Layout
 
 ```
-├── index.php            homepage (the only hand-written page)
+├── index.php            homepage (hand-written)
+├── services/            services & engagements page (hand-written)
 ├── comments.php         comment endpoint + rendered thread (dynamic island)
 ├── n.php                newsletter endpoint (subscribe / confirm / unsubscribe)
 ├── a.php                analytics beacon (pageviews + engaged-time pings)
@@ -74,7 +78,8 @@ form, and first-party analytics.
 cp config.example.php config.php   # fill in secrets: openssl rand -hex 24
 php tools/build.php                # generate the site
 php -S 127.0.0.1:8080              # serve locally
-php tests/run.php                  # 120+ assertions, unit + integration
+./run.sh                           # …or the docker-compose equivalent
+php tests/run.php                  # 500+ assertions, unit + integration
 ```
 
 ## Writing a post
@@ -148,7 +153,8 @@ prints the queue after every deploy so nothing waits unnoticed.
 
 ## Deploying
 
-`deploy.sh` runs the tests, rebuilds, **backs up the remote docroot to a local
+`deploy.sh` reads its SSH target from a gitignored `deploy.env` (copy
+`deploy.env.example`), runs the tests, rebuilds, **backs up the remote docroot to a local
 `_remote-backup/<timestamp>.tar.gz`**, then rsyncs. Runtime data on the server
 (comments, analytics) is excluded in both directions and can never be overwritten.
 `--dry-run` previews, `--clean` also removes remotely deleted files.

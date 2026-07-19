@@ -13,11 +13,20 @@ set -euo pipefail
 # content/comments/*.json, content/analytics.db, content/analytics.seed
 
 # --- config ---
-SSH_USER="bfrackowiak"
-SSH_HOST="server.example.com"
-SSH_PORT="22"
-REMOTE_DIR="/home/bfrackowiak/domains/bfrackowiak.pl/public_html"
+# The deployment target lives in deploy.env (gitignored) — copy
+# deploy.env.example and fill in your host. Required vars:
+#   SSH_USER, SSH_HOST, SSH_PORT, REMOTE_DIR
 LOCAL_DIR="$(cd "$(dirname "$0")" && pwd)/"
+if [ ! -f "${LOCAL_DIR}deploy.env" ]; then
+  echo "Missing deploy.env — copy deploy.env.example and fill in your SSH target." >&2
+  exit 1
+fi
+# shellcheck source=deploy.env.example
+source "${LOCAL_DIR}deploy.env"
+: "${SSH_USER:?deploy.env must set SSH_USER}"
+: "${SSH_HOST:?deploy.env must set SSH_HOST}"
+: "${SSH_PORT:=22}"
+: "${REMOTE_DIR:?deploy.env must set REMOTE_DIR}"
 BACKUP_DIR="${LOCAL_DIR}_remote-backup"
 TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
 BACKUP_STAGE="${BACKUP_DIR}/${TIMESTAMP}"

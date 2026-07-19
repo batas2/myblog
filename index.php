@@ -30,7 +30,7 @@ $form_message = $form['message'];
 <meta property="og:url" content="https://bfrackowiak.pl/" />
 <meta property="og:title" content="Bartosz Frąckowiak · Solution Architect" />
 <meta property="og:description" content="Weekly essays on software architecture, the people around it, and the corporate machine they form together. Consulting & training." />
-<meta property="og:image" content="https://bfrackowiak.pl/mysefl.jpeg" />
+<meta property="og:image" content="https://bfrackowiak.pl/myself.jpeg" />
 <meta property="og:site_name" content="bfrackowiak.pl" />
 <meta name="twitter:card" content="summary_large_image" />
 
@@ -44,7 +44,7 @@ $form_message = $form['message'];
       "name": "Bartosz Frąckowiak",
       "alternateName": ["bfrackowiak", "Bartosz Frackowiak"],
       "url": "https://bfrackowiak.pl",
-      "image": "https://bfrackowiak.pl/mysefl.jpeg",
+      "image": "https://bfrackowiak.pl/myself.jpeg",
       "jobTitle": "Solution Architect",
       "description": "Solution architect with 12+ years of experience in distributed systems, domain-driven design, and AI-native engineering. Writes weekly about architecture, people, and organizational systems.",
       "alumniOf": [
@@ -138,7 +138,7 @@ $form_message = $form['message'];
         </p>
       </div>
       <div class="portrait rise-3">
-        <img src="/mysefl.jpeg" alt="Bartosz Frąckowiak" width="460" height="460" fetchpriority="high" decoding="async">
+        <img src="/myself.jpeg" alt="Bartosz Frąckowiak" width="460" height="460" fetchpriority="high" decoding="async">
         <div class="portrait-caption">
           <span class="pc-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></span>
           <span><strong>B. Frąckowiak</strong>solution architect</span>
