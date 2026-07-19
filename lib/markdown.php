@@ -109,6 +109,7 @@ function md_to_html(array $lines): string
         }
         $para[] = $t;
     }
+    if ($inCode) $html .= "</code></pre>\n";   // unclosed fence must not swallow the rest of the page
     $flushPara(); $flushList(); $flushQuote();
     return $html;
 }

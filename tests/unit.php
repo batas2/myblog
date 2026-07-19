@@ -56,8 +56,8 @@ t_eq('cqrs-es', tag_slug('CQRS/ES!!'), 'specials collapse');
 t_contains('href="/blog/tag/data-quality/"', tag_link('Data Quality'), 'tag link URL');
 t_contains('>#data-quality<', tag_link('Data Quality'), 'hashtag text');
 $tags = collect_tags([
-    ['tags' => ['A', 'B']],
-    ['tags' => ['A']],
+    ['slug' => 'p1', 'tags' => ['A', 'B']],
+    ['slug' => 'p2', 'tags' => ['A']],
 ]);
 t_eq(['A', 'B'], array_keys($tags), 'collect_tags sorts by count desc');
 t_eq(2, count($tags['A']), 'tag groups posts');
@@ -532,6 +532,46 @@ $bc = schema_breadcrumbs(['Home' => 'https://x/', 'Blog' => 'https://x/blog/']);
 t_eq(2, count($bc['itemListElement']), 'breadcrumb items');
 t_eq(1, $bc['itemListElement'][0]['position'], 'breadcrumb positions start at 1');
 t_assert(json_decode(ld_script(schema_blog()) ? substr(ld_script(schema_blog()), 51, -9) : '') !== null || str_contains(ld_script(schema_blog()), '"@type":"Blog"'), 'ld_script serializes');
+
+/* ---------------- bug-hunt regressions (2026-07 review) ---------------- */
+section('review regressions');
+
+// unclosed code fence: the page must not render inside <pre> forever
+$h = md_to_html(['```', '$x = 1;']);
+t_contains('</code></pre>', $h, 'unclosed fence auto-closed at EOF');
+
+// filename slug contract matches every runtime consumer
+$dir = sys_get_temp_dir() . '/bf-unit-posts'; @mkdir($dir);
+file_put_contents($dir . '/2020-01-05-My_Post.md', "# T\n\nBody.\n");
+t_eq(null, parse_post_file($dir . '/2020-01-05-My_Post.md'), 'uppercase/underscore slug rejected at parse');
+file_put_contents($dir . '/2020-01-05-ok-slug.md', "# T\n\n*Sub.*\n\nBody words here.\n");
+t_assert(parse_post_file($dir . '/2020-01-05-ok-slug.md') !== null, 'conforming slug still parses');
+
+// subtitle line must not swallow multi-emphasis body lines
+file_put_contents($dir . '/2020-01-05-sub-multi.md', "# T\n\n*One* word *two*\n\nBody words here.\n");
+$sp2 = parse_post_file($dir . '/2020-01-05-sub-multi.md');
+t_eq('', $sp2['subtitle'], 'multi-emphasis line is body, not subtitle');
+
+// tag variants merge into one archive, first spelling wins, no dupes per post
+$tp = fn(string $slug, array $tags) => ['slug' => $slug, 'tags' => $tags, 'publish_ts' => 1, 'title' => $slug, 'subtitle' => '', 'minutes' => 1];
+$merged = collect_tags([$tp('a', ['AI', 'ai']), $tp('b', ['ai'])]);
+t_eq(1, count($merged), 'case variants collapse to one tag group');
+t_eq('AI', array_key_first($merged), 'first-seen spelling is the display name');
+t_eq(2, count($merged['AI']), 'post tagged with both spellings counted once');
+
+// empty archive: sitemap renders without notices
+$sm0 = render_sitemap([]);
+t_contains('/services/', $sm0, 'empty-archive sitemap still lists static pages');
+t_assert(simplexml_load_string($sm0) !== false, 'empty-archive sitemap is valid XML');
+
+// RSS: ']]>' inside content cannot break the CDATA envelope
+$rssPost = ['slug' => 'cdata', 'title' => 'C', 'subtitle' => 's', 'html' => '<p>evil ]]> here</p>',
+            'publish_ts' => 1700000000, 'publish_iso' => date('c', 1700000000), 'minutes' => 1, 'tags' => []];
+t_assert(simplexml_load_string(render_rss([$rssPost])) !== false, 'CDATA breakout escaped, feed stays valid');
+
+// JSON-LD cannot be broken out of via a </script> in author content
+t_not_contains('</script></script>', ld_script(['x' => 'a</script>b']), 'HEX_TAG keeps </script> encoded');
+t_contains('</script', ld_script(['x' => 'a</script>b']), 'literal </script> is hex-encoded');
 
 /* ---------------- newsletter core ---------------- */
 section('newsletter');

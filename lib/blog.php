@@ -99,7 +99,13 @@ function post_publish_ts(string $date, ?string $explicit = null): int
 function parse_post_file(string $file): ?array
 {
     $name = basename($file, '.md');
-    if (!preg_match('/^(\d{4}-\d{2}-\d{2})-(.+)$/', $name, $m)) {
+    // the filename slug must satisfy the same contract every runtime consumer
+    // enforces (comments, admin, store) — a looser slug would build a page
+    // that can never be commented on or managed
+    if (!preg_match('/^(\d{4}-\d{2}-\d{2})-([a-z0-9-]{3,80})$/', $name, $m)) {
+        if (preg_match('/^\d{4}-\d{2}-\d{2}-/', $name)) {
+            blog_warn("skipped {$name}.md: slug must match [a-z0-9-]{3,80}");
+        }
         return null;
     }
     [, $date, $slug] = $m;
@@ -131,7 +137,7 @@ function parse_post_file(string $file): ?array
         if ($title === '' && preg_match('/^#\s+(.*)$/', $line, $mm)) { $title = trim($mm[1]); continue; }
         $bodyStarted = (bool) array_filter($body, fn($l) => trim($l) !== '');
         if ($title !== '' && $subtitle === '' && !$bodyStarted
-            && preg_match('/^\*([^*].*)\*\s*$/', trim($line), $mm)) {
+            && preg_match('/^\*([^*]+)\*\s*$/', trim($line), $mm)) {
             $subtitle = trim($mm[1]);
             continue;
         }
@@ -156,6 +162,10 @@ function parse_post_file(string $file): ?array
             continue;
         }
         if ($title !== '') $body[] = $line;
+    }
+
+    if ($inFence) {
+        blog_warn("{$name}.md: unclosed code fence — any metadata after it (Status/Publish/Tags) is treated as fenced text and ignored");
     }
 
     $plain = trim(preg_replace('/\s+/', ' ', strip_tags(md_to_html($body))));
@@ -305,14 +315,28 @@ function related_posts(array $post, array $pool, int $n = 3): array
     return array_column(array_slice($scored, 0, $n), 2);
 }
 
-/** tag name => list of posts (posts stay in reverse-chron order) */
+/**
+ * tag name => list of posts (posts stay in reverse-chron order).
+ * Grouped by tag_slug so case/punctuation variants ("AI" vs "ai") merge into
+ * one archive instead of silently overwriting each other's page; the
+ * first-seen spelling becomes the display name.
+ */
 function collect_tags(array $posts): array
 {
-    $tags = [];
+    $bySlug = [];
+    $names = [];
     foreach ($posts as $p) {
-        foreach ($p['tags'] as $t) $tags[$t][] = $p;
+        foreach ($p['tags'] as $t) {
+            $k = tag_slug($t);
+            $names[$k] ??= $t;
+            $group = $bySlug[$k] ?? [];
+            // a post tagged with two spellings of one tag lands in the group once
+            if (!$group || end($group)['slug'] !== $p['slug']) $bySlug[$k][] = $p;
+        }
     }
-    uasort($tags, fn($a, $b) => count($b) <=> count($a));
+    uasort($bySlug, fn($a, $b) => count($b) <=> count($a));
+    $tags = [];
+    foreach ($bySlug as $k => $list) $tags[$names[$k]] = $list;
     return $tags;
 }
 

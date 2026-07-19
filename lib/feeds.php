@@ -44,7 +44,7 @@ XML;
 function render_sitemap(array $posts): string
 {
     $site = (string) cfg('site_url');
-    $latest = date('Y-m-d', $posts[0]['publish_ts']);
+    $latest = $posts ? date('Y-m-d', $posts[0]['publish_ts']) : date('Y-m-d');
     $urls = "  <url><loc>{$site}/</loc><lastmod>{$latest}</lastmod><priority>1.0</priority></url>\n"
           . "  <url><loc>{$site}/blog/</loc><lastmod>{$latest}</lastmod><priority>0.9</priority></url>\n"
           . "  <url><loc>{$site}/blog/start/</loc><lastmod>{$latest}</lastmod><priority>0.8</priority></url>\n"

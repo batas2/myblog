@@ -6,7 +6,8 @@
 
 declare(strict_types=1);
 
-const LD_JSON_FLAGS = JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE;
+// HEX_TAG: a title containing "</script>" must not break out of the JSON-LD tag
+const LD_JSON_FLAGS = JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG;
 
 /** One <script type="application/ld+json"> tag. */
 function ld_script(array $schema): string

@@ -113,9 +113,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['c_submit']) && !isset
     $rl = throttle_path('c_rl_', 'bfrackowiak-comments', (string) ($_SERVER['REMOTE_ADDR'] ?? ''));
     if (is_file($rl) && time() - (int) filemtime($rl) < C_MIN_GAP) { header("Location: {$back}?cerr=slow#comment-form"); exit; }
 
+    // stored raw, escaped with e() at render — strip_tags here would mangle
+    // legitimate text like "for x<10" into "for x2"
     c_store_mutate($slug, fn(array $list): array => [...$list, [
-        'email' => mb_substr(strip_tags($email), 0, 254),
-        'text'  => mb_substr(strip_tags($text), 0, C_MAX_TEXT),
+        'email' => mb_substr($email, 0, 254),
+        'text'  => mb_substr($text, 0, C_MAX_TEXT),
         'date'  => date('Y-m-d H:i'),
     ]]);
     touch($rl);
