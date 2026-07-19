@@ -90,11 +90,19 @@ if [ ${#RSYNC_MODE[@]} -eq 0 ]; then
     "${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}/" \
     "${BACKUP_STAGE}/"
 
+  # sanity: an (almost) empty remote means something is very wrong — pushing over
+  # it would make the loss permanent and silent (this exact thing ate the
+  # analytics history on 2026-07-19). Stop and let a human look first.
+  BACKUP_FILES="$(find "${BACKUP_STAGE}" -type f | wc -l | tr -d ' ')"
+  if [ "${BACKUP_FILES}" -lt 20 ]; then
+    die "Remote backup contains only ${BACKUP_FILES} files — the remote looks empty or wrong. Investigate before deploying (backup kept at ${BACKUP_STAGE})."
+  fi
+
   tar -czf "${BACKUP_ARCHIVE}" -C "${BACKUP_DIR}" "${TIMESTAMP}"
   rm -rf "${BACKUP_STAGE}"
 
   BACKUP_SIZE="$(du -h "${BACKUP_ARCHIVE}" | cut -f1)"
-  step_done "Backup saved (${BACKUP_SIZE})"
+  step_done "Backup saved (${BACKUP_SIZE}, ${BACKUP_FILES} files)"
 fi
 
 # --- 4. deploy ---
@@ -122,6 +130,7 @@ rsync -az --progress --stats "${RSYNC_MODE[@]}" "${DELETE_FLAG[@]}" "${GEOIP_PRO
   --exclude='_remote-backup/' \
   --exclude='content/comments/' \
   --exclude='content/.sessions/' \
+  --exclude='content/.buildlock' \
   --exclude='Dockerfile' \
   --exclude='docker-compose.yml' \
   --exclude='run.sh' \
@@ -166,7 +175,7 @@ if [ -n "${QUEUE}" ]; then
   echo -e "${YELLOW}Scheduled posts waiting to go live:${NC}"
   echo "${QUEUE}"
   echo -e "Make sure the server cron is set (MyDevil panel or crontab -e):"
-  echo -e "  */15 * * * * cd ${REMOTE_DIR} && php tools/build.php >/dev/null 2>&1"
+  echo -e "  */15 * * * * cd ${REMOTE_DIR} && php tools/build.php >/dev/null 2>&1 && php tools/newsletter_send.php >> content/newsletter.log 2>&1"
 fi
 
 echo

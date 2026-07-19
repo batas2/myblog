@@ -23,7 +23,12 @@ if (!preg_match('/^\d{4}-\d{2}$/', $month)) {
     exit(1);
 }
 
-$tmpGz = tempnam(sys_get_temp_dir(), 'dbip') . '.csv.gz';
+$tmpBase = tempnam(sys_get_temp_dir(), 'dbip');
+$tmpGz = $tmpBase . '.csv.gz';
+register_shutdown_function(function () use ($tmpBase, $tmpGz): void {
+    @unlink($tmpBase);   // tempnam creates this file; we only ever use the .csv.gz path
+    @unlink($tmpGz);
+});
 $ctx = stream_context_create(['http' => ['timeout' => 120, 'follow_location' => 1, 'user_agent' => 'bfrackowiak.pl geoip updater']]);
 
 $fetched = false;

@@ -47,11 +47,6 @@ function c_valid_slug($slug): bool
     return post_is_public($slug);
 }
 
-function c_load(string $slug): array
-{
-    return c_store_load($slug);
-}
-
 /** j***@example.com — identity without handing addresses to harvesters */
 function c_mask_email(string $email): string
 {
@@ -137,7 +132,7 @@ if (!isset($COMMENT_SLUG)) {
 
 if (!c_valid_slug($COMMENT_SLUG)) return;
 
-$c_list = c_load($COMMENT_SLUG);
+$c_list = c_store_load($COMMENT_SLUG);
 $c_n    = count($c_list);
 $c_err  = $_GET['cerr'] ?? '';
 $c_msgs = [

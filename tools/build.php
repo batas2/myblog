@@ -57,9 +57,31 @@ function build_cleanup_stale(array $keepSlugs, array $keepTagSlugs): array
 
 if (defined('BUILD_NO_RUN')) return;
 
+/** Write a live-served file via tmp+rename: a request mid-build never sees a truncated page. */
+function build_write(string $path, string $content): void
+{
+    $tmp = $path . '.tmp';
+    if (file_put_contents($tmp, $content) === false || !rename($tmp, $path)) {
+        @unlink($tmp);
+        fwrite(STDERR, "warning: could not write {$path}\n");
+    }
+}
+
+// one build at a time — cron and the admin "rebuild now" button can overlap
+$buildLock = @fopen(CONTENT_DIR . '/.buildlock', 'c');
+if ($buildLock === false || !flock($buildLock, LOCK_EX)) {
+    fwrite(STDERR, "could not acquire the build lock\n");
+    exit(1);
+}
+
 $all = load_posts(true);
 $posts = array_values(array_filter($all, fn(array $p): bool => $p['status'] === 'published'));
-if (!$posts) { fwrite(STDERR, $all ? "no published posts\n" : "no posts found\n"); exit(1); }
+if (!$posts) {
+    // still sweep: un-publishing the last post must take its page down
+    build_cleanup_stale([], []);
+    fwrite(STDERR, $all ? "no published posts — generated pages swept\n" : "no posts found\n");
+    exit(0);
+}
 
 @mkdir(APP_ROOT . '/blog', 0755, true);
 
@@ -69,21 +91,21 @@ foreach ($posts as $i => $p) {
     $next = $i > 0 ? $posts[$i - 1] : null;      // newer
     $dir = APP_ROOT . '/blog/' . $p['slug'];
     @mkdir($dir, 0755, true);
-    file_put_contents($dir . '/index.php', render_post($p, $prev, $next, $posts));
-    file_put_contents($dir . '/index.md', render_md($p));
+    build_write($dir . '/index.php', render_post($p, $prev, $next, $posts));
+    build_write($dir . '/index.md', render_md($p));
 }
 
-file_put_contents(APP_ROOT . '/blog/index.php', render_index($posts));
-file_put_contents(APP_ROOT . '/blog/_latest.php', render_latest_partial($posts));
+build_write(APP_ROOT . '/blog/index.php', render_index($posts));
+build_write(APP_ROOT . '/blog/_latest.php', render_latest_partial($posts));
 @mkdir(APP_ROOT . '/blog/start', 0755, true);
-file_put_contents(APP_ROOT . '/blog/start/index.php', render_start_page($posts));
-file_put_contents(APP_ROOT . '/404.php', render_404_page($posts));
+build_write(APP_ROOT . '/blog/start/index.php', render_start_page($posts));
+build_write(APP_ROOT . '/404.php', render_404_page($posts));
 
 $tags = collect_tags($posts);
 foreach ($tags as $tag => $tagged) {
     $dir = APP_ROOT . '/blog/tag/' . tag_slug($tag);
     @mkdir($dir, 0755, true);
-    file_put_contents($dir . '/index.php', render_tag_page($tag, $tagged, $n));
+    build_write($dir . '/index.php', render_tag_page($tag, $tagged, $n));
 }
 
 // drop generated pages whose post is gone or no longer published, and stale tag archives
@@ -92,12 +114,12 @@ $removed = build_cleanup_stale(
     array_map('tag_slug', array_keys($tags))
 );
 
-file_put_contents(APP_ROOT . '/llms-full.txt', render_llms_full($posts));
+build_write(APP_ROOT . '/llms-full.txt', render_llms_full($posts));
 if (!update_llms_selected(APP_ROOT . '/llms.txt', $posts)) {
     fwrite(STDERR, "warning: llms.txt has no 'Selected posts:' list to refresh\n");
 }
-file_put_contents(APP_ROOT . '/feed.xml', render_rss($posts));
-file_put_contents(APP_ROOT . '/sitemap.xml', render_sitemap($posts));
+build_write(APP_ROOT . '/feed.xml', render_rss($posts));
+build_write(APP_ROOT . '/sitemap.xml', render_sitemap($posts));
 
 echo "built {$n} posts + " . count($tags) . " tag pages → blog/, index, _latest partial, feed.xml, sitemap.xml\n";
 if ($removed) echo 'removed stale pages: ' . implode(', ', $removed) . "\n";

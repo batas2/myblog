@@ -64,8 +64,9 @@ t_eq(2, count($tags['A']), 'tag groups posts');
 
 /* ---------------- dates ---------------- */
 section('dates');
-t_eq('2026.07.13', log_date('2026-07-13'), 'log date format');
-t_eq('Jul 13, 2026', nice_date('2026-07-13'), 'nice date format');
+$noonTs = strtotime('2026-07-13 12:00');
+t_eq('2026.07.13', log_ts($noonTs), 'log timestamp format');
+t_eq('Jul 13, 2026', nice_ts($noonTs), 'nice timestamp format');
 
 /* ---------------- post status model ---------------- */
 section('post status');

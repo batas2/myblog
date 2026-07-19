@@ -57,8 +57,6 @@ function series_suffix(string $slug): string
     return ' · ' . e($name) . ', part ' . $part;
 }
 
-function nice_date(string $d): string { return date('M j, Y', strtotime($d)); }
-function log_date(string $d): string { return date('Y.m.d', strtotime($d)); }
 
 /* display dates come from the publish moment, not the filename — a post
    published early or late shows the day it actually went live */

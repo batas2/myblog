@@ -41,9 +41,8 @@ $path = (string) ($_GET['path'] ?? '');
 if (!preg_match(AN_PATH_RE, $path)) $path = '';
 
 /** dashboard link that keeps the current filters (auth rides in the session) */
-function s_url(array $over = []): string
+function s_url(array $over, string $daysRaw, string $path): string
 {
-    global $daysRaw, $path;
     $q = array_merge([
         'days' => $daysRaw,
         'path' => $path !== '' ? $path : null,
@@ -182,12 +181,12 @@ a.plink { text-decoration: none; }
     <h1>bfrackowiak.pl · <?= e($rangeLabel) ?></h1>
     <nav class="seg">
       <?php foreach (['7' => '7d', '30' => '30d', '90' => '90d', '365' => '1y', 'all' => 'all'] as $d => $label): ?>
-        <?php if ($daysRaw === $d): ?><span><?= $label ?></span><?php else: ?><a href="<?= e(s_url(['days' => $d])) ?>"><?= $label ?></a><?php endif; ?>
+        <?php if ($daysRaw === $d): ?><span><?= $label ?></span><?php else: ?><a href="<?= e(s_url(['days' => $d], $daysRaw, $path)) ?>"><?= $label ?></a><?php endif; ?>
       <?php endforeach; ?>
     </nav>
   </div>
   <?php if ($path !== ''): ?>
-    <p class="pathchip">page: <?= e($path) ?> <a href="<?= e(s_url(['path' => null])) ?>">× all pages</a></p>
+    <p class="pathchip">page: <?= e($path) ?> <a href="<?= e(s_url(['path' => null], $daysRaw, $path)) ?>">× all pages</a></p>
   <?php endif; ?>
 
   <nav class="tabs">
@@ -244,7 +243,7 @@ a.plink { text-decoration: none; }
     <?php $totPage = max(1, array_sum(array_map(fn($p) => (int) $p['pv'], $pages))); ?>
     <?php foreach ($pages as $p): ?>
       <tr>
-        <td class="pathcell cell-bar" style="--w:<?= (int) round($p['pv'] / $topPage * 100) ?>%"><a class="plink" href="<?= e(s_url(['path' => $p['path']])) ?>"><?= e($p['path']) ?></a></td>
+        <td class="pathcell cell-bar" style="--w:<?= (int) round($p['pv'] / $topPage * 100) ?>%"><a class="plink" href="<?= e(s_url(['path' => $p['path']], $daysRaw, $path)) ?>"><?= e($p['path']) ?></a></td>
         <td class="r n"><?= number_format((int) $p['pv']) ?></td>
         <td class="r n dim"><?= round($p['pv'] / $totPage * 100) ?>%</td>
         <td class="r n"><?= (int) $p['uv'] ?></td>

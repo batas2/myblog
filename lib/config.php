@@ -12,7 +12,7 @@ if (!defined('APP_ROOT')) {
     define('CONTENT_DIR', APP_ROOT . '/content');
 }
 
-/** Read a config value (dot notation for one level: 'smtp.host'). */
+/** Read a top-level config value; nested blocks come back as arrays (cfg('smtp')['host']). */
 function cfg(string $key, $default = null)
 {
     static $config = null;
@@ -25,10 +25,6 @@ function cfg(string $key, $default = null)
         $config = require $file;
         // one clock everywhere: dates render in the site timezone on any host
         date_default_timezone_set((string) ($config['timezone'] ?? 'Europe/Warsaw'));
-    }
-    if (str_contains($key, '.')) {
-        [$a, $b] = explode('.', $key, 2);
-        return $config[$a][$b] ?? $default;
     }
     return $config[$key] ?? $default;
 }

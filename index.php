@@ -156,7 +156,11 @@ $form_message = $form['message'];
         <p>Weekly essays on architecture, people, and the corporate machine. New signal most Mondays.</p>
       </div>
 
-      <?php include __DIR__ . '/blog/_latest.php'; ?>
+      <?php if (is_file(__DIR__ . '/blog/_latest.php')) {
+          include __DIR__ . '/blog/_latest.php';
+      } else {
+          echo '<p style="color:var(--muted)">Fresh clone — run <code>php tools/build.php</code> to generate the blog.</p>';
+      } ?>
 
       <p style="margin-top:2rem">
         <a class="btn btn-ghost" href="/blog/">All essays &rarr;</a>

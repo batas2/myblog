@@ -31,3 +31,4 @@ _archive/
 .claude/
 content/newsletter.lock
 content/.sessions/
+content/.buildlock
