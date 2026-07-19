@@ -104,7 +104,7 @@ function render_index(array $posts): string
     $header  = eyebrow('The blog', true);
     $header .= '<h1 style="font-size:clamp(2.2rem,5vw,3.2rem)">Field Notes</h1>';
     $header .= '<p>Weekly essays on software architecture, the people around it, and the corporate machine they form together.</p>';
-    $header .= '<p class="meta" style="margin-top:1rem">' . $count . ' essays · new signal most Mondays · <a href="/blog/start/">new here? start here</a> · <a href="/feed.xml">RSS</a></p>';
+    $header .= '<p class="meta" style="margin-top:1rem">' . $count . ' essays · new signal most Mondays · <a href="/blog/start/">new here? start here</a> · <a href="#newsletter">get them by email</a></p>';
 
     $content  = featured_card($posts[0]);
     $content .= post_grid(array_slice($posts, 1));
@@ -307,7 +307,6 @@ function render_start_page(array $posts): string
     $html .= '<div class="start-follow">';
     $html .= '<span class="lbl">Follow along</span>';
     $html .= '<a href="#newsletter">Newsletter — one essay, most Mondays</a>';
-    $html .= '<a href="/feed.xml">RSS</a>';
     $html .= '<a href="https://www.linkedin.com/in/bartoszfrackowiak/" rel="me">LinkedIn</a>';
     $html .= '<a href="/llms.txt">for AI agents: llms.txt</a>';
     $html .= '</div>';

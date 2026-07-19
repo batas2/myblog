@@ -93,7 +93,7 @@ function author_box(): string
       <a href="/blog/start/">Start here</a>
       <a href="/services/">Work with me</a>
       <a href="https://www.linkedin.com/in/bartoszfrackowiak/">LinkedIn</a>
-      <a href="/feed.xml">RSS</a>
+      <a href="#newsletter">Newsletter</a>
     </div>
   </div>
 </div></div>
