@@ -31,8 +31,14 @@ form, and first-party analytics.
   screen bucket, visitor timezone, UTM tags, and engaged reading time per view.
   Dashboard at `/stats.php` (access key or admin session) with daily + hour-of-day
   charts, per-page drilldown, and a recent-visits feed.
-- **Newsletter capture** — plain HTML form posting to a Buttondown embed endpoint
-  (configurable; hidden entirely when unconfigured).
+- **Self-hosted newsletter** — no external service. A form on every page posts
+  to `n.php`: double opt-in over your own SMTP, subscribers in SQLite
+  (`content/newsletter.db`), RFC 8058 one-click unsubscribe (link + mail
+  headers), honeypot + per-IP rate limit. `tools/newsletter_send.php` (cron,
+  after the generator) mails each newly published essay to the confirmed list
+  exactly once — the first run seeds the ledger with the existing archive so
+  nobody gets the whole back-catalog. Stores the address and two timestamps,
+  nothing else.
 - **SEO / AI-ready** — canonical URLs, OpenGraph + article meta, JSON-LD
   (BlogPosting, Breadcrumbs, Blog, ItemList, CollectionPage), `llms.txt`,
   hardened `.htaccess` with security headers and CSP.
@@ -42,6 +48,7 @@ form, and first-party analytics.
 ```
 ├── index.php            homepage (the only hand-written page)
 ├── comments.php         comment endpoint + rendered thread (dynamic island)
+├── n.php                newsletter endpoint (subscribe / confirm / unsubscribe)
 ├── a.php                analytics beacon (pageviews + engaged-time pings)
 ├── stats.php            analytics dashboard (key or admin session)
 ├── admin.php            admin control room (publishing pipeline, moderation)
@@ -113,7 +120,7 @@ For scheduled posts to flip live unattended, run the generator on the server
 via cron (MyDevil panel or `crontab -e`):
 
 ```
-*/15 * * * * cd ~/domains/bfrackowiak.pl/public_html && php tools/build.php >/dev/null 2>&1
+*/15 * * * * cd ~/domains/bfrackowiak.pl/public_html && php tools/build.php >/dev/null 2>&1 && php tools/newsletter_send.php >> content/newsletter.log 2>&1
 ```
 
 The admin **"Rebuild site now"** button does the same on demand. `deploy.sh`

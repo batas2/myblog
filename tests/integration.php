@@ -44,7 +44,7 @@ function sbx_php(string $code): string
 section('sandbox build');
 exec('rsync -a --exclude=_remote-backup/ --exclude=_archive/ --exclude=docs/ --exclude=tests/ '
    . '--exclude=.claude/ --exclude=.git/ --exclude=content/comments/ --exclude=content/analytics.db '
-   . '--exclude=content/analytics.seed --exclude=content/geoip.dat --exclude=blog/ '
+   . '--exclude=content/analytics.seed --exclude=content/geoip.dat --exclude=content/newsletter.db --exclude=content/newsletter.db-* --exclude=blog/ '
    . escapeshellarg($ROOT . '/') . ' ' . escapeshellarg($SANDBOX . '/'), $o, $rc);
 t_eq(0, $rc, 'sandbox copied');
 mkdir($SANDBOX . '/content/comments', 0755, true);
@@ -55,7 +55,7 @@ file_put_contents($SANDBOX . '/config.php', '<?php return ' . var_export([
     'site_name'           => 'bfrackowiak.pl',
     'author'              => 'Bartosz Frąckowiak',
     'og_image'            => 'https://bfrackowiak.pl/mysefl.jpeg',
-    'newsletter_action'   => 'https://buttondown.com/api/emails/embed-subscribe/bfrackowiak',
+    'newsletter_action'   => '/n.php',
     'comments_secret'     => 'itest-comments-secret',
     'stats_key'           => STATS_KEY,
     'goatcounter_url'     => '',
@@ -214,6 +214,52 @@ t_eq(200, $code, 'woff2 files served');
 [$code, $body] = http_req('GET', "$BASE/404.php");
 t_eq(404, $code, 'branded 404 answers with 404 status');
 t_contains('No signal on this frequency', $body, 'branded 404 body served');
+
+/* ---------------- newsletter (self-hosted) ---------------- */
+section('newsletter');
+[$code, $body] = http_req('POST', "$BASE/n.php", [
+    'headers' => "Content-Type: application/x-www-form-urlencoded\r\n",
+    'body' => 'email=reader%40example.com&website=',
+]);
+t_eq(200, $code, 'subscribe accepted');
+t_contains('Check your inbox', $body, 'subscribe shows double-opt-in page');
+$nlTok = sbx_php('require "lib/config.php"; require "lib/newsletter.php";
+    echo nl_db()->query("SELECT token FROM subscribers WHERE email = \'reader@example.com\'")->fetchColumn();');
+t_assert(strlen($nlTok) === 32, 'pending subscriber stored with token');
+[$code, $body] = http_req('POST', "$BASE/n.php", [
+    'headers' => "Content-Type: application/x-www-form-urlencoded\r\n",
+    'body' => 'email=bot%40example.com&website=spam',
+]);
+t_contains('Check your inbox', $body, 'honeypot pretends success');
+t_eq('', sbx_php('require "lib/config.php"; require "lib/newsletter.php";
+    echo (string) nl_db()->query("SELECT token FROM subscribers WHERE email = \'bot@example.com\'")->fetchColumn();'), 'honeypot stores nothing');
+[$code, $body] = http_req('GET', "$BASE/n.php?confirm={$nlTok}");
+t_contains('You\'re in', $body, 'confirmation page served');
+t_eq('confirmed', sbx_php('require "lib/config.php"; require "lib/newsletter.php";
+    echo nl_db()->query("SELECT status FROM subscribers WHERE email = \'reader@example.com\'")->fetchColumn();'), 'subscriber confirmed');
+[$code, $body] = http_req('GET', "$BASE/n.php?confirm=" . str_repeat('0', 32));
+t_contains('didn', $body, 'bad confirm token rejected politely');
+
+// sender: first run seeds the ledger without mailing, second run has nothing new
+$nlOut = '';
+exec('cd ' . escapeshellarg($SANDBOX) . ' && ' . PHP_BINARY . ' tools/newsletter_send.php 2>&1', $nlO1);
+$nlOut = implode("\n", $nlO1);
+t_contains('baseline: seeded', $nlOut, 'first sender run seeds baseline');
+t_contains('nothing mailed', $nlOut, 'baseline mails nothing');
+exec('cd ' . escapeshellarg($SANDBOX) . ' && ' . PHP_BINARY . ' tools/newsletter_send.php 2>&1', $nlO2);
+t_contains('nothing new to send', implode("\n", $nlO2), 'second sender run idempotent');
+// pull one slug out of the ledger — dry-run must plan exactly that essay for the 1-name list
+sbx_php('require "lib/config.php"; require "lib/newsletter.php";
+    nl_db()->exec("DELETE FROM sends WHERE slug = \'itest-past-post\'");');
+exec('cd ' . escapeshellarg($SANDBOX) . ' && ' . PHP_BINARY . ' tools/newsletter_send.php --dry-run 2>&1', $nlO3);
+$nlDry = implode("\n", $nlO3);
+t_contains('would send "itest-past-post" to 1 subscribers', $nlDry, 'dry-run plans the unsent essay for the confirmed list');
+t_contains('1 confirmed', $nlDry, 'sender reports list size');
+
+[$code, $body] = http_req('GET', "$BASE/n.php?u={$nlTok}");
+t_contains('You\'re out', $body, 'one-click unsubscribe page served');
+t_eq('', sbx_php('require "lib/config.php"; require "lib/newsletter.php";
+    echo (string) nl_db()->query("SELECT token FROM subscribers WHERE email = \'reader@example.com\'")->fetchColumn();'), 'unsubscribe deletes the row');
 
 /* ---------------- analytics v2 ---------------- */
 section('analytics');

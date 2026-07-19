@@ -237,8 +237,9 @@ t_contains('class="pcard reveal"', $card, 'card has reveal class');
 t_contains('.thumb.jpg', $card, 'card uses thumbnail');
 t_not_contains('<a class="tag"', $card, 'no nested anchors inside card link');
 $nl = newsletter_box();
-t_contains('buttondown.com/api/emails/embed-subscribe', $nl, 'newsletter posts to buttondown');
+t_contains('action="/n.php"', $nl, 'newsletter posts to the self-hosted endpoint');
 t_contains('type="email"', $nl, 'newsletter has email field');
+t_contains('name="website"', $nl, 'newsletter form carries the honeypot');
 $bs = beacon_script();
 t_contains("sendBeacon('/a.php'", $bs, 'beacon targets a.php');
 t_contains('doNotTrack', $bs, 'beacon honors DNT');
@@ -510,7 +511,7 @@ foreach (['nobody-owns-the-sum', 'from-signals-to-blips', 'a-company-of-one-staf
 }
 t_contains('Then pick your door', $sp, 'doors section present');
 t_contains('Tools That Scale', $sp, 'series map note present');
-t_contains('embed-subscribe', $sp, 'newsletter form on start page');
+t_contains('action="/n.php"', $sp, 'newsletter form on start page');
 t_contains('/#services', $sp, 'soft services link present');
 t_contains('llms.txt', $sp, 'AI-agent follow link present');
 t_contains(count($posts) . ' essays in', $sp, 'live essay count in headline');

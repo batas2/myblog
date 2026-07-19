@@ -125,6 +125,8 @@ rsync -az --progress --stats "${RSYNC_MODE[@]}" "${DELETE_FLAG[@]}" "${GEOIP_PRO
   --exclude='content/analytics.db' \
   --exclude='content/analytics.db-*' \
   --exclude='content/analytics.seed' \
+  --exclude='content/newsletter.db' \
+  --exclude='content/newsletter.db-*' \
   --exclude='*.log' \
   --exclude='.DS_Store' \
   -e "ssh -p ${SSH_PORT}" \

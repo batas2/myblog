@@ -191,8 +191,9 @@ function newsletter_box(string $variant = ''): string
   <form action="{$action}" method="post" class="nl-form">
     <label class="visually-hidden" for="nl-email">Email address</label>
     <input type="email" id="nl-email" name="email" required placeholder="you@example.com" autocomplete="email">
+    <input type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px">
     <button type="submit">Subscribe</button>
-    <span class="nl-note">No spam. Unsubscribe anytime.</span>
+    <span class="nl-note">Double opt-in, one-click unsubscribe. Your address stays here.</span>
   </form>
 </div>
 HTML;

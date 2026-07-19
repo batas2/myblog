@@ -13,6 +13,8 @@ content/analytics.db
 content/geoip.dat
 content/analytics.db-*
 content/analytics.seed
+content/newsletter.db
+content/newsletter.db-*
 content/.ratelimit/
 content/comments/*.json
 

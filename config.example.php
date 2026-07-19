@@ -15,10 +15,11 @@ return [
     'author'      => 'Your Name',
     'og_image'    => 'https://example.com/photo.jpg',
 
-    // newsletter embed endpoint (Buttondown:
-    // https://buttondown.com/api/emails/embed-subscribe/<username>)
-    // leave '' to hide the subscribe boxes
-    'newsletter_action' => '',
+    // newsletter form target — '/n.php' for the built-in self-hosted
+    // newsletter (double opt-in over your own SMTP, list in
+    // content/newsletter.db, sends via tools/newsletter_send.php cron);
+    // an external embed URL also works; '' hides the subscribe boxes
+    'newsletter_action' => '/n.php',
 
     // Calendly event link for the free discovery call on /services/
     // (e.g. 'https://calendly.com/you/discovery-30'); '' = contact-form CTA instead
