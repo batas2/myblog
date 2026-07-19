@@ -373,6 +373,7 @@ $form_message = $form['message'];
           <input type="email" id="nl-email-home" name="email" required placeholder="you@example.com" autocomplete="email">
           <input type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px">
           <button type="submit">Subscribe</button>
+          <?php if (turnstile_enabled()): ?><div class="nl-captcha"><?= turnstile_widget('newsletter') ?></div><?php endif; ?>
           <span class="nl-note">Double opt-in, one-click unsubscribe. Your address stays here.</span>
         </form>
       </div>

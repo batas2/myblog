@@ -18,6 +18,7 @@ require_once __DIR__ . '/lib/helpers.php';
 require_once __DIR__ . '/lib/components.php';
 require_once __DIR__ . '/lib/page.php';
 require_once __DIR__ . '/lib/newsletter.php';
+require_once __DIR__ . '/lib/captcha.php';
 
 const NL_MIN_GAP = 30;   // seconds between subscribe attempts per IP
 
@@ -76,6 +77,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $rl = throttle_path('nl_', 'bfrackowiak-newsletter', (string) ($_SERVER['REMOTE_ADDR'] ?? ''));
     if (is_file($rl) && time() - (int) filemtime($rl) < NL_MIN_GAP) {
         nl_page('Slow down', 'One at a time.', 'That was quick. Give it half a minute and try again.');
+    }
+
+    // Turnstile when configured (each POST costs a confirmation email — worth guarding)
+    if (turnstile_enabled() && !turnstile_verify_post()) {
+        nl_page('Spam check failed', 'The spam check didn\'t pass.', 'Please go back and try the form again — the check refreshes on reload.',
+            '<a class="btn btn-ghost" href="/#newsletter">Back to the form &rarr;</a>');
     }
 
     $token = nl_subscribe($db, (string) ($_POST['email'] ?? ''));

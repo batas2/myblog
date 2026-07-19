@@ -181,6 +181,11 @@ function newsletter_box(string $variant = ''): string
 {
     $action = (string) cfg('newsletter_action');
     if ($action === '') return '';
+    require_once __DIR__ . '/captcha.php';
+    $captcha = turnstile_enabled()
+        ? '<div class="nl-captcha">' . turnstile_widget('newsletter') . '</div>'
+        : '';
+    $script = turnstile_enabled() ? turnstile_script() : '';
     return <<<HTML
 <div class="newsletter {$variant}" id="newsletter">
   <div class="nl-text">
@@ -193,9 +198,11 @@ function newsletter_box(string $variant = ''): string
     <input type="email" id="nl-email" name="email" required placeholder="you@example.com" autocomplete="email">
     <input type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px">
     <button type="submit">Subscribe</button>
+    {$captcha}
     <span class="nl-note">Double opt-in, one-click unsubscribe. Your address stays here.</span>
   </form>
 </div>
+{$script}
 HTML;
 }
 
