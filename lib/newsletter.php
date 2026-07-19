@@ -32,20 +32,20 @@ function nl_db(?string $path = null): PDO
     $db = new PDO('sqlite:' . ($path ?? nl_db_path()), null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
     $db->exec('PRAGMA journal_mode=WAL');
     $db->exec('PRAGMA busy_timeout=3000');
-    $db->exec('CREATE TABLE IF NOT EXISTS subscribers (
+    $db->exec("CREATE TABLE IF NOT EXISTS subscribers (
         id INTEGER PRIMARY KEY,
         email TEXT NOT NULL UNIQUE,
-        status TEXT NOT NULL DEFAULT "pending",
+        status TEXT NOT NULL DEFAULT 'pending',
         token TEXT NOT NULL UNIQUE,
         created_ts INTEGER NOT NULL,
         confirmed_ts INTEGER
-    )');
-    $db->exec('CREATE TABLE IF NOT EXISTS sends (
+    )");
+    $db->exec("CREATE TABLE IF NOT EXISTS sends (
         slug TEXT PRIMARY KEY,
         sent_ts INTEGER NOT NULL,
         recipients INTEGER NOT NULL,
-        note TEXT NOT NULL DEFAULT ""
-    )');
+        note TEXT NOT NULL DEFAULT ''
+    )");
     return $db;
 }
 
@@ -64,7 +64,7 @@ function nl_subscribe(PDO $db, string $email): ?string
     if ($token = $row->fetchColumn()) return (string) $token;
 
     $token = bin2hex(random_bytes(16));
-    $db->prepare('INSERT INTO subscribers (email, status, token, created_ts) VALUES (?, "pending", ?, ?)')
+    $db->prepare("INSERT INTO subscribers (email, status, token, created_ts) VALUES (?, 'pending', ?, ?)")
        ->execute([$email, $token, time()]);
     return $token;
 }
@@ -73,7 +73,7 @@ function nl_subscribe(PDO $db, string $email): ?string
 function nl_confirm(PDO $db, string $token): bool
 {
     if (!preg_match('/^[0-9a-f]{32}$/', $token)) return false;
-    $st = $db->prepare('UPDATE subscribers SET status = "confirmed", confirmed_ts = COALESCE(confirmed_ts, ?) WHERE token = ?');
+    $st = $db->prepare("UPDATE subscribers SET status = 'confirmed', confirmed_ts = COALESCE(confirmed_ts, ?) WHERE token = ?");
     $st->execute([time(), $token]);
     return $st->rowCount() > 0;
 }
@@ -90,7 +90,7 @@ function nl_unsubscribe(PDO $db, string $token): bool
 /** @return array<array{email: string, token: string}> */
 function nl_confirmed(PDO $db): array
 {
-    return $db->query('SELECT email, token FROM subscribers WHERE status = "confirmed" ORDER BY id')
+    return $db->query("SELECT email, token FROM subscribers WHERE status = 'confirmed' ORDER BY id")
               ->fetchAll(PDO::FETCH_ASSOC);
 }
 
@@ -166,7 +166,7 @@ function nl_send_new(array $posts, bool $dryRun = false, ?PDO $db = null): array
     if ($ledgerEmpty) {
         foreach ($posts as $p) {
             if (!$dryRun) {
-                $db->prepare('INSERT OR IGNORE INTO sends (slug, sent_ts, recipients, note) VALUES (?, ?, 0, "baseline")')
+                $db->prepare("INSERT OR IGNORE INTO sends (slug, sent_ts, recipients, note) VALUES (?, ?, 0, 'baseline')")
                    ->execute([$p['slug'], time()]);
             }
         }
@@ -197,7 +197,7 @@ function nl_send_new(array $posts, bool $dryRun = false, ?PDO $db = null): array
             }
             usleep(250000);   // gentle on the shared host's rate limits
         }
-        $db->prepare('INSERT INTO sends (slug, sent_ts, recipients, note) VALUES (?, ?, ?, "")')
+        $db->prepare("INSERT INTO sends (slug, sent_ts, recipients, note) VALUES (?, ?, ?, '')")
            ->execute([$p['slug'], time(), $ok]);
         $out[] = 'sent "' . $p['slug'] . '" to ' . $ok . '/' . count($subs) . ' subscribers';
     }
