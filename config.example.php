@@ -20,6 +20,10 @@ return [
     // leave '' to hide the subscribe boxes
     'newsletter_action' => '',
 
+    // Calendly event link for the free discovery call on /services/
+    // (e.g. 'https://calendly.com/you/discovery-30'); '' = contact-form CTA instead
+    'calendly_url' => '',
+
     // HMAC key for the comment captcha tokens; rotate freely
     'comments_secret' => 'CHANGE-ME-openssl-rand-hex-24',
 

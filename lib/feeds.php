@@ -47,7 +47,8 @@ function render_sitemap(array $posts): string
     $latest = date('Y-m-d', $posts[0]['publish_ts']);
     $urls = "  <url><loc>{$site}/</loc><lastmod>{$latest}</lastmod><priority>1.0</priority></url>\n"
           . "  <url><loc>{$site}/blog/</loc><lastmod>{$latest}</lastmod><priority>0.9</priority></url>\n"
-          . "  <url><loc>{$site}/blog/start/</loc><lastmod>{$latest}</lastmod><priority>0.8</priority></url>\n";
+          . "  <url><loc>{$site}/blog/start/</loc><lastmod>{$latest}</lastmod><priority>0.8</priority></url>\n"
+          . "  <url><loc>{$site}/services/</loc><lastmod>{$latest}</lastmod><priority>0.6</priority></url>\n";
     foreach ($posts as $p) {
         $urls .= '  <url><loc>' . post_url($p['slug']) . '</loc><lastmod>' . date('Y-m-d', $p['publish_ts']) . "</lastmod><priority>0.7</priority></url>\n";
     }

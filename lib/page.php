@@ -42,11 +42,12 @@ function page_head(string $title, string $desc, string $canonical, string $extra
 HTML;
 }
 
-/** Site navigation. $active: 'blog' | 'start' | 'home' | '' — marks the current place. */
+/** Site navigation. $active: 'blog' | 'start' | 'services' | 'home' | '' — marks the current place. */
 function site_nav(string $active = ''): string
 {
-    $blog  = $active === 'blog' ? ' aria-current="page"' : '';
-    $start = $active === 'start' ? ' aria-current="page"' : '';
+    $blog     = $active === 'blog' ? ' aria-current="page"' : '';
+    $start    = $active === 'start' ? ' aria-current="page"' : '';
+    $services = $active === 'services' ? ' aria-current="page"' : '';
     return <<<HTML
 <header class="nav">
   <div class="nav-inner">
@@ -55,8 +56,8 @@ function site_nav(string $active = ''): string
       <li><a href="/blog/"{$blog}>Writing</a></li>
       <li><a href="/blog/start/"{$start}>Start here</a></li>
       <li class="optional"><a href="/#journey">Journey</a></li>
-      <li class="optional"><a href="/#services">Services</a></li>
-      <li><a class="nav-cta" href="/#contact">Work with me</a></li>
+      <li class="optional"><a href="/services/"{$services}>Services</a></li>
+      <li><a class="nav-cta" href="/services/">Work with me</a></li>
     </ul>
   </div>
 </header>
@@ -74,6 +75,7 @@ function site_footer(): string
     <span>© {$y} Bartosz Frąckowiak</span>
     <nav>
       <a href="/blog/">Writing</a>
+      <a href="/services/">Services</a>
       <a href="/feed.xml">RSS</a>
       <a href="https://www.linkedin.com/in/bartoszfrackowiak/" rel="me">LinkedIn</a>
       <a href="https://medium.com/@bfrackowiak" rel="me">Medium</a>
