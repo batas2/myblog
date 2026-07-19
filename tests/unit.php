@@ -573,6 +573,17 @@ t_assert(simplexml_load_string(render_rss([$rssPost])) !== false, 'CDATA breakou
 t_not_contains('</script></script>', ld_script(['x' => 'a</script>b']), 'HEX_TAG keeps </script> encoded');
 t_contains('</script', ld_script(['x' => 'a</script>b']), 'literal </script> is hex-encoded');
 
+// corrupt comment thread: mutation refuses, history bytes survive
+$corrupt = c_store_path('unit-corrupt-thread');
+@mkdir(c_store_dir(), 0755, true);
+file_put_contents($corrupt, '[{"email":"a@b.c","text":"first"}');   // truncated JSON
+t_assert(!c_store_mutate('unit-corrupt-thread', fn($l) => [...$l, ['text' => 'new']]), 'corrupt thread aborts the mutate');
+t_contains('first', (string) file_get_contents($corrupt), 'damaged bytes left intact for forensics');
+@unlink($corrupt);
+// aborted mutate on a fresh slug leaves no empty file behind
+t_assert(!c_store_mutate('unit-abort-thread', fn($l) => null), 'abort returns false');
+t_assert(!is_file(c_store_path('unit-abort-thread')), 'aborted mutate leaves no empty thread file');
+
 /* ---------------- newsletter core ---------------- */
 section('newsletter');
 require_once dirname(__DIR__) . '/lib/newsletter.php';
