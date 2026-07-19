@@ -208,6 +208,28 @@ function admin_delete_comment(string $slug, string $key): bool
     });
 }
 
+/**
+ * Change a post's publication status from the dashboard. Writes the meta
+ * into the markdown source (post_write_status), so it survives rebuilds.
+ * Returns [ok, human message].
+ */
+function admin_set_post_status(string $slug, string $action, string $when = ''): array
+{
+    if (!preg_match('/^[a-z0-9-]{3,80}$/', $slug)) return [false, 'Bad slug.'];
+    $file = post_source_file($slug);
+    if ($file === null) return [false, "No source file for {$slug}."];
+    if (!post_write_status($file, $action, $when)) {
+        return [false, "Could not update {$slug} (bad action or datetime?)."];
+    }
+    $post = parse_post_file($file);
+    $label = match ($post['status']) {
+        'draft'     => 'draft',
+        'scheduled' => 'scheduled — goes live ' . date('Y-m-d H:i', $post['publish_ts']),
+        default     => 'published',
+    };
+    return [true, "{$slug} → {$label}."];
+}
+
 /* ---------------- rebuild ---------------- */
 
 /** Run the static build (publishes anything whose time has come). [exit code, output]. */

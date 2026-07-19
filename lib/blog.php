@@ -60,6 +60,11 @@ function series_suffix(string $slug): string
 function nice_date(string $d): string { return date('M j, Y', strtotime($d)); }
 function log_date(string $d): string { return date('Y.m.d', strtotime($d)); }
 
+/* display dates come from the publish moment, not the filename — a post
+   published early or late shows the day it actually went live */
+function nice_ts(int $ts): string { return date('M j, Y', $ts); }
+function log_ts(int $ts): string { return date('Y.m.d', $ts); }
+
 /* ---------------- loading & parsing ---------------- */
 
 /**
@@ -207,18 +212,81 @@ function load_posts(bool $withUnpublished = false): array
     return $posts;
 }
 
-/** True when the slug belongs to a currently published post (comments gate). */
-function post_is_public(string $slug): bool
+/** Source .md path for a slug, or null. */
+function post_source_file(string $slug): ?string
 {
     // the glob is a suffix match ("service" also hits "…-not-a-service.md"),
     // so verify the parsed slug before trusting a file
     foreach (glob(CONTENT_DIR . '/posts/*-' . $slug . '.md') as $file) {
         $post = parse_post_file($file);
-        if ($post !== null && $post['slug'] === $slug) {
-            return $post['status'] === 'published';
-        }
+        if ($post !== null && $post['slug'] === $slug) return $file;
     }
-    return false;
+    return null;
+}
+
+/** True when the slug belongs to a currently published post (comments gate). */
+function post_is_public(string $slug): bool
+{
+    $file = post_source_file($slug);
+    if ($file === null) return false;
+    $post = parse_post_file($file);
+    return $post !== null && $post['status'] === 'published';
+}
+
+/**
+ * Rewrite a post file's publication meta in place (atomically):
+ *   'publish'  → live now  (**Publish:** <now>, any draft flag removed)
+ *   'draft'    → hidden    (**Status:** draft appended)
+ *   'schedule' → goes live at $when ('YYYY-MM-DD HH:MM', site timezone)
+ * Existing Status/Publish lines are removed first (never inside code
+ * fences); the new line lands just above the **Tags:** line, or at EOF.
+ * Everything else in the file stays byte-identical.
+ */
+function post_write_status(string $file, string $action, string $when = ''): bool
+{
+    if (!is_file($file)) return false;
+
+    if ($action === 'schedule') {
+        try {
+            $when = (new DateTimeImmutable($when, site_tz()))->format('Y-m-d H:i');
+        } catch (Exception) {
+            return false;
+        }
+    } elseif ($action === 'publish') {
+        $when = date('Y-m-d H:i');
+    } elseif ($action !== 'draft') {
+        return false;
+    }
+
+    $lines = preg_split('/\r?\n/', (string) file_get_contents($file));
+    $kept = [];
+    $inFence = false;
+    foreach ($lines as $line) {
+        if (preg_match('/^```/', $line)) $inFence = !$inFence;
+        if (!$inFence && preg_match('/^\*\*(Status|Publish):\*\*/', trim($line))) continue;
+        $kept[] = $line;
+    }
+
+    $meta = $action === 'draft' ? '**Status:** draft' : "**Publish:** {$when}";
+
+    // insert above the trailing Tags line when there is one, else append
+    $at = null;
+    $inFence = false;
+    foreach ($kept as $i => $line) {
+        if (preg_match('/^```/', $line)) $inFence = !$inFence;
+        if (!$inFence && preg_match('/^\*\*Tags:\*\*/', trim($line))) $at = $i;
+    }
+    if ($at !== null) {
+        array_splice($kept, $at, 0, [$meta, '']);
+    } else {
+        while ($kept && trim(end($kept)) === '') array_pop($kept);
+        $kept[] = '';
+        $kept[] = $meta;
+    }
+
+    $tmp = $file . '.tmp';
+    if (file_put_contents($tmp, implode("\n", $kept) . "\n") === false) return false;
+    return rename($tmp, $file);
 }
 
 /** tag name => list of posts (posts stay in reverse-chron order) */
@@ -273,7 +341,7 @@ function render_md(array $p): string
     return "# {$p['title']}\n\n"
         . "*{$p['subtitle']}*\n\n"
         . '- Author: ' . cfg('author') . "\n"
-        . "- Published: {$p['date']}\n"
+        . '- Published: ' . date('Y-m-d', $p['publish_ts']) . "\n"
         . '- Canonical: ' . post_url($p['slug']) . "\n"
         . $medium
         . "- Tags: {$tags}\n\n---\n\n"

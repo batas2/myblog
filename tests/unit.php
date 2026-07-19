@@ -111,6 +111,37 @@ t_eq('published', $p['status'], 'fenced Status/Publish examples ignored');
 t_contains('**Status:** draft', $p['html'], 'fenced example survives into rendered body');
 t_contains('After the fence.', $p['html'], 'body continues after fence');
 
+/* ---------------- status writer (admin "change status") ---------------- */
+section('post status writer');
+$wf = $mkpost('2026-01-05-fixture-write.md');
+t_assert(post_write_status($wf, 'draft'), 'write draft ok');
+$p = parse_post_file($wf);
+t_eq('draft', $p['status'], 'file now parses as draft');
+t_contains('Fixture subtitle line.', (string) file_get_contents($wf), 'body untouched by status write');
+t_assert(post_write_status($wf, 'publish'), 'write publish ok');
+$p = parse_post_file($wf);
+t_eq('published', $p['status'], 'publish-now makes it published');
+t_assert(abs($p['publish_ts'] - time()) < 180, 'publish-now moment is about now');
+t_not_contains('**Status:**', (string) file_get_contents($wf), 'draft flag removed on publish');
+t_assert(post_write_status($wf, 'schedule', '2099-03-04 10:30'), 'schedule ok');
+$p = parse_post_file($wf);
+t_eq('scheduled', $p['status'], 'scheduled after schedule action');
+t_eq((new DateTimeImmutable('2099-03-04 10:30', site_tz()))->getTimestamp(), $p['publish_ts'], 'scheduled moment exact');
+t_assert(post_write_status($wf, 'schedule', '2099-06-01 08:00'), 'reschedule ok');
+t_eq(1, substr_count((string) file_get_contents($wf), '**Publish:**'), 'repeated writes keep exactly one Publish line');
+t_assert(!post_write_status($wf, 'schedule', 'not-a-datetime'), 'garbage datetime rejected');
+t_assert(!post_write_status($wf, 'explode'), 'unknown action rejected');
+$p = parse_post_file($wf);
+t_eq('scheduled', $p['status'], 'rejected writes change nothing');
+// fenced meta examples survive a status write untouched
+$ff = sys_get_temp_dir() . '/bf-unit-posts/2026-01-05-fixture-fencedwrite.md';
+file_put_contents($ff, "# F\n\n*S.*\n\nExample:\n\n```\n**Status:** draft\n```\n\n**Tags:** One\n");
+t_assert(post_write_status($ff, 'publish'), 'write on fenced file ok');
+$raw = (string) file_get_contents($ff);
+t_contains("```\n**Status:** draft\n```", $raw, 'fenced example preserved verbatim');
+t_eq('published', parse_post_file($ff)['status'], 'fenced file published');
+t_assert(!post_write_status($ff . '.missing', 'publish'), 'missing file rejected');
+
 /* ---------------- load_posts against real content ---------------- */
 section('load_posts');
 $all = load_posts(true);
@@ -408,7 +439,8 @@ t_eq('https://bfrackowiak.pl/blog/my-post/', post_url('my-post'), 'post_url abso
 t_eq('/blog/tag/data-quality/', tag_path('Data Quality'), 'tag_path from name');
 t_eq('', series_suffix('mathematicians-vs-lawyers'), 'no series suffix outside series');
 t_contains('Tools That Scale, part 1', series_suffix('from-signals-to-blips'), 'series suffix for series post');
-t_contains('· 5 min read', post_meta_line(['date' => '2026-07-13', 'minutes' => 5, 'slug' => 'x']), 'post meta line');
+t_contains('· 5 min read', post_meta_line(['publish_ts' => post_publish_ts('2026-07-13'), 'minutes' => 5, 'slug' => 'x']), 'post meta line');
+t_contains('Jul 13, 2026', post_meta_line(['publish_ts' => post_publish_ts('2026-07-13'), 'minutes' => 5, 'slug' => 'x']), 'meta line date from publish moment');
 
 section('components');
 t_eq('<img src="/a.jpg" alt="x" width="10" height="5" loading="lazy" decoding="async">', img_lazy('/a.jpg', 'x', 10, 5), 'lazy img attrs');

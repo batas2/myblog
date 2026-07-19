@@ -44,14 +44,14 @@ XML;
 function render_sitemap(array $posts): string
 {
     $site = (string) cfg('site_url');
-    $latest = $posts[0]['date'];
+    $latest = date('Y-m-d', $posts[0]['publish_ts']);
     $urls = "  <url><loc>{$site}/</loc><lastmod>{$latest}</lastmod><priority>1.0</priority></url>\n"
           . "  <url><loc>{$site}/blog/</loc><lastmod>{$latest}</lastmod><priority>0.9</priority></url>\n";
     foreach ($posts as $p) {
-        $urls .= '  <url><loc>' . post_url($p['slug']) . "</loc><lastmod>{$p['date']}</lastmod><priority>0.7</priority></url>\n";
+        $urls .= '  <url><loc>' . post_url($p['slug']) . '</loc><lastmod>' . date('Y-m-d', $p['publish_ts']) . "</lastmod><priority>0.7</priority></url>\n";
     }
     foreach (collect_tags($posts) as $tag => $tagged) {
-        $urls .= '  <url><loc>' . $site . tag_path($tag) . "</loc><lastmod>{$tagged[0]['date']}</lastmod><priority>0.4</priority></url>\n";
+        $urls .= '  <url><loc>' . $site . tag_path($tag) . '</loc><lastmod>' . date('Y-m-d', $tagged[0]['publish_ts']) . "</lastmod><priority>0.4</priority></url>\n";
     }
     return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n{$urls}</urlset>\n";
 }

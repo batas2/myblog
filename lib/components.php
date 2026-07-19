@@ -36,7 +36,7 @@ function arrow_icon(): string
 /** "<date> · N min read[ · series]" meta line for a post. */
 function post_meta_line(array $p): string
 {
-    return nice_date($p['date']) . ' · ' . $p['minutes'] . ' min read' . series_suffix($p['slug']);
+    return nice_ts($p['publish_ts']) . ' · ' . $p['minutes'] . ' min read' . series_suffix($p['slug']);
 }
 
 /** Thumbnail wrapped in a named span, when the post has a hero image. */
@@ -110,7 +110,7 @@ function log_rows(array $posts, bool $withTags = false, string $extraClass = '')
         $html .= '<a href="' . e(post_path($p['slug'])) . '">';
         $html .= thumb_span(hero_meta($p['slug']), 'thumb');
         $html .= '<span class="log-main">';
-        $html .= '<span class="date">' . log_date($p['date']) . '</span>';
+        $html .= '<span class="date">' . log_ts($p['publish_ts']) . '</span>';
         $html .= '<h3>' . e($p['title']) . '</h3><span class="sub">' . e($p['subtitle']) . '</span>';
         $html .= '</span>';
         $html .= '<span class="rt">' . $p['minutes'] . ' min</span>';
@@ -131,7 +131,7 @@ function post_card(array $p): string
     $out  = '<a class="pcard reveal" href="' . e(post_path($p['slug'])) . '">';
     $out .= thumb_span(hero_meta($p['slug']), 'pcard-media');
     $out .= '<span class="pcard-body">';
-    $out .= '<span class="meta">' . log_date($p['date']) . ' · ' . $p['minutes'] . ' min</span>';
+    $out .= '<span class="meta">' . log_ts($p['publish_ts']) . ' · ' . $p['minutes'] . ' min</span>';
     $out .= '<h3>' . e($p['title']) . '</h3>';
     $out .= '<span class="sub">' . e($p['subtitle']) . '</span>';
     if ($p['tags']) {

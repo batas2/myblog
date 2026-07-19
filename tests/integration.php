@@ -359,6 +359,37 @@ t_contains('scheduled: itest-future-post', $body, 'rebuild output lists the queu
 t_assert(is_dir($SANDBOX . '/blog/itest-past-post'), 'rebuild kept published pages');
 t_assert(!is_dir($SANDBOX . '/blog/itest-future-post'), 'rebuild still excludes scheduled post');
 
+/* status cycle from the dashboard: draft → publish now → reschedule → draft */
+$setStatus = fn(string $slug, string $act, string $when = '') => $asAdmin('POST', "$BASE/admin.php", ['body' => http_build_query(
+    ['action' => 'setstatus', 'csrf' => $csrf, 'slug' => $slug, 'status_action' => $act] + ($when !== '' ? ['when' => $when] : [])
+)]);
+$draftFile = $SANDBOX . '/content/posts/2024-01-01-itest-draft-post.md';
+
+[$code] = $setStatus('itest-draft-post', 'publish');
+t_eq(302, $code, 'publish-now accepted');
+t_assert(is_dir($SANDBOX . '/blog/itest-draft-post'), 'publish-now built the page (auto rebuild)');
+t_contains('ITest Draft Post', (string) file_get_contents($SANDBOX . '/blog/index.php'), 'publish-now listed the post');
+t_contains('**Publish:**', (string) file_get_contents($draftFile), 'publish moment written into the source');
+t_not_contains('**Status:** draft', (string) file_get_contents($draftFile), 'draft flag removed from the source');
+[, $body] = $asAdmin('GET', "$BASE/admin.php");
+t_contains('itest-draft-post → published', $body, 'status flash shown');
+t_contains('Site rebuilt', $body, 'auto-rebuild reported');
+
+[$code] = $setStatus('itest-draft-post', 'schedule', '2099-05-01T12:00');
+t_eq(302, $code, 'reschedule accepted');
+t_assert(!is_dir($SANDBOX . '/blog/itest-draft-post'), 'rescheduled post unbuilt again');
+t_contains('**Publish:** 2099-05-01 12:00', (string) file_get_contents($draftFile), 'schedule moment written');
+
+[$code] = $setStatus('itest-draft-post', 'draft');
+t_eq(302, $code, 'back-to-draft accepted');
+t_contains('**Status:** draft', (string) file_get_contents($draftFile), 'draft flag restored');
+t_not_contains('ITest Draft Post', (string) file_get_contents($SANDBOX . '/blog/index.php'), 'draft absent from index again');
+
+[$code] = $setStatus('no-such-post', 'publish');
+t_eq(302, $code, 'unknown slug redirects');
+[, $body] = $asAdmin('GET', "$BASE/admin.php");
+t_contains('No source file', $body, 'unknown slug reported, nothing broken');
+
 [$code, , $loc] = $asAdmin('POST', "$BASE/admin.php", ['body' => http_build_query([
     'action' => 'delcomment', 'csrf' => $csrf, 'slug' => 'nobody-owns-the-sum', 'key' => $commentKey,
 ])]);

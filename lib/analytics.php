@@ -220,20 +220,21 @@ function an_visitor(string $seed, string $utcDay, string $ip, string $ua): strin
 
 /* ---------------- reading (dashboard queries) ---------------- */
 
-/** Shared WHERE fragment: period + optional exact-path drilldown. */
-function an_where(string $since, string $path, array &$args): string
+/** Shared WHERE fragment: period (since ≤ day < until) + optional exact-path drilldown. */
+function an_where(string $since, string $path, array &$args, string $until = ''): string
 {
     $sql = 'day >= ?';
     $args[] = $since;
+    if ($until !== '') { $sql .= ' AND day < ?'; $args[] = $until; }
     if ($path !== '') { $sql .= ' AND path = ?'; $args[] = $path; }
     return $sql;
 }
 
 /** Totals for a period: pageviews, uniques, engaged-time stats, live-now. */
-function an_summary(PDO $db, string $since, string $path = ''): array
+function an_summary(PDO $db, string $since, string $path = '', string $until = ''): array
 {
     $args = [];
-    $where = an_where($since, $path, $args);
+    $where = an_where($since, $path, $args, $until);
     $st = $db->prepare("SELECT COUNT(*) pv, COUNT(DISTINCT visitor) uv,
             COALESCE(AVG(CASE WHEN duration > 0 THEN duration END), 0) avg_time,
             COUNT(DISTINCT day) days,
@@ -247,8 +248,11 @@ function an_summary(PDO $db, string $since, string $path = ''): array
     $row['live'] = (int) $live->fetchColumn();
 
     // readers who saw more than one page that day (whole-site metric)
-    $multi = $db->prepare('SELECT COUNT(*) FROM (SELECT day, visitor FROM hits WHERE day >= ? GROUP BY day, visitor HAVING COUNT(*) > 1)');
-    $multi->execute([$since]);
+    $mArgs = [$since];
+    $mSql = 'day >= ?';
+    if ($until !== '') { $mSql .= ' AND day < ?'; $mArgs[] = $until; }
+    $multi = $db->prepare("SELECT COUNT(*) FROM (SELECT day, visitor FROM hits WHERE {$mSql} GROUP BY day, visitor HAVING COUNT(*) > 1)");
+    $multi->execute($mArgs);
     $row['multi'] = (int) $multi->fetchColumn();
 
     return [
