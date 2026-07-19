@@ -191,24 +191,33 @@ function render_start_page(array $posts): string
         [
             'k'       => 'Architecture & orgs',
             'icon'    => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/></svg>',
-            'promise' => 'Systems fail where ownership does. For architects and leads who keep meeting people problems wearing technical costumes.',
-            'flag'    => ['nobody-owns-the-sum', 'The sharpest org observation on this blog.'],
-            'more'    => ['decisions-have-an-architecture-too', 'the-anti-corruption-layer-is-for-people-too'],
+            'who'     => 'For architects and tech leads meeting people problems dressed as technical ones.',
+            'reads'   => [
+                ['nobody-owns-the-sum',                        'The sharpest org observation on this blog.'],
+                ['decisions-have-an-architecture-too',         ''],
+                ['the-anti-corruption-layer-is-for-people-too', ''],
+            ],
         ],
         [
             'k'       => 'The AI transformation',
+            'series'  => 'The “Tools That Scale” series — read in order',
             'icon'    => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z"/></svg>',
-            'promise' => 'Running AI adoption across fifteen squads — the radar, the metrics, the practice. For leaders asked to "do AI" without a map.',
-            'flag'    => ['from-signals-to-blips', 'How a tech radar became the engine of a transformation.'],
-            'more'    => ['probabilistic-metrics', 'prompt-driven-architecture'],
-            'note'    => 'These three are the “Tools That Scale” series — best read in order.',
+            'who'     => 'For leaders told to "do AI" — how I run adoption across fifteen squads.',
+            'reads'   => [
+                ['from-signals-to-blips',      'A tech radar becomes the engine of a transformation.'],
+                ['probabilistic-metrics',      ''],
+                ['prompt-driven-architecture', ''],
+            ],
         ],
         [
             'k'       => 'Building in the open',
             'icon'    => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"/></svg>',
-            'promise' => 'One person, several shipping products, AI-staffed. For anyone building alone — or pricing work nobody can see.',
-            'flag'    => ['a-company-of-one-staffed-by-agents', 'The field report on what AI actually changes about building.'],
-            'more'    => ['the-diagram-that-cannot-lie', 'edge-cases-written-by-parliament'],
+            'who'     => 'For anyone building alone — my products, shipped with AI agents, receipts included.',
+            'reads'   => [
+                ['a-company-of-one-staffed-by-agents', 'What AI actually changes about building solo.'],
+                ['the-diagram-that-cannot-lie',        ''],
+                ['edge-cases-written-by-parliament',   ''],
+            ],
         ],
     ];
 
@@ -218,7 +227,7 @@ function render_start_page(array $posts): string
     // structured data: a CollectionPage over the featured picks
     $featured = array_values(array_filter(array_merge(
         [$hook],
-        ...array_map(fn($d) => array_map($pick, array_merge([$d['flag'][0]], $d['more'])), $doors)
+        ...array_map(fn($d) => array_map(fn($r) => $pick($r[0]), $d['reads']), $doors)
     )));
     $extra  = ld_script([
         '@context' => 'https://schema.org',
@@ -275,29 +284,23 @@ function render_start_page(array $posts): string
     $html .= '<p>Three threads run through everything here. Follow the one that sounds like your week.</p></div>';
     $html .= '<div class="grid-3 start-doors">';
     foreach ($doors as $d) {
-        $flag = $pick($d['flag'][0]);
-        $html .= '<article class="card door reveal">';
+        $html .= '<article class="card door">';
         $html .= '<div class="card-top"><div class="icon-tile">' . $d['icon'] . '</div><span class="k">' . e($d['k']) . '</span></div>';
-        $html .= '<p class="d-promise">' . e($d['promise']) . '</p>';
-        if ($flag) {
-            $html .= '<a class="d-flag" href="' . e(post_path($flag['slug'])) . '">';
-            $html .= thumb_span(hero_meta($flag['slug']), 'd-thumb');
-            $html .= '<span class="d-ftxt">';
-            $html .= '<span class="d-why">' . e($d['flag'][1]) . '</span>';
-            $html .= '<span class="d-title">' . e($flag['title']) . '</span>';
-            $html .= '<span class="meta">' . $flag['minutes'] . ' min read</span>';
-            $html .= '</span></a>';
+        $html .= '<p class="d-promise">' . e($d['who']) . '</p>';
+        $html .= '<ol class="d-path">';
+        foreach ($d['reads'] as $i => [$slug, $why]) {
+            $p = $pick($slug);
+            if (!$p) continue;
+            $html .= '<li><a href="' . e(post_path($slug)) . '">';
+            $html .= '<span class="d-no">' . sprintf('%02d', $i + 1) . '</span>';
+            $html .= '<span class="d-read"><span class="d-title">' . e($p['title']) . '</span>';
+            if ($why !== '') $html .= '<span class="d-why">' . e($why) . '</span>';
+            $html .= '</span>';
+            $html .= '<span class="d-min">' . $p['minutes'] . ' min</span>';
+            $html .= '</a></li>';
         }
-        $more = array_values(array_filter(array_map($pick, $d['more'])));
-        if ($more) {
-            $html .= '<span class="d-then">then</span><ul class="d-more">';
-            foreach ($more as $m) {
-                $html .= '<li><a href="' . e(post_path($m['slug'])) . '">' . e($m['title'])
-                       . ' <span class="meta">· ' . $m['minutes'] . ' min</span></a></li>';
-            }
-            $html .= '</ul>';
-        }
-        if (!empty($d['note'])) $html .= '<p class="d-note">' . e($d['note']) . '</p>';
+        $html .= '</ol>';
+        if (!empty($d['series'])) $html .= '<span class="d-series">' . e($d['series']) . '</span>';
         $html .= '</article>';
     }
     $html .= '</div>';
