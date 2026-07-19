@@ -194,7 +194,7 @@ t_contains('href="/blog/mathematicians-vs-lawyers/"', $body, 'start page hook se
 [$code, $body] = http_req('GET', "$BASE/services/");
 t_eq(200, $code, 'services page 200');
 t_contains('Architecture Health Check', $body, 'services page lists engagements');
-t_contains('12 000 PLN', $body, 'services page shows pricing');
+t_not_contains('PLN', $body, 'no prices on the public services page');
 t_contains('/#contact', $body, 'services page falls back to contact CTA when calendly unset');
 [, $body] = http_req('GET', "$BASE/blog/nobody-owns-the-sum/");
 t_contains('href="/services/"', $body, 'post pages link to services (nav + author box)');

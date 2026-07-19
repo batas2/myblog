@@ -36,13 +36,13 @@ $ld = json_encode([
                 '@type' => 'OfferCatalog',
                 'name' => 'Engagements',
                 'itemListElement' => [
-                    ['@type' => 'Offer', 'price' => '8000',  'priceCurrency' => 'PLN', 'itemOffered' => ['@type' => 'Service', 'name' => 'Architecture Health Check']],
-                    ['@type' => 'Offer', 'price' => '12000', 'priceCurrency' => 'PLN', 'itemOffered' => ['@type' => 'Service', 'name' => 'AI-Native Architecture Review']],
-                    ['@type' => 'Offer', 'price' => '40000', 'priceCurrency' => 'PLN', 'itemOffered' => ['@type' => 'Service', 'name' => 'Architecture Advisory Sprint']],
-                    ['@type' => 'Offer', 'price' => '15000', 'priceCurrency' => 'PLN', 'itemOffered' => ['@type' => 'Service', 'name' => 'DDD & Event Sourcing Workshop (1 day)']],
-                    ['@type' => 'Offer', 'price' => '18000', 'priceCurrency' => 'PLN', 'itemOffered' => ['@type' => 'Service', 'name' => 'Claude Code Mastery Workshop (1 day)']],
-                    ['@type' => 'Offer', 'price' => '8000',  'priceCurrency' => 'PLN', 'itemOffered' => ['@type' => 'Service', 'name' => 'Advisory Retainer (monthly)']],
-                    ['@type' => 'Offer', 'price' => '20000', 'priceCurrency' => 'PLN', 'itemOffered' => ['@type' => 'Service', 'name' => 'Fractional Principal Engineer (monthly)']],
+                    ['@type' => 'Offer', 'itemOffered' => ['@type' => 'Service', 'name' => 'Architecture Health Check']],
+                    ['@type' => 'Offer', 'itemOffered' => ['@type' => 'Service', 'name' => 'AI-Native Architecture Review']],
+                    ['@type' => 'Offer', 'itemOffered' => ['@type' => 'Service', 'name' => 'Architecture Advisory Sprint']],
+                    ['@type' => 'Offer', 'itemOffered' => ['@type' => 'Service', 'name' => 'DDD & Event Sourcing Workshop (1 day)']],
+                    ['@type' => 'Offer', 'itemOffered' => ['@type' => 'Service', 'name' => 'Claude Code Mastery Workshop (1 day)']],
+                    ['@type' => 'Offer', 'itemOffered' => ['@type' => 'Service', 'name' => 'Advisory Retainer (monthly)']],
+                    ['@type' => 'Offer', 'itemOffered' => ['@type' => 'Service', 'name' => 'Fractional Principal Engineer (monthly)']],
                 ],
             ],
         ],
@@ -55,10 +55,9 @@ $extra = <<<HTML
 .svc-hero { padding: 6.5rem 0 1rem; }
 .svc-hero h1 { margin: 0.9rem 0 1rem; }
 .svc-hero .lede { max-width: 46rem; }
-.price-row { display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap; margin-top: 1.1rem; padding-top: 0.9rem; border-top: 1px solid var(--line); }
-.price-row .price { font-weight: 800; font-size: 1.28rem; color: var(--ink); letter-spacing: -0.01em; }
-.price-row .alt { font-size: 0.85rem; color: var(--muted); }
-.price-row .len { margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 0.66rem; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); }
+.proof-row { display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap; margin-top: 1.1rem; padding-top: 0.9rem; border-top: 1px solid var(--line); }
+.proof-row .proof { font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; letter-spacing: 0.07em; text-transform: uppercase; font-weight: 700; color: var(--accent); }
+.proof-row .len { margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 0.66rem; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); }
 .badge-flag { display: inline-block; font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; letter-spacing: 0.11em; text-transform: uppercase; color: var(--paper); background: var(--accent); border-radius: 999px; padding: 0.28em 0.75em; margin-left: 0.6rem; vertical-align: middle; }
 .how { counter-reset: step; display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); margin-top: 2rem; }
 .how li { list-style: none; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 1.1rem 1.25rem; }
@@ -72,7 +71,7 @@ HTML;
 
 echo page_head(
     'Work with me · Bartosz Frąckowiak — architecture consulting, workshops & AI-native training',
-    'Fixed-scope architecture engagements, team workshops (DDD, Claude Code), and ongoing advisory — from the architect who runs an AI transformation across several hundred developers. Transparent pricing.',
+    'Fixed-scope architecture engagements, team workshops (DDD, Claude Code), and ongoing advisory — from the architect who runs an AI transformation across several hundred developers.',
     'https://bfrackowiak.pl/services/',
     $extra
 );
@@ -88,7 +87,7 @@ echo site_nav('services');
     <p class="lede">
       Everything I learn ends up <a href="/blog/">on the blog</a> — in public, for free, most Mondays.
       When you want it applied to <em>your</em> system, with your constraints and your team in the room,
-      these are the shapes I work in. Fixed scope, fixed price, written deliverables. No hourly meters.
+      these are the shapes I work in. Fixed scope, written deliverables, a price agreed up front. No hourly meters.
     </p>
     <p class="read-first">New here? The honest starting point is <a href="/blog/start/">reading a few essays</a> — it costs nothing and tells you exactly how I think.</p>
   </section>
@@ -112,7 +111,7 @@ echo site_nav('services');
             <li><span>60-minute review call, recorded</span></li>
             <li><span>As-is architecture diagram</span></li>
           </ul>
-          <div class="price-row"><span class="price">8 000 PLN</span><span class="alt">· €2 200</span><span class="len">1 week</span></div>
+          <div class="proof-row"><span class="proof">12+ yrs of production systems behind it</span><span class="len">1 week</span></div>
         </article>
 
         <article class="card">
@@ -124,7 +123,7 @@ echo site_nav('services');
             <li><span>Claude Code / agentic workflow rollout plan</span></li>
             <li><span>Built on the playbook I run across fifteen squads</span></li>
           </ul>
-          <div class="price-row"><span class="price">12 000 PLN</span><span class="alt">· €3 200</span><span class="len">1 week</span></div>
+          <div class="proof-row"><span class="proof">Proven across 15 squads, 100s of devs</span><span class="len">1 week</span></div>
         </article>
 
         <article class="card">
@@ -136,7 +135,7 @@ echo site_nav('services');
             <li><span>Optional proof-of-concept</span></li>
             <li><span>6-month implementation roadmap</span></li>
           </ul>
-          <div class="price-row"><span class="price">40 000 PLN</span><span class="alt">· €10 000</span><span class="len">5 days</span></div>
+          <div class="proof-row"><span class="proof">20+ bounded contexts governed daily</span><span class="len">5 days</span></div>
         </article>
       </div>
     </div>
@@ -161,7 +160,7 @@ echo site_nav('services');
             <li><span>ADR template pack</span></li>
             <li><span>Anti-pattern review in your code</span></li>
           </ul>
-          <div class="price-row"><span class="price">15 000 PLN</span><span class="alt">· €4 000</span><span class="len">1 day</span></div>
+          <div class="proof-row"><span class="proof">15-year monolith moved with DDD</span><span class="len">1 day</span></div>
         </article>
 
         <article class="card">
@@ -173,7 +172,7 @@ echo site_nav('services');
             <li><span>Custom skills + MCP hands-on</span></li>
             <li><span>60-minute follow-up call included</span></li>
           </ul>
-          <div class="price-row"><span class="price">18 000 PLN</span><span class="alt">· €4 800</span><span class="len">1 day</span></div>
+          <div class="proof-row"><span class="proof">Workflows from a live AI transformation</span><span class="len">1 day</span></div>
         </article>
 
         <article class="card">
@@ -181,9 +180,10 @@ echo site_nav('services');
           <h3>Ongoing advisory</h3>
           <p>For teams that want the second opinion on tap rather than a one-off engagement.</p>
           <ul>
-            <li><span><strong>Advisory Retainer</strong> — 8h/month, async + 2 calls, &lt;24h response · <strong>8 000 PLN/mo</strong> <span style="color:var(--muted)">(€2 200)</span>, 3-month minimum</span></li>
-            <li><span><strong>Fractional Principal Engineer</strong> — 20h/month embedded, weekly standup, owns one critical RFC per month · <strong>20 000 PLN/mo</strong> <span style="color:var(--muted)">(€5 500)</span>, 6-month minimum, max 2 clients at a time</span></li>
+            <li><span><strong>Advisory Retainer</strong> — 8h/month, async + 2 calls, &lt;24h response; 3-month minimum</span></li>
+            <li><span><strong>Fractional Principal Engineer</strong> — 20h/month embedded, weekly standup, owns one critical RFC per month; 6-month minimum, max 2 clients at a time</span></li>
           </ul>
+          <div class="proof-row"><span class="proof">Second opinion on tap, not a seat filled</span><span class="len">Monthly</span></div>
         </article>
       </div>
     </div>
@@ -200,7 +200,7 @@ echo site_nav('services');
 
       <ol class="how">
         <li><b>Discovery call — 30 min, free</b><p>Your stack, your team, where it hurts. No pitch deck.</p></li>
-        <li><b>Fixed proposal within 24h</b><p>Scope, deliverable, date, price. One page, no surprises.</p></li>
+        <li><b>Fixed proposal within 24h</b><p>Scope, deliverable, date, and a fixed price. One page, no surprises, no hourly meters.</p></li>
         <li><b>The work</b><p>Delivered on the stated date, with the written artifact your team keeps.</p></li>
       </ol>
 

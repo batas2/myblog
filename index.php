@@ -354,7 +354,7 @@ $form_message = $form['message'];
       </div>
 
       <p style="margin-top:2rem">
-        <a class="btn btn-ghost" href="/services/">Engagements &amp; pricing &rarr;</a>
+        <a class="btn btn-ghost" href="/services/">See the engagements &rarr;</a>
       </p>
     </div>
   </section>

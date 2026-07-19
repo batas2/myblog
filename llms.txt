@@ -52,20 +52,20 @@ Selected essays are cross-published on Medium (https://medium.com/@bfrackowiak);
 
 ## Services
 
-Full catalog with transparent pricing: https://bfrackowiak.pl/services/ — fixed scope, fixed price, written deliverables. A free 30-minute discovery call is the entry point for everything.
+Full catalog: https://bfrackowiak.pl/services/ — fixed scope, written deliverables, a fixed price agreed up front in a 24-hour proposal (no hourly billing). A free 30-minute discovery call is the entry point for everything.
 
 ### Advisory engagements
-- Architecture Health Check — 1 week — 8 000 PLN / EUR 2 200: audit, top-5 risks, quick wins, 3-6 month roadmap; 15-page report + 60-min review call.
-- AI-Native Architecture Review (flagship) — 1 week — 12 000 PLN / EUR 3 200: the Health Check plus a Claude Code / agentic-workflow adoption plan, built on the playbook run across fifteen squads and several hundred developers.
-- Architecture Advisory Sprint — 5 days — 40 000 PLN / EUR 10 000: one hard problem, embedded week, full RFC (20-40 pages), optional POC, 6-month roadmap.
+- Architecture Health Check — 1 week: audit, top-5 risks, quick wins, 3-6 month roadmap; 15-page report + 60-min review call.
+- AI-Native Architecture Review (flagship) — 1 week: the Health Check plus a Claude Code / agentic-workflow adoption plan, built on the playbook run across fifteen squads and several hundred developers.
+- Architecture Advisory Sprint — 5 days: one hard problem, embedded week, full RFC (20-40 pages), optional POC, 6-month roadmap.
 
 ### Team workshops (1 day, max 12 people, on your codebase)
-- DDD & Event Sourcing — 15 000 PLN / EUR 4 000: event storming on a real domain, ADR template pack, anti-pattern review.
-- Claude Code Mastery — 18 000 PLN / EUR 4 800: fundamentals, custom skills, MCP servers, spec-driven development, live exercise on the client's repository; 60-min follow-up included.
+- DDD & Event Sourcing: event storming on a real domain, ADR template pack, anti-pattern review.
+- Claude Code Mastery: fundamentals, custom skills, MCP servers, spec-driven development, live exercise on the client's repository; 60-min follow-up included.
 
 ### Ongoing advisory
-- Advisory Retainer — 8 000 PLN/mo (EUR 2 200): 8h/month, async + 2 calls, <24h response, 3-month minimum.
-- Fractional Principal Engineer — 20 000 PLN/mo (EUR 5 500): 20h/month embedded, weekly standup, owns one critical RFC per month; 6-month minimum, max 2 clients at a time.
+- Advisory Retainer: 8h/month, async + 2 calls, <24h response, 3-month minimum.
+- Fractional Principal Engineer: 20h/month embedded, weekly standup, owns one critical RFC per month; 6-month minimum, max 2 clients at a time.
 
 ## Expertise
 
