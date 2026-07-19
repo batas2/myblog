@@ -533,4 +533,79 @@ t_eq(2, count($bc['itemListElement']), 'breadcrumb items');
 t_eq(1, $bc['itemListElement'][0]['position'], 'breadcrumb positions start at 1');
 t_assert(json_decode(ld_script(schema_blog()) ? substr(ld_script(schema_blog()), 51, -9) : '') !== null || str_contains(ld_script(schema_blog()), '"@type":"Blog"'), 'ld_script serializes');
 
+/* ---------------- newsletter core ---------------- */
+section('newsletter');
+require_once dirname(__DIR__) . '/lib/newsletter.php';
+$nlTmp = sys_get_temp_dir() . '/bfx-nl-unit-' . getmypid() . '.db';
+@unlink($nlTmp);
+$ndb = nl_db($nlTmp);
+
+// subscribe: validation + normalization + idempotency
+t_eq(null, nl_subscribe($ndb, 'not-an-email'), 'garbage address rejected');
+t_eq(null, nl_subscribe($ndb, str_repeat('a', 250) . '@example.com'), 'overlong address rejected');
+$tok = nl_subscribe($ndb, '  Reader@Example.COM ');
+t_assert(is_string($tok) && strlen($tok) === 32, 'valid address stored, 32-hex token');
+t_eq('reader@example.com', $ndb->query('SELECT email FROM subscribers')->fetchColumn(), 'address trimmed + lowercased');
+t_eq($tok, nl_subscribe($ndb, 'reader@example.com'), 'resubscribe returns the same token, no dupe row');
+t_eq(1, (int) $ndb->query('SELECT COUNT(*) FROM subscribers')->fetchColumn(), 'one row per address');
+
+// confirm: format gate, wrong token, happy path, no status downgrade
+t_assert(!nl_confirm($ndb, 'zzz'), 'malformed token rejected');
+t_assert(!nl_confirm($ndb, str_repeat('0', 32)), 'unknown token confirms nothing');
+t_assert(nl_confirm($ndb, $tok), 'valid token confirms');
+t_eq('confirmed', $ndb->query('SELECT status FROM subscribers')->fetchColumn(), 'status flipped to confirmed');
+$firstConfirmTs = (int) $ndb->query('SELECT confirmed_ts FROM subscribers')->fetchColumn();
+t_eq($tok, nl_subscribe($ndb, 'reader@example.com'), 'subscribe after confirm keeps the row');
+t_eq('confirmed', $ndb->query('SELECT status FROM subscribers')->fetchColumn(), 'confirmed never downgraded to pending');
+nl_confirm($ndb, $tok);
+t_eq($firstConfirmTs, (int) $ndb->query('SELECT confirmed_ts FROM subscribers')->fetchColumn(), 'reconfirm keeps original confirmed_ts');
+
+// counts + unsubscribe
+nl_subscribe($ndb, 'pending@example.com');
+t_eq(['confirmed' => 1, 'pending' => 1], nl_counts($ndb), 'counts split by status');
+t_assert(!nl_unsubscribe($ndb, str_repeat('f', 32)), 'unknown unsubscribe token is a no-op');
+t_assert(nl_unsubscribe($ndb, $tok), 'unsubscribe by token works');
+t_eq(0, (int) $ndb->query("SELECT COUNT(*) FROM subscribers WHERE email = 'reader@example.com'")->fetchColumn(), 'unsubscribe deletes the row outright');
+
+// mail assembly
+t_eq('<a href="https://bfrackowiak.pl/blog/x/">', nl_absolutize('<a href="/blog/x/">'), 'hrefs absolutized');
+t_contains('src="https://bfrackowiak.pl/assets/i.jpg"', nl_absolutize('<img src="/assets/i.jpg">'), 'img srcs absolutized');
+$fakePost = ['slug' => 'unit-essay', 'title' => 'Unit Essay', 'subtitle' => 'A subtitle.',
+             'html' => '<p>Body with <a href="/blog/other/">a link</a>.</p>', 'publish_ts' => time(), 'minutes' => 3];
+[$nsub, $nhtml, $ntext] = nl_compose($fakePost);
+t_eq('Unit Essay', $nsub, 'subject = essay title');
+t_contains('href="https://bfrackowiak.pl/blog/other/"', $nhtml, 'body links absolute in mail');
+t_contains('%%UNSUB%%', $nhtml, 'html carries the per-recipient unsubscribe placeholder');
+t_contains('%%UNSUB%%', $ntext, 'text alternative carries it too');
+t_contains('https://bfrackowiak.pl/blog/unit-essay/', $nhtml, 'read-on-site link present');
+
+// sends ledger: baseline seeds without mailing, then exactly-once per new essay
+$pendTok = (string) $ndb->query("SELECT token FROM subscribers WHERE email = 'pending@example.com'")->fetchColumn();
+nl_confirm($ndb, $pendTok);   // one confirmed recipient for the dry-run below
+$old = ['slug' => 'old-essay', 'title' => 'Old', 'subtitle' => 's', 'html' => '<p>x</p>', 'publish_ts' => time() - 86400, 'minutes' => 1];
+$log = nl_send_new([$old], false, $ndb);
+t_contains('baseline: seeded 1', implode("\n", $log), 'first run seeds the ledger');
+t_eq('baseline', $ndb->query("SELECT note FROM sends WHERE slug = 'old-essay'")->fetchColumn(), 'baseline rows marked');
+$log = nl_send_new([$old], false, $ndb);
+t_contains('nothing new to send', implode("\n", $log), 'seen essay never sent again');
+$log = nl_send_new([$old, $fakePost], true, $ndb);
+t_contains('would send "unit-essay" to 1 subscribers', implode("\n", $log), 'dry-run plans the fresh essay only');
+t_eq(1, (int) $ndb->query('SELECT COUNT(*) FROM sends')->fetchColumn(), 'dry-run writes nothing to the ledger');
+// real send path with zero confirmed recipients: records the essay, mails nobody
+nl_unsubscribe($ndb, $pendTok);
+$log = nl_send_new([$old, $fakePost], false, $ndb);
+t_contains('sent "unit-essay" to 0/0 subscribers', implode("\n", $log), 'fresh essay recorded even with an empty list');
+t_eq(2, (int) $ndb->query('SELECT COUNT(*) FROM sends')->fetchColumn(), 'ledger now covers both essays');
+
+// smtp guard: with no configured password the sender must refuse quietly
+$smtpCfg = (array) cfg('smtp', []);
+if (($smtpCfg['pass'] ?? '') === '') {
+    t_assert(!nl_smtp_send('x@example.com', 's', 'h', 't', 'https://u'), 'smtp disabled without a password');
+} else {
+    t_assert(true, 'smtp guard skipped (live credentials present — not sending from tests)');
+}
+
+$ndb = null;
+@unlink($nlTmp); @unlink($nlTmp . '-wal'); @unlink($nlTmp . '-shm');
+
 if (basename($_SERVER['SCRIPT_NAME'] ?? '') === 'unit.php') exit(t_summary());
