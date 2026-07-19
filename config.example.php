@@ -45,6 +45,14 @@ return [
     // (see docs/ANALYTICS-SETUP.md); leave '' to omit the tracker snippet
     'goatcounter_url' => '',
 
+    // Cloudflare Turnstile captcha (contact form + comments). Both keys set =
+    // Turnstile replaces the built-in math captcha; leave empty to keep the
+    // dependency-free defenses. Remember to allow this hostname on the widget.
+    'turnstile' => [
+        'sitekey' => '',
+        'secret'  => '',
+    ],
+
     // contact form (PHPMailer over SMTP); leave 'pass' empty to disable sending
     'smtp' => [
         'host'      => 'smtp.example.com',

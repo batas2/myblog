@@ -25,6 +25,7 @@ require_once __DIR__ . '/lib/helpers.php';
 require_once __DIR__ . '/lib/markdown.php';
 require_once __DIR__ . '/lib/blog.php';
 require_once __DIR__ . '/lib/comment_store.php';
+require_once __DIR__ . '/lib/captcha.php';
 
 if (!defined('C_MAX_TEXT')) {
     define('C_MAX_TEXT', 2000);
@@ -99,7 +100,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['c_submit']) && !isset
     // bots: pretend success, store nothing
     if ($trap !== '' || $age < 4 || $age > 86400) { header("Location: {$back}#comments"); exit; }
 
-    if (!c_verify_challenge($chal, $answer)) { header("Location: {$back}?cerr=captcha#comment-form"); exit; }
+    // Turnstile when configured, the stateless math captcha otherwise
+    if (turnstile_enabled()) {
+        if (!turnstile_verify_post()) { header("Location: {$back}?cerr=captcha#comment-form"); exit; }
+    } elseif (!c_verify_challenge($chal, $answer)) {
+        header("Location: {$back}?cerr=captcha#comment-form"); exit;
+    }
     if (filter_var($email, FILTER_VALIDATE_EMAIL) === false) { header("Location: {$back}?cerr=email#comment-form"); exit; }
     if ($text === '') { header("Location: {$back}?cerr=empty#comment-form"); exit; }
     if (mb_strlen($text) > C_MAX_TEXT || mb_strlen($email) > 254) { header("Location: {$back}?cerr=long#comment-form"); exit; }
@@ -171,6 +177,16 @@ $c_msgs = [
       <input type="hidden" name="c_ts" value="<?= time() ?>">
       <input type="hidden" name="c_chal" value="<?= e($c_token) ?>">
       <p class="c-website-row" aria-hidden="true"><label>Website<input type="text" name="c_website" tabindex="-1" autocomplete="off"></label></p>
+      <?php if (turnstile_enabled()): ?>
+      <div class="field">
+        <label for="c_email">Email</label>
+        <input type="email" id="c_email" name="c_email" required maxlength="254" placeholder="you@example.com" autocomplete="email">
+      </div>
+      <div class="field">
+        <label>Spam check</label>
+        <?= turnstile_widget('comment') ?>
+      </div>
+      <?php else: ?>
       <div class="two-col">
         <div class="field">
           <label for="c_email">Email</label>
@@ -181,6 +197,7 @@ $c_msgs = [
           <input type="text" id="c_answer" name="c_answer" required inputmode="numeric" pattern="[0-9]*" maxlength="3" placeholder="<?= $c_a ?> + <?= $c_b ?> = …" autocomplete="off">
         </div>
       </div>
+      <?php endif; ?>
       <div class="field">
         <label for="c_text">Comment</label>
         <textarea id="c_text" name="c_text" required maxlength="2000" placeholder="Agree, disagree, or bring a war story of your own…"></textarea>
@@ -189,4 +206,5 @@ $c_msgs = [
       <p class="comment-note">Your email is required but published only in masked form (j***@example.com). Nothing else is stored.</p>
     </form>
   </div>
+  <?php if (turnstile_enabled()) echo turnstile_script(); ?>
 </section>

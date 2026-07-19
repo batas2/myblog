@@ -10,6 +10,7 @@ use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/captcha.php';
 require_once APP_ROOT . '/vendor/phpmailer/Exception.php';
 require_once APP_ROOT . '/vendor/phpmailer/PHPMailer.php';
 require_once APP_ROOT . '/vendor/phpmailer/SMTP.php';
@@ -33,6 +34,10 @@ function handle_contact_form(): array
 
     if (!$name || !$email || !$subject || !$message) {
         return ['sent' => false, 'error' => true, 'message' => 'Please fill in all fields with a valid email address.'];
+    }
+
+    if (turnstile_enabled() && !turnstile_verify_post()) {
+        return ['sent' => false, 'error' => true, 'message' => 'The spam check did not pass. Please try again.'];
     }
 
     $smtp = (array) cfg('smtp', []);

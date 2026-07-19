@@ -437,8 +437,15 @@ $form_message = $form['message'];
                 <label for="message">Message</label>
                 <textarea id="message" name="message" required placeholder="Tell me about your team, your system, and what you're trying to achieve…"><?= htmlspecialchars($_POST['message'] ?? '') ?></textarea>
               </div>
+              <?php if (turnstile_enabled()): ?>
+              <div class="field">
+                <label>Spam check</label>
+                <?= turnstile_widget('contact') ?>
+              </div>
+              <?php endif; ?>
               <button class="submit" type="submit" name="contact_submit">Send message</button>
             </form>
+            <?php if (turnstile_enabled()) echo turnstile_script(); ?>
           <?php endif; ?>
         </div>
       </div>
