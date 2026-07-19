@@ -288,6 +288,7 @@ function render_start_page(array $posts): string
         foreach ($reads as $i => $p) {
             $html .= '<li><a href="' . e(post_path($p['slug'])) . '">';
             $html .= '<span class="pl-no">' . sprintf('%02d', $i + 1) . '</span>';
+            $html .= thumb_span(hero_meta($p['slug']), 'pl-thumb');
             $html .= '<span class="pl-txt"><span class="pl-title">' . e($p['title']) . '</span>';
             $html .= '<span class="pl-sub">' . e($p['subtitle']) . '</span></span>';
             $html .= '<span class="pl-min">' . $p['minutes'] . ' min</span>';
