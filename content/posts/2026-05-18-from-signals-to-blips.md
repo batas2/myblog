@@ -2,7 +2,7 @@
 
 *How a tech radar became my favorite tool for driving an AI transformation across several hundred developers.*
 
-For the past months, as a Solution Architect, I've been an active participant in our AI transformation at EcoVadis. Several hundred developers. Fifteen squads across four tribes. One goal: change how software gets built.
+For the past months, as a Solution Architect, I've been an active participant in our AI transformation. Several hundred developers. Fifteen squads across four tribes. One goal: change how software gets built.
 
 And one painfully practical problem: **how do you drive change at that scale?**
 

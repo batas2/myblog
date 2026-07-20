@@ -144,6 +144,9 @@ t_eq($pubN, substr_count((string) file_get_contents($SANDBOX . '/llms-full.txt')
 $post = (string) file_get_contents($SANDBOX . '/blog/mathematicians-vs-lawyers/index.php');
 t_contains('rel="canonical" href="https://bfrackowiak.pl/blog/mathematicians-vs-lawyers/"', $post, 'canonical set');
 t_contains('property="og:type" content="article"', $post, 'og:type article');
+t_not_contains('property="og:type" content="website"', $post, 'no duplicate website og:type on articles');
+t_contains('max-image-preview:large', $post, 'robots meta allows large image previews');
+t_contains('"sameAs"', $post, 'author entity with sameAs on the article page');
 t_contains('article:published_time" content="2026-07-13T09:00:00+02:00"', $post, 'published_time in site timezone');
 preg_match_all('#<script type="application/ld\+json">(.*?)</script>#s', $post, $ld);
 $ldOk = count($ld[1]) >= 2;
@@ -236,8 +239,9 @@ t_eq('', sbx_php('require "lib/config.php"; require "lib/newsletter.php";
 t_contains('You\'re in', $body, 'confirmation page served');
 t_eq('confirmed', sbx_php('require "lib/config.php"; require "lib/newsletter.php";
     echo nl_db()->query("SELECT status FROM subscribers WHERE email = \'reader@example.com\'")->fetchColumn();'), 'subscriber confirmed');
-[$code, $body] = http_req('GET', "$BASE/n.php?confirm=" . str_repeat('0', 32));
+[$code, $body, , $nlHdrs] = http_req('GET', "$BASE/n.php?confirm=" . str_repeat('0', 32));
 t_contains('didn', $body, 'bad confirm token rejected politely');
+t_assert((bool) array_filter($nlHdrs, fn($h) => stripos($h, 'X-Robots-Tag: noindex') === 0), 'newsletter token pages are noindex');
 
 // sender: first run seeds the ledger without mailing, second run has nothing new
 $nlOut = '';
@@ -358,18 +362,24 @@ t_eq('', $row['country'], 'loopback has no country');
 t_eq(42, (int) $row['duration'], 'engagement seconds attached to the pageview row');
 
 [$code, , , $probeHdrs] = http_req('GET', "$BASE/stats.php?key=totally-wrong");
-t_eq(404, $code, 'stats rejects wrong key');
+t_eq(404, $code, 'stats shim rejects wrong key');
 t_assert(!array_filter($probeHdrs, fn($h) => stripos($h, 'Set-Cookie:') === 0), 'anonymous probe gets no session cookie');
-[$code, $body, , $statsHdrs] = http_req('GET', "$BASE/stats.php?key=" . STATS_KEY . "&days=7");
-t_eq(200, $code, 'stats opens with key');
-t_not_contains('key=' . STATS_KEY, $body, 'dashboard links never carry the key');
+[$code, , $loc, $statsHdrs] = http_req('GET', "$BASE/stats.php?key=" . STATS_KEY . "&days=7");
+t_eq(302, $code, 'valid key redirects to the unified dashboard');
+t_contains('admin.php?days=7', $loc, 'redirect keeps the range filter');
+t_assert(!str_contains($loc, 'key='), 'redirect target never carries the key');
 $statsCookie = '';
 foreach ($statsHdrs as $h) {
     if (stripos($h, 'Set-Cookie: bfadmin=') === 0 && preg_match('/bfadmin=([^;]+)/', $h, $m)) $statsCookie = 'bfadmin=' . $m[1];
 }
 t_assert($statsCookie !== '', 'valid key mints a stats session');
-[$code2] = http_req('GET', "$BASE/stats.php?days=7", ['headers' => "User-Agent: T/1\r\nCookie: {$statsCookie}\r\n"]);
-t_eq(200, $code2, 'keyless follow-up works on the stats session');
+$asStats = fn(string $method, string $url) => http_req($method, $url, ['headers' => "User-Agent: T/1\r\nCookie: {$statsCookie}\r\n"]);
+[$code2, , $loc2] = $asStats('GET', "$BASE/stats.php?days=7");
+t_eq(302, $code2, 'keyless shim follow-up still redirects on the stats session');
+t_contains('admin.php?days=7', $loc2, 'shim preserves filters without the key');
+[$code, $body] = $asStats('GET', "$BASE/admin.php?days=7");
+t_eq(200, $code, 'unified dashboard opens on the stats session');
+t_not_contains('key=' . STATS_KEY, $body, 'dashboard links never carry the key');
 preg_match('#<b>([\d,]+)</b><span>Pageviews#', $body, $m);
 t_eq('3', $m[1] ?? '?', 'stats card: pageviews = 3');
 preg_match('#<b>([\d,]+)</b><span>Visitors#', $body, $m);
@@ -379,7 +389,10 @@ t_contains('Chrome', $body, 'browser table populated');
 t_contains('newsletter', $body, 'campaign table populated');
 t_contains('42s', $body, 'engaged time rendered');
 t_not_contains('/bot/', $body, 'bot path never stored');
-[$code, $body] = http_req('GET', "$BASE/stats.php?key=" . STATS_KEY . '&days=7&path=' . rawurlencode('/blog/data-driven-theater/'));
+t_not_contains('Publishing pipeline', $body, 'stats session sees no admin tabs');
+t_not_contains('Field Notes', $body, 'stats session sees no subscriber data');
+t_not_contains('Rebuild site', $body, 'stats session sees no admin actions');
+[$code, $body] = $asStats('GET', "$BASE/admin.php?days=7&path=" . rawurlencode('/blog/data-driven-theater/'));
 t_eq(200, $code, 'path drilldown renders');
 preg_match('#<b>([\d,]+)</b><span>Pageviews#', $body, $m);
 t_eq('1', $m[1] ?? '?', 'drilldown narrows to one view');
@@ -476,6 +489,9 @@ t_contains('ITest Future Post', $body, 'scheduled post visible in pipeline');
 t_contains('b-scheduled', $body, 'scheduled badge shown');
 t_contains('ITest Draft Post', $body, 'draft post visible in pipeline');
 t_contains('tester@example.com', $body, 'comment listed for moderation (full email for admin)');
+t_contains('Acquisition', $body, 'analytics tabs folded into the admin page');
+t_contains('Recent visits', $body, 'activity pane rendered inline');
+t_contains('Rebuild site', $body, 'admin actions present for the full session');
 preg_match('/name="csrf" value="([^"]+)"/', $body, $m);
 $csrf = $m[1] ?? '';
 t_assert($csrf !== '', 'csrf token in dashboard forms');
@@ -483,8 +499,9 @@ preg_match('/name="key" value="([0-9a-f]{12})"/', $body, $m);
 $commentKey = $m[1] ?? '';
 t_assert($commentKey !== '', 'comment delete form carries content fingerprint');
 
-[$code, $body] = $asAdmin('GET', "$BASE/stats.php");
-t_eq(200, $code, 'stats open via admin session, no key');
+[$code, , $loc] = $asAdmin('GET', "$BASE/stats.php");
+t_eq(302, $code, 'old stats URL redirects the admin session');
+t_contains('admin.php', $loc, 'shim points at the unified dashboard');
 
 [$code] = http_req('POST', "$BASE/admin.php", ['body' => http_build_query(['action' => 'rebuild', 'csrf' => 'x'])]);
 t_eq(403, $code, 'rebuild without session forbidden');
@@ -538,6 +555,31 @@ $storedAfter = json_decode((string) file_get_contents($cfile), true);
 t_eq(0, count($storedAfter), 'comment removed from disk');
 [, $page3] = http_req('GET', $postUrl);
 t_not_contains('Integration test comment.', $page3, 'deleted comment gone from the page');
+
+/* newsletter tab: pane data + subscriber moderation */
+$subTok = sbx_php('require "lib/config.php"; require "lib/newsletter.php"; echo nl_subscribe(nl_db(), "moderate@example.com");');
+t_assert(strlen($subTok) === 32, 'fixture subscriber planted');
+[, $body] = $asAdmin('GET', "$BASE/admin.php");
+t_contains('Newsletter — Field Notes', $body, 'newsletter pane rendered');
+t_contains('moderate@example.com', $body, 'subscriber listed with full address');
+t_contains('badge b-pending', $body, 'pending badge on the unconfirmed row');
+t_contains('SMTP is not configured', $body, 'mail-off warning shown when smtp pass is empty');
+t_contains('value="' . $subTok . '"', $body, 'moderation forms carry the subscriber token');
+
+[$code] = http_req('POST', "$BASE/admin.php", ['body' => http_build_query(['action' => 'nlconfirm', 'csrf' => 'x', 'token' => $subTok])]);
+t_eq(403, $code, 'subscriber moderation without session forbidden');
+[$code, , $loc] = $asAdmin('POST', "$BASE/admin.php", ['body' => http_build_query(['action' => 'nlconfirm', 'csrf' => $csrf, 'token' => $subTok])]);
+t_eq(302, $code, 'manual confirm accepted');
+t_contains('#newsletter', $loc, 'confirm lands back on the newsletter tab');
+[, $body] = $asAdmin('GET', "$BASE/admin.php");
+t_contains('Subscriber confirmed.', $body, 'confirm flash shown');
+t_contains('badge b-confirmed', $body, 'subscriber shows as confirmed');
+
+[$code] = $asAdmin('POST', "$BASE/admin.php", ['body' => http_build_query(['action' => 'nldelete', 'csrf' => $csrf, 'token' => $subTok])]);
+t_eq(302, $code, 'subscriber delete accepted');
+[, $body] = $asAdmin('GET', "$BASE/admin.php");
+t_contains('Subscriber removed.', $body, 'delete flash shown');
+t_not_contains('moderate@example.com', $body, 'subscriber row gone — GDPR erasure is immediate');
 
 [$code, , $loc] = $asAdmin('POST', "$BASE/admin.php", ['body' => http_build_query(['action' => 'logout', 'csrf' => $csrf])]);
 t_eq(302, $code, 'logout redirects');

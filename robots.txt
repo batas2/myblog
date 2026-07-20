@@ -1,29 +1,75 @@
 User-agent: *
 Allow: /
 
-# AI crawlers — welcome, full access
+# AI crawlers — welcome, full access.
+# Machine-readable site summary: https://bfrackowiak.pl/llms.txt
+# Full blog content in one file:  https://bfrackowiak.pl/llms-full.txt
+
+# OpenAI: training, search index, user-triggered fetches
 User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
 Allow: /
 
 User-agent: ChatGPT-User
 Allow: /
 
+# Anthropic
 User-agent: ClaudeBot
 Allow: /
 
 User-agent: Claude-Web
 Allow: /
 
+User-agent: Claude-User
+Allow: /
+
+User-agent: Claude-SearchBot
+Allow: /
+
 User-agent: anthropic-ai
 Allow: /
 
+# Perplexity: index + user-triggered fetches
 User-agent: PerplexityBot
 Allow: /
 
+User-agent: Perplexity-User
+Allow: /
+
+# Google: search + Gemini/AI Overviews grounding
 User-agent: Googlebot
 Allow: /
 
+User-agent: Google-Extended
+Allow: /
+
+# Microsoft / Bing (feeds Copilot)
 User-agent: bingbot
+Allow: /
+
+# Apple Intelligence
+User-agent: Applebot
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+# Meta AI
+User-agent: meta-externalagent
+Allow: /
+
+# Common Crawl — the corpus most open models train on
+User-agent: CCBot
+Allow: /
+
+# Mistral user-triggered fetches
+User-agent: MistralAI-User
+Allow: /
+
+# DuckDuckGo AI assist
+User-agent: DuckAssistBot
 Allow: /
 
 Sitemap: https://bfrackowiak.pl/sitemap.xml

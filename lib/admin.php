@@ -5,8 +5,8 @@
  * and the rebuild action. The page itself is admin.php.
  *
  * Auth model: one password, stored in config as a password_hash() value
- * ('admin_password_hash'). Empty hash = admin disabled. A logged-in admin
- * session also unlocks stats.php.
+ * ('admin_password_hash'). Empty hash = admin disabled. A stats-only session
+ * (minted by the stats key via stats.php) unlocks just the analytics tabs.
  */
 
 declare(strict_types=1);
@@ -55,8 +55,8 @@ function admin_session_active(): bool
 
 /**
  * Dashboard access: a full admin session, or a stats-only session minted by
- * presenting the stats key once (stats.php promotes the key so its links can
- * stay keyless afterwards).
+ * presenting the stats key once (the stats.php shim promotes the key, then
+ * redirects into admin.php's analytics tabs — keyless from there on).
  */
 function dash_session_active(): bool
 {

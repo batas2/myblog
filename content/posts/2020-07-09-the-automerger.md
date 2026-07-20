@@ -4,7 +4,7 @@
 
 If your team uses a branching model with more than two long-living branches, you know the ritual. A bug gets fixed on the release branch. Somebody has to remember to bring that fix back to develop, or the bug will happily reappear in the next release. Multiply that by several release branches, several teams, and several fixes per week, and you have a full-time job nobody applied for.
 
-At EcoVadis we lived exactly that. GitFlow-style branching, multiple active branches at once (master, develop, releases in flight), and changes that had to propagate across all of them. Manual coordination was error-prone and slow, and the errors were the expensive kind: a regression returning in production because one merge was forgotten.
+At the company I worked for, we lived exactly that. GitFlow-style branching, multiple active branches at once (master, develop, releases in flight), and changes that had to propagate across all of them. Manual coordination was error-prone and slow, and the errors were the expensive kind: a regression returning in production because one merge was forgotten.
 
 So we automated it. We call it the **Automerger**.
 
@@ -39,7 +39,5 @@ The lesson generalizes beyond git. Find the task that is repetitive, mechanical,
 What is the "merge back to develop" of your team, the recurring chore everyone does by hand because nobody sat down for a week to kill it?
 
 ---
-
-**Medium:** https://medium.com/ecovadis-engineering/the-automerger-216d1b060396
 
 **Tags:** Developer Tools, Automation, Engineering Practices, DevOps, Software Engineering

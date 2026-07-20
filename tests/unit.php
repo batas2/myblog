@@ -104,6 +104,15 @@ $p = parse_post_file($mkpost('2020-01-05-fixture-badpublish.md', '**Publish:** n
 t_eq('published', $p['status'], 'unparseable Publish falls back to filename date');
 t_eq(post_publish_ts('2020-01-05'), $p['publish_ts'], 'fallback ts = filename default');
 
+// optional **Updated:** revision marker
+$p = parse_post_file($mkpost('2020-01-05-fixture-updated.md', '**Updated:** 2021-03-04 10:00'));
+t_eq((new DateTimeImmutable('2021-03-04 10:00', site_tz()))->getTimestamp(), $p['updated_ts'], 'explicit Updated parsed in site tz');
+t_contains('+', (string) $p['updated_iso'], 'updated_iso carries a timezone offset');
+t_not_contains('Updated', $p['html'], 'updated line stripped from body');
+t_eq(null, parse_post_file($mkpost('2020-01-05-fixture-noupdate.md'))['updated_ts'], 'no Updated marker = null');
+t_eq(null, parse_post_file($mkpost('2020-01-05-fixture-badupdate.md', '**Updated:** garbage'))['updated_ts'], 'unparsable Updated ignored');
+t_eq(null, parse_post_file($mkpost('2020-01-05-fixture-preupdate.md', '**Updated:** 2019-01-01'))['updated_ts'], 'Updated before publish ignored');
+
 // meta markers inside code fences are examples, not metadata
 $f = sys_get_temp_dir() . '/bf-unit-posts/2020-01-05-fixture-fenced.md';
 file_put_contents($f, "# Fenced\n\n*Sub.*\n\nHow to schedule:\n\n```\n**Status:** draft\n**Publish:** 2099-01-01 00:00\n```\n\nAfter the fence.\n\n**Tags:** One\n");
@@ -164,12 +173,10 @@ foreach ($all as $p) {
 }
 t_assert($allOk, 'every post has title, subtitle, exactly 5 tags, minutes, html');
 $bySlug = array_column($all, null, 'slug');
-foreach (['stop-calling-it-legacy-code', 'the-automerger', 'technical-leader-identity-disorder'] as $s) {
-    t_assert(!empty($bySlug[$s]['medium']), "medium link parsed for {$s}");
-}
+t_assert(!empty($bySlug['stop-calling-it-legacy-code']['medium']), 'medium link parsed for stop-calling-it-legacy-code');
 t_eq(null, $bySlug['mathematicians-vs-lawyers']['medium'], 'no medium link where none declared');
 t_not_contains('**Tags:**', $bySlug['data-driven-theater']['html'], 'tags line stripped from body');
-t_not_contains('**Medium:**', $bySlug['the-automerger']['html'], 'medium line stripped from body');
+t_not_contains('**Medium:**', $bySlug['stop-calling-it-legacy-code']['html'], 'medium line stripped from body');
 t_not_contains($bySlug['data-driven-theater']['subtitle'], $bySlug['data-driven-theater']['html'], 'subtitle not duplicated into body');
 
 /* ---------------- llms.txt selected-posts refresh ---------------- */
@@ -212,9 +219,9 @@ t_contains('width="', $fig, 'hero figure carries dimensions');
 
 /* ---------------- render_md ---------------- */
 section('render_md');
-$md = render_md($bySlug['the-automerger']);
-t_contains('# The Automerger', $md, 'md mirror has title');
-t_contains('Canonical: https://bfrackowiak.pl/blog/the-automerger/', $md, 'md mirror has canonical');
+$md = render_md($bySlug['stop-calling-it-legacy-code']);
+t_contains('# Stop Calling It Legacy Code', $md, 'md mirror has title');
+t_contains('Canonical: https://bfrackowiak.pl/blog/stop-calling-it-legacy-code/', $md, 'md mirror has canonical');
 t_contains('Also on Medium: https://medium.com', $md, 'md mirror lists medium link');
 $md2 = render_md($bySlug['mathematicians-vs-lawyers']);
 t_not_contains('Also on Medium', $md2, 'no medium line when absent');
@@ -226,10 +233,15 @@ t_assert(simplexml_load_string($rss) !== false, 'rss is valid xml');
 t_contains('<atom:link', $rss, 'rss has atom self link');
 t_contains('<content:encoded>', $rss, 'rss carries full content');
 t_contains(date('D, d M Y', $posts[0]['publish_ts']), $rss, 'rss pubDate from publish moment');
+t_contains('<dc:creator>', $rss, 'rss items credit the author');
+t_contains('xmlns:dc=', $rss, 'dc namespace declared');
 $sm = render_sitemap($posts);
 t_assert(simplexml_load_string($sm) !== false, 'sitemap is valid xml');
 t_contains(cfg('site_url') . '/blog/mathematicians-vs-lawyers/', $sm, 'sitemap has post url');
 t_contains(cfg('site_url') . '/blog/tag/software-architecture/', $sm, 'sitemap has tag url');
+$upPost = $posts[0];
+$upPost['updated_ts'] = (new DateTimeImmutable('2026-06-01 12:00', site_tz()))->getTimestamp();
+t_contains('<lastmod>2026-06-01</lastmod>', render_sitemap([$upPost]), 'sitemap lastmod uses the revision date');
 
 /* ---------------- cards / boxes ---------------- */
 section('components');
@@ -491,6 +503,14 @@ t_contains('noindex', $nf, '404 is noindex');
 
 section('fonts & theme');
 $head = page_head('T', 'D', 'https://x/');
+t_contains('property="og:locale" content="en_US"', $head, 'og locale set');
+t_contains('max-image-preview:large', $head, 'robots meta allows large image previews');
+t_contains('property="og:type" content="website"', $head, 'default og:type is website');
+t_contains('/llms.txt', $head, 'llms.txt advertised in every head');
+$headArt = page_head('T', 'D', 'https://x/', '<meta property="og:type" content="article">');
+t_eq(1, substr_count($headArt, 'og:type'), 'article og:type suppresses the website default');
+$headNoIdx = page_head('T', 'D', 'https://x/', '<meta name="robots" content="noindex, follow">');
+t_eq(1, substr_count($headNoIdx, 'name="robots"'), 'noindex extra suppresses the default robots meta');
 t_contains('/assets/fonts.css', $head, 'pages load self-hosted fonts');
 t_not_contains('fonts.googleapis.com', $head, 'no external font CSS');
 t_not_contains('fonts.gstatic.com', $head, 'no external font host');
@@ -529,6 +549,12 @@ $bp = schema_blog_posting($posts[0], hero_meta($posts[0]['slug']), post_url($pos
 t_eq('BlogPosting', $bp['@type'], 'blog posting type');
 t_assert(isset($bp['image']['width']), 'posting image has dimensions');
 t_eq($posts[0]['publish_iso'], $bp['datePublished'], 'posting datePublished = publish moment');
+t_eq($posts[0]['publish_iso'], $bp['dateModified'], 'dateModified falls back to the publish moment');
+t_contains('linkedin.com', implode(',', $bp['author']['sameAs']), 'article author entity carries sameAs');
+t_eq('Solution Architect', $bp['author']['jobTitle'], 'article author entity carries jobTitle');
+$pu = $posts[0];
+$pu['updated_iso'] = '2026-06-01T12:00:00+02:00';
+t_eq('2026-06-01T12:00:00+02:00', schema_blog_posting($pu, null, 'https://x/', $pu['publish_iso'])['dateModified'], 'dateModified uses the Updated meta');
 $bc = schema_breadcrumbs(['Home' => 'https://x/', 'Blog' => 'https://x/blog/']);
 t_eq(2, count($bc['itemListElement']), 'breadcrumb items');
 t_eq(1, $bc['itemListElement'][0]['position'], 'breadcrumb positions start at 1');
@@ -672,6 +698,49 @@ nl_unsubscribe($ndb, $pendTok);
 $log = nl_send_new([$old, $fakePost], false, $ndb);
 t_contains('sent "unit-essay" to 0/0 subscribers', implode("\n", $log), 'fresh essay recorded even with an empty list');
 t_eq(2, (int) $ndb->query('SELECT COUNT(*) FROM sends')->fetchColumn(), 'ledger now covers both essays');
+
+// admin dashboard queries: fixed clock, hand-planted timestamps
+$NOW = strtotime('2026-07-20 12:00:00');   // a Monday
+$st0 = nl_stats($ndb, $NOW);
+t_eq(0, $st0['confirmed'], 'stats on an empty list: zero confirmed');
+t_eq(null, $st0['confirm_rate'], 'confirm rate unknowable on an empty list');
+t_eq(null, $st0['median_confirm_secs'], 'no median without a single confirm');
+$ins = $ndb->prepare('INSERT INTO subscribers (email, status, token, created_ts, confirmed_ts) VALUES (?, ?, ?, ?, ?)');
+$ins->execute(['old@example.com',  'confirmed', str_repeat('a', 32), $NOW - 100 * 86400, $NOW - 99 * 86400]);
+$ins->execute(['prev@example.com', 'confirmed', str_repeat('b', 32), $NOW - 40 * 86400,  $NOW - 35 * 86400]);
+$ins->execute(['new@example.com',  'confirmed', str_repeat('c', 32), $NOW - 10 * 86400,  $NOW - 9 * 86400]);
+$ins->execute(['wait@example.com', 'pending',   str_repeat('d', 32), $NOW - 2 * 86400,   null]);
+$st = nl_stats($ndb, $NOW);
+t_eq(3, $st['confirmed'], 'stats count confirmed');
+t_eq(1, $st['pending'], 'stats count pending');
+t_eq(75, $st['confirm_rate'], 'confirm rate = confirmed / all addresses');
+t_eq(1, $st['new30'], 'only the last-30-days confirm lands in new30');
+t_eq(1, $st['prev30'], 'the 30 days before that counted separately');
+t_eq(86400, $st['median_confirm_secs'], 'median confirm lag (lags 1d, 5d, 1d → 1d)');
+t_eq(1, $st['essays_mailed'], 'baseline seeds excluded from essays mailed');
+t_eq('unit-essay', $st['last_send']['slug'], 'last send is the latest real send');
+$ndb->exec("INSERT INTO sends (slug, sent_ts, recipients, note) VALUES ('inflight', " . ($NOW + 60) . ", 0, 'sending')");
+t_eq('unit-essay', nl_stats($ndb, $NOW)['last_send']['slug'], 'an in-flight send is not "last send" yet');
+$ndb->exec("DELETE FROM sends WHERE slug = 'inflight'");
+
+$wkb = nl_weekly($ndb, 4, $NOW);
+t_eq(4, count($wkb), 'weekly growth: one bucket per requested week');
+t_eq('2026-07-20', end($wkb)['week'], 'last bucket is the current ISO week (Monday)');
+t_eq(1, array_sum(array_column($wkb, 'confirmed')), 'a confirm counts in its confirm week only');
+t_eq(1, array_sum(array_column($wkb, 'pending')), 'a still-pending signup counts in its signup week');
+
+$all = nl_all($ndb);
+t_eq(4, count($all), 'nl_all lists every subscriber');
+t_eq('wait@example.com', $all[0]['email'], 'newest signup first');
+$sl = nl_sends($ndb);
+t_eq(2, count($sl), 'send ledger listed in full, baseline included');
+t_eq('unit-essay', $sl[0]['slug'], 'newest send first');
+
+t_eq('—', nl_fmt_span(null), 'span: null renders as em dash');
+t_eq('42s', nl_fmt_span(42), 'span: seconds');
+t_eq('18m', nl_fmt_span(1130), 'span: minutes');
+t_eq('3h 20m', nl_fmt_span(12000), 'span: hours');
+t_eq('2d 5h', nl_fmt_span(2 * 86400 + 5 * 3600 + 60), 'span: days');
 
 // smtp guard: with no configured password the sender must refuse quietly
 $smtpCfg = (array) cfg('smtp', []);

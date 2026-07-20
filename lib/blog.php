@@ -110,7 +110,7 @@ function parse_post_file(string $file): ?array
 
     $lines = preg_split('/\r?\n/', (string) file_get_contents($file));
     $title = $subtitle = '';
-    $medium = $publishRaw = null;
+    $medium = $publishRaw = $updatedRaw = null;
     $draft = false;
     $tags = [];
     $body = [];
@@ -154,6 +154,11 @@ function parse_post_file(string $file): ?array
             $dropTrailingRule();
             continue;
         }
+        if (preg_match('/^\*\*Updated:\*\*\s*(.+?)\s*$/', trim($line), $mm)) {
+            $updatedRaw = $mm[1];
+            $dropTrailingRule();
+            continue;
+        }
         if (preg_match('/^\*\*Tags:\*\*\s*(.+)$/', trim($line), $mm)) {
             $tags = array_map('trim', explode(',', $mm[1]));
             $dropTrailingRule();
@@ -172,6 +177,18 @@ function parse_post_file(string $file): ?array
     $publishTs = post_publish_ts($date, $publishRaw);
     $status = $draft ? 'draft' : ($publishTs > time() ? 'scheduled' : 'published');
 
+    // optional **Updated:** meta — a real revision signal (schema dateModified,
+    // article:modified_time, sitemap lastmod). Unparsable or before publish → ignored.
+    $updatedTs = null;
+    if ($updatedRaw !== null) {
+        try {
+            $updatedTs = (new DateTimeImmutable($updatedRaw, site_tz()))->getTimestamp();
+            if ($updatedTs < $publishTs) $updatedTs = null;
+        } catch (Exception) {
+            blog_warn("{$name}.md: unparsable **Updated:** '{$updatedRaw}' — ignored");
+        }
+    }
+
     return [
         'slug'        => $slug,
         'date'        => $date,
@@ -182,6 +199,8 @@ function parse_post_file(string $file): ?array
         'status'      => $status,
         'publish_ts'  => $publishTs,
         'publish_iso' => (new DateTimeImmutable('@' . $publishTs))->setTimezone(site_tz())->format('c'),
+        'updated_ts'  => $updatedTs,
+        'updated_iso' => $updatedTs !== null ? (new DateTimeImmutable('@' . $updatedTs))->setTimezone(site_tz())->format('c') : null,
         'words'       => $words,
         'minutes'     => max(1, (int) ceil($words / 215)),
         'html'        => md_to_html($body),

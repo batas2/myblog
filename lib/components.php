@@ -206,7 +206,7 @@ function newsletter_box(string $variant = ''): string
 HTML;
 }
 
-/** Shared look of the private dashboards (stats.php, admin.php): cards + tables. */
+/** Shared look of the private dashboard (admin.php): cards + tables. */
 function dash_base_css(): string
 {
     return <<<'CSS'

@@ -2,11 +2,11 @@
 
 *Splitting one corporate title into its two words, and what each of them demands.*
 
-Hi, my name is Bartosz Frąckowiak, for over three years now I'm the so-called Technical Leader at EcoVadis and I would like to tell you my story :)
+Hi, my name is Bartosz Frąckowiak, for over three years now I'm the so-called Technical Leader and I would like to tell you my story :)
 
 A technical leader can be just a simple position in the corporate hierarchy. It can be a safe position reserved for a person technically based with some leadership skills. Opposite to team leaders who generally should have strong leadership skills and a technical base, not necessarily be a guru in the programming stack. The question you should ask yourself is: what do you expect from your career?
 
-One of the ingredients is your attitude. I have never wanted to make this title just a corporate position to me. The footer in corporate mail means nothing to me. After three years of being a technical leader at EcoVadis, I've learnt a lot about what it's like to be one of them (in this particular environment). I have ups and downs. One day I would never change this position to a different one, the next day I was almost ready to quit and move on. I would like to break down this position into smaller pieces for you. Let's start with splitting just the name "technical leader". It has two words in it. The first part is strictly "technical", the second is "leader". I will try to address these two parts inside this article and explain what it means to me. What I do to be the best possible technical leader.
+One of the ingredients is your attitude. I have never wanted to make this title just a corporate position to me. The footer in corporate mail means nothing to me. After three years of being a technical leader, I've learnt a lot about what it's like to be one of them (in this particular environment). I have ups and downs. One day I would never change this position to a different one, the next day I was almost ready to quit and move on. I would like to break down this position into smaller pieces for you. Let's start with splitting just the name "technical leader". It has two words in it. The first part is strictly "technical", the second is "leader". I will try to address these two parts inside this article and explain what it means to me. What I do to be the best possible technical leader.
 
 ## "Technical"
 
@@ -26,7 +26,7 @@ Finding this architecture is a never-ending story. The company evolves and softw
 
 > "Clean code is not written by following a set of rules. You don't become a software craftsman by learning a list of heuristics. Professionalism and craftsmanship come from values that drive disciplines." ― Robert C. Martin
 
-**Being a medium.** The third category is being the technical medium and connector between the architect, other teams, and the team itself. At EcoVadis at the moment we have eight teams with seven developers each. This is not a space where lack of proper communication can be accepted. Discussing with other technical leaders and the architect takes place twice per week.
+**Being a medium.** The third category is being the technical medium and connector between the architect, other teams, and the team itself. At the moment we have eight teams with seven developers each. This is not a space where lack of proper communication can be accepted. Discussing with other technical leaders and the architect takes place twice per week.
 
 Being a connector between the technical leaders' community and the team is an important task which needs to be done every day. Making sure the team knows where we are heading. It's crucial to the whole IT environment to know what decision has been made and why the technical leaders' community took this approach. In the long run, communication lets the team understand the goal where we are heading and, therefore, be more independent in making decisions and in the end more effective.
 
@@ -76,9 +76,9 @@ Which method should we choose? The rule of thumb is to pick "small" pair program
 
 A lesson learned here for technical leaders: be prepared to monitor the involvement of others during "everyone is watching" meetings. The tool is so simple and so powerful; in terms of team building and knowledge sharing it is one of the best in my opinion. Be careful not to fall into the trap of being "The Devil's Advocate", which causes frustration. Usually stepping back and taking a huge breath is the cure. After all, being pragmatic and empathic is crucial here.
 
-**Open source initiative.** Teams at EcoVadis are backend based. Usually we have a 5:2 ratio of backend to frontend developers inside a team. Team members produce source code daily. Most of the code is usually not visible to the end user and, therefore, it is harder to appreciate the craftsmanship of individuals.
+**Open source initiative.** Teams at our company are backend based. Usually we have a 5:2 ratio of backend to frontend developers inside a team. Team members produce source code daily. Most of the code is usually not visible to the end user and, therefore, it is harder to appreciate the craftsmanship of individuals.
 
-Here, the idea was to share our concepts with the external world. Share it with the IT community in the form of YouTube videos, source code on GitHub, and articles on medium.com, exactly like this one. Each IT member can express himself or herself to the community about the topic he or she has mastered during nine-to-five work. Every piece of content is signed with the developer's name, no anonymous content. The sharing idea brings clear benefits to both sides. Developers build a brand for their names, and they build a brand for EcoVadis as a company with a strong engineering culture.
+Here, the idea was to share our concepts with the external world. Share it with the IT community in the form of YouTube videos, source code on GitHub, and articles on medium.com, exactly like this one. Each IT member can express himself or herself to the community about the topic he or she has mastered during nine-to-five work. Every piece of content is signed with the developer's name, no anonymous content. The sharing idea brings clear benefits to both sides. Developers build a brand for their names, and they build the company's brand as one with a strong engineering culture.
 
 > "Open source is a development methodology; free software is a social movement." ― Richard Stallman
 
@@ -91,7 +91,5 @@ If you find yourself in the same corporate position as mine, please share your e
 > "Great things are not done by impulse, but by a series of small things brought together." ― George Eliot
 
 ---
-
-**Medium:** https://medium.com/ecovadis-engineering/technical-leader-identity-disorder-c5bfd797f871
 
 **Tags:** Technical Leadership, Engineering Leadership, Team Building, Knowledge Sharing, Corporate Culture

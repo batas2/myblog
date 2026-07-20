@@ -32,8 +32,8 @@ form, and first-party analytics.
   country (offline GeoIP — no external calls), referrer + source group (search /
   social / AI assistants / news / campaigns), browser, OS, device class, language,
   screen bucket, visitor timezone, UTM tags, and engaged reading time per view.
-  Dashboard at `/stats.php` (access key or admin session) with daily + hour-of-day
-  charts, per-page drilldown, and a recent-visits feed.
+  Dashboard lives in `/admin.php` (analytics tabs; stats key or admin session)
+  with daily + hour-of-day charts, per-page drilldown, and a recent-visits feed.
 - **Self-hosted newsletter** — no external service. A form on every page posts
   to `n.php`: double opt-in over your own SMTP, subscribers in SQLite
   (`content/newsletter.db`), RFC 8058 one-click unsubscribe (link + mail
@@ -54,8 +54,8 @@ form, and first-party analytics.
 ├── comments.php         comment endpoint + rendered thread (dynamic island)
 ├── n.php                newsletter endpoint (subscribe / confirm / unsubscribe)
 ├── a.php                analytics beacon (pageviews + engaged-time pings)
-├── stats.php            analytics dashboard (key or admin session)
-├── admin.php            admin control room (publishing pipeline, moderation)
+├── stats.php            back-compat shim → admin.php (mints the stats session)
+├── admin.php            the one dashboard: pipeline, newsletter, comments, analytics
 ├── config.example.php   copy to config.php and fill in — all secrets live there
 ├── lib/                 config, helpers, markdown, content model, templates,
 │                        analytics, geoip, admin core
@@ -133,16 +133,19 @@ prints the queue after every deploy so nothing waits unnoticed.
 
 ## Admin & analytics
 
-- `/admin.php` — publishing pipeline (statuses, go-live countdowns), one-click
-  rebuild, comment moderation, 7-day analytics cards, system health. Password:
-  `admin_password_hash` in config (`php -r "echo password_hash('pw', PASSWORD_DEFAULT), PHP_EOL;"`).
-  Sessions are cookie-hardened; login is rate-limited; actions are CSRF-protected.
-- `/stats.php` — the full dashboard: daily + hour-of-day charts, top pages with
-  engaged reading time, source groups (search / social / AI / news / campaigns),
+- `/admin.php` — the one dashboard, tabbed: publishing pipeline (statuses,
+  go-live countdowns, one-click rebuild), newsletter (list health, weekly growth,
+  send ledger, subscriber moderation), comment moderation, system health — plus
+  the full analytics view: daily + hour-of-day charts, top pages with engaged
+  reading time, source groups (search / social / AI / news / campaigns),
   referrers, countries (offline GeoIP), browsers/OS/devices/screens, languages,
   timezones, UTM campaigns, and a recent-visits feed. Every table narrows to a
-  single page via the path drilldown. Access: `?key=<stats_key>` or an admin session.
-- Self-exclusion: logging into `/admin.php` (or opening `/stats.php`) plants a
+  single page via the path drilldown. Password login: `admin_password_hash` in
+  config (`php -r "echo password_hash('pw', PASSWORD_DEFAULT), PHP_EOL;"`).
+  Sessions are cookie-hardened; login is rate-limited; actions are CSRF-protected.
+  Analytics-only access without the password: `/stats.php?key=<stats_key>` mints
+  a read-only stats session and redirects into the analytics tabs.
+- Self-exclusion: logging into `/admin.php` (or presenting the stats key) plants a
   1-year `bfx` cookie that keeps that browser out of the analytics — refreshed
   on every admin visit. Manual toggle per device: `/a.php?me=off` / `/a.php?me=on`.
   Enforced twice: the beacon doesn't send, and the endpoint drops carried hits.

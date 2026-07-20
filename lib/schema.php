@@ -15,10 +15,27 @@ function ld_script(array $schema): string
     return '<script type="application/ld+json">' . json_encode($schema, LD_JSON_FLAGS) . '</script>';
 }
 
-/** The site author as a schema.org Person reference. */
+/**
+ * The site author as a full schema.org Person. Google resolves @id only
+ * within one page, so every article must carry the whole entity itself —
+ * jobTitle + sameAs on the article pages is what E-E-A-T actually reads.
+ * Keep the values in sync with the hand-written @graph on the homepage.
+ */
 function schema_person(): array
 {
-    return ['@type' => 'Person', '@id' => cfg('site_url') . '/#person', 'name' => cfg('author'), 'url' => cfg('site_url')];
+    return [
+        '@type' => 'Person',
+        '@id' => cfg('site_url') . '/#person',
+        'name' => cfg('author'),
+        'url' => cfg('site_url'),
+        'image' => cfg('site_url') . '/myself.jpeg',
+        'jobTitle' => 'Solution Architect',
+        'sameAs' => [
+            'https://www.linkedin.com/in/bartoszfrackowiak/',
+            'https://medium.com/@bfrackowiak',
+            'https://github.com/batas2',
+        ],
+    ];
 }
 
 /** BreadcrumbList from [name => url] pairs, in order. */
@@ -51,7 +68,7 @@ function schema_blog_posting(array $p, ?array $hero, string $url, string $publis
         'headline' => $p['title'],
         'description' => $p['subtitle'],
         'datePublished' => $published,
-        'dateModified' => $published,
+        'dateModified' => $p['updated_iso'] ?? $published,
         'author' => $person,
         'publisher' => $person,
         'mainEntityOfPage' => ['@type' => 'WebPage', '@id' => $url],

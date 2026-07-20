@@ -48,7 +48,7 @@ Organizational experience turned out to be directly transferable. Clear charters
 
 But the transfer runs both ways, and that's the part I can't stop thinking about. When you design coordination from scratch, with no politics, no history, no feelings to spare, you would never include a layer whose only function is summarizing upward. You would never require every hand-off to pass through one node. You would never let two roles both vaguely own the same outcome, and you would never leave an escalation path undefined.
 
-Then you look at your real org chart and ask why it's full of things you would never design. The polite version of the answer is "history". I explored the human side of sitting inside such a structure in [Technical Leader — Identity Disorder](https://medium.com/ecovadis-engineering/technical-leader-identity-disorder-c5bfd797f871); designing agents is the first time I've gotten to sit on the other side of the whiteboard.
+Then you look at your real org chart and ask why it's full of things you would never design. The polite version of the answer is "history". I explored the human side of sitting inside such a structure in [Technical Leader — Identity Disorder](/blog/technical-leader-identity-disorder/); designing agents is the first time I've gotten to sit on the other side of the whiteboard.
 
 There is a Conway's law for agents, too: left unattended, your multi-agent architecture will faithfully copy your organization's communication patterns, including the dysfunctional ones, because its designers can't easily imagine anything else. We nearly shipped our org chart into the prompt. I suspect we weren't the first.
 

@@ -28,8 +28,9 @@ return [
     // HMAC key for the comment captcha tokens; rotate freely
     'comments_secret' => 'CHANGE-ME-openssl-rand-hex-24',
 
-    // access key for the analytics dashboard: /stats.php?key=<this>
-    // (a logged-in admin session also opens stats.php without the key)
+    // analytics-only access key: /stats.php?key=<this> mints a read-only
+    // session and redirects into admin.php's analytics tabs
+    // (a logged-in admin session sees the same tabs without the key)
     'stats_key' => 'CHANGE-ME-openssl-rand-hex-24',
 
     // admin.php password as a PHP password hash; empty = admin disabled

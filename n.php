@@ -23,10 +23,11 @@ require_once __DIR__ . '/lib/captcha.php';
 const NL_MIN_GAP  = 30;    // seconds between subscribe attempts per IP
 const NL_MAIL_GAP = 900;   // seconds between confirmation mails per address
 
-/** Small branded status page. Token-bearing pages must never be cached. */
+/** Small branded status page. Token-bearing pages must never be cached or indexed. */
 function nl_page(string $title, string $heading, string $body, string $cta = ''): void
 {
     header('Cache-Control: no-store');
+    header('X-Robots-Tag: noindex, nofollow');
     echo page_head($title . ' · bfrackowiak.pl', $body, cfg('site_url') . '/n.php');
     echo site_nav();
     echo '<main class="wrap" style="padding:7rem 24px 4rem;max-width:44rem">';

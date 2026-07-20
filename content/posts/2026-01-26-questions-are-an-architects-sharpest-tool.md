@@ -38,7 +38,7 @@ Every solution design of mine ends with an "Open Questions" section: the things 
 
 Declared uncertainty, I keep relearning, builds more credibility than performed certainty ever did.
 
-Years ago, in [Technical Leader — Identity Disorder](https://medium.com/ecovadis-engineering/technical-leader-identity-disorder-c5bfd797f871), I leaned on Socrates while untangling my own role. I've since stopped treating "I know that I know nothing" as philosophical decoration. It's a working method, and the open-questions file is its production implementation. Confidence is not the absence of open questions. **Confidence is knowing exactly which questions are open.**
+Years ago, in [Technical Leader — Identity Disorder](/blog/technical-leader-identity-disorder/), I leaned on Socrates while untangling my own role. I've since stopped treating "I know that I know nothing" as philosophical decoration. It's a working method, and the open-questions file is its production implementation. Confidence is not the absence of open questions. **Confidence is knowing exactly which questions are open.**
 
 Which is why an *empty* Open Questions section in a big design is, for me, a red flag with a siren attached. If you can't name three things you don't know about your own architecture, that's not completeness. That's the first open question.
 

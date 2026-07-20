@@ -9,7 +9,7 @@
  * browser/OS/device family, primary language, screen bucket, timezone,
  * referrer group, UTM tags, and engaged seconds per view.
  *
- * Writers: a.php (beacon). Readers: stats.php, admin.php.
+ * Writers: a.php (beacon). Reader: admin.php (stats.php is a redirect shim).
  */
 
 declare(strict_types=1);

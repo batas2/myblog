@@ -12,6 +12,11 @@ function page_head(string $title, string $desc, string $canonical, string $extra
     $siteName = e((string) cfg('site_name'));
     $author = e((string) cfg('author'));
     $feed = e(cfg('site_url') . '/feed.xml');
+    $llms = e(cfg('site_url') . '/llms.txt');
+    // article pages inject their own og:type via $extra — only default the rest;
+    // same for robots: a page that says noindex (404, token pages) must not also say index
+    $ogType = str_contains($extra, 'og:type') ? '' : '<meta property="og:type" content="website">' . "\n";
+    $robots = str_contains($extra, 'name="robots"') ? '' : '<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">' . "\n";
     return <<<HTML
 <!DOCTYPE html>
 <html lang="en">
@@ -21,11 +26,12 @@ function page_head(string $title, string $desc, string $canonical, string $extra
 <title>{$t}</title>
 <meta name="description" content="{$d}">
 <meta name="author" content="{$author}">
-<link rel="canonical" href="{$c}">
-<meta property="og:title" content="{$t}">
+{$robots}<link rel="canonical" href="{$c}">
+{$ogType}<meta property="og:title" content="{$t}">
 <meta property="og:description" content="{$d}">
 <meta property="og:url" content="{$c}">
 <meta property="og:site_name" content="{$siteName}">
+<meta property="og:locale" content="en_US">
 <meta property="og:image" content="{$og}">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -34,6 +40,7 @@ function page_head(string $title, string $desc, string $canonical, string $extra
 <meta name="theme-color" media="(prefers-color-scheme: light)" content="#fbfbfd">
 <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0f1014">
 <link rel="alternate" type="application/rss+xml" title="Field Notes · RSS" href="{$feed}">
+<link rel="alternate" type="text/plain" href="{$llms}" title="LLM context">
 <link rel="stylesheet" href="/assets/fonts.css">
 <link rel="stylesheet" href="/assets/site.css">
 {$extra}

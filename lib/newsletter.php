@@ -107,6 +107,95 @@ function nl_counts(PDO $db): array
     return $c;
 }
 
+/* ---------------- admin dashboard ---------------- */
+
+/** Full subscriber list for the admin, newest signup first. */
+function nl_all(PDO $db): array
+{
+    return $db->query('SELECT email, status, token, created_ts, confirmed_ts FROM subscribers ORDER BY created_ts DESC, id DESC')
+              ->fetchAll(PDO::FETCH_ASSOC);
+}
+
+/** Send ledger, newest first (baseline seeds included). */
+function nl_sends(PDO $db): array
+{
+    return $db->query('SELECT slug, sent_ts, recipients, note FROM sends ORDER BY sent_ts DESC, slug DESC')
+              ->fetchAll(PDO::FETCH_ASSOC);
+}
+
+/**
+ * Headline numbers for the admin dashboard; $now is injectable for tests.
+ * new30/prev30 are confirms in the last 30 days and the 30 before that —
+ * unsubscribes leave no trace by design, so growth here is gross, not net.
+ */
+function nl_stats(PDO $db, ?int $now = null): array
+{
+    $now ??= time();
+    $d30 = 30 * 86400;
+    $c = nl_counts($db);
+    $total = $c['confirmed'] + $c['pending'];
+
+    $win = function (int $from, int $to) use ($db): int {
+        $st = $db->prepare('SELECT COUNT(*) FROM subscribers WHERE confirmed_ts >= ? AND confirmed_ts < ?');
+        $st->execute([$from, $to]);
+        return (int) $st->fetchColumn();
+    };
+
+    $lags = array_map('intval', array_column(
+        $db->query('SELECT confirmed_ts - created_ts AS lag FROM subscribers WHERE confirmed_ts IS NOT NULL ORDER BY lag')
+           ->fetchAll(PDO::FETCH_ASSOC), 'lag'));
+
+    // note = '' means completed — an in-flight 'sending' row has no final recipient count yet
+    $last = $db->query("SELECT slug, sent_ts, recipients FROM sends WHERE note = '' ORDER BY sent_ts DESC LIMIT 1")
+               ->fetch(PDO::FETCH_ASSOC) ?: null;
+
+    return [
+        'confirmed'    => $c['confirmed'],
+        'pending'      => $c['pending'],
+        'confirm_rate' => $total > 0 ? (int) round($c['confirmed'] / $total * 100) : null,
+        'new30'        => $win($now - $d30, $now + 1),
+        'prev30'       => $win($now - 2 * $d30, $now - $d30),
+        'median_confirm_secs' => $lags ? $lags[intdiv(count($lags) - 1, 2)] : null,
+        'essays_mailed' => (int) $db->query("SELECT COUNT(*) FROM sends WHERE note != 'baseline'")->fetchColumn(),
+        'last_send'    => $last,
+    ];
+}
+
+/**
+ * Weekly growth buckets for the chart — the last $weeks ISO weeks (site
+ * timezone), oldest first: ['week' => Monday 'Y-m-d', confirmed, pending].
+ * A confirm counts in its confirm week, a still-pending signup in its signup
+ * week — the chart answers "when did the list actually grow".
+ */
+function nl_weekly(PDO $db, int $weeks = 26, ?int $now = null): array
+{
+    $now ??= time();
+    $monday = fn(int $ts): string => date('Y-m-d', strtotime(date('o-\WW', $ts) . '-1'));
+
+    $out = $idx = [];
+    for ($i = $weeks - 1; $i >= 0; $i--) {
+        $wk = $monday(strtotime("-{$i} week", $now));
+        $idx[$wk] = count($out);
+        $out[] = ['week' => $wk, 'confirmed' => 0, 'pending' => 0];
+    }
+    foreach ($db->query('SELECT status, created_ts, confirmed_ts FROM subscribers') as $r) {
+        $confirmed = $r['status'] === 'confirmed' && $r['confirmed_ts'] !== null;
+        $wk = $monday((int) ($confirmed ? $r['confirmed_ts'] : $r['created_ts']));
+        if (isset($idx[$wk])) $out[$idx[$wk]][$confirmed ? 'confirmed' : 'pending']++;
+    }
+    return $out;
+}
+
+/** "42s" / "18m" / "3h 20m" / "2d 5h" — confirm lags span seconds to days. */
+function nl_fmt_span(?int $s): string
+{
+    if ($s === null) return '—';
+    if ($s < 60) return max(0, $s) . 's';
+    if ($s < 3600) return intdiv($s, 60) . 'm';
+    if ($s < 86400) return intdiv($s, 3600) . 'h ' . intdiv($s % 3600, 60) . 'm';
+    return intdiv($s, 86400) . 'd ' . intdiv($s % 86400, 3600) . 'h';
+}
+
 /* ---------------- mail assembly ---------------- */
 
 /** Absolute URLs for a mail client: /assets/… and /blog/… have no base there. */

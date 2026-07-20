@@ -2,7 +2,7 @@
 
 *Why the most useful numbers in our AI transformation were never in a database.*
 
-In my previous article ([From Signals to Blips](/blog/from-signals-to-blips/)) I described the engine room of our AI transformation at EcoVadis: a tech radar fed by weekly AI sweeps over fifteen squad reports. Every week an agent reads the reports, extracts signals, scores them, and hands me a ranked candidate list for human validation.
+In my previous article ([From Signals to Blips](/blog/from-signals-to-blips/)) I described the engine room of our AI transformation: a tech radar fed by weekly AI sweeps over fifteen squad reports. Every week an agent reads the reports, extracts signals, scores them, and hands me a ranked candidate list for human validation.
 
 This article is about the part of that machinery I can't stop thinking about. The scores that steer our architecture attention are not computed from clean, structured data. They are **extracted by AI from messy human text: probabilistically, with a known and accepted margin of error.**
 

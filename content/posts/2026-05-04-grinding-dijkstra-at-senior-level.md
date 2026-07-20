@@ -16,7 +16,7 @@ And there is something bracingly *honest* about that. Inside a company, seniorit
 
 Algorithms, I discovered, are a language I used to speak fluently and now translate in my head. Exams, early jobs, the first competitive years: fluent. A decade-plus of architecture later, I still *read* the language perfectly well. But producing it at speed is different. You don't relearn BFS; the concept never left. You relearn *fluency*. Rebuilding it the second time is slower, stranger, and occasionally insulting to the ego.
 
-I once wrote about the identity split this role produces ([Technical Leader — Identity Disorder](https://medium.com/ecovadis-engineering/technical-leader-identity-disorder-c5bfd797f871)). Interview prep is that split, sharpened to a point: it forces you to separate "I am senior" from "I can demonstrate X under pressure in forty minutes." The first is a story. The second is a fact. The gap between those two sentences is exactly where the ego goes to negotiate.
+I once wrote about the identity split this role produces ([Technical Leader — Identity Disorder](/blog/technical-leader-identity-disorder/)). Interview prep is that split, sharpened to a point: it forces you to separate "I am senior" from "I can demonstrate X under pressure in forty minutes." The first is a story. The second is a fact. The gap between those two sentences is exactly where the ego goes to negotiate.
 
 ## The System Behind the Loop
 

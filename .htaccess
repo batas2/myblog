@@ -4,9 +4,12 @@
 AddDefaultCharset UTF-8
 Options -Indexes
 
-# ---- force HTTPS: HSTS only protects after the first secure visit ----------
+# ---- canonical host: force HTTPS and strip www (one URL per page for
+# search engines; HSTS only protects after the first secure visit) ----------
 <IfModule mod_rewrite.c>
   RewriteEngine On
+  RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
+  RewriteRule ^ https://%1%{REQUEST_URI} [R=301,L]
   RewriteCond %{HTTPS} !=on
   RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
 </IfModule>

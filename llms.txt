@@ -24,6 +24,7 @@ For LLM ingestion: the complete blog content in one plain-text file is at https:
 
 Selected posts:
 
+- The Model Is the Easy Part: https://bfrackowiak.pl/blog/the-model-is-the-easy-part/
 - Mathematicians vs. Lawyers: https://bfrackowiak.pl/blog/mathematicians-vs-lawyers/
 - Pricing the Invisible: https://bfrackowiak.pl/blog/pricing-the-invisible/
 - Multi-Agent Is an Org Chart: https://bfrackowiak.pl/blog/multi-agent-is-an-org-chart/

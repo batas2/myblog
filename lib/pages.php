@@ -34,6 +34,9 @@ function render_post(array $p, ?array $prev, ?array $next, array $all = []): str
     ])) . "\n";
     $extra .= '<meta property="og:type" content="article">' . "\n";
     $extra .= '<meta property="article:published_time" content="' . $published . '">' . "\n";
+    if ($p['updated_iso'] ?? null) {
+        $extra .= '<meta property="article:modified_time" content="' . $p['updated_iso'] . '">' . "\n";
+    }
     $extra .= '<meta property="article:author" content="' . e(cfg('author')) . '">' . "\n";
     foreach ($p['tags'] as $t) $extra .= '<meta property="article:tag" content="' . e($t) . '">' . "\n";
     $extra .= '<link rel="alternate" type="text/markdown" href="' . $url . 'index.md" title="Markdown source">' . "\n";
@@ -247,7 +250,7 @@ function render_start_page(array $posts): string
     $html .= eyebrow('Start here', true);
     $html .= '<h1 style="font-size:clamp(2.1rem,4.6vw,3rem)">' . $n . ' essays in. Here is the map.</h1>';
     $html .= '<p>I\'m <strong>Bartosz Frąckowiak</strong> — solution architect, currently leading an AI transformation across several hundred engineers. Every week I publish one field note about systems, the people around them, and the corporate machine they form together. This page is the shortest path to the good stuff.</p>';
-    $html .= '<p class="proof" style="margin-top:1.1rem"><span>Solution Architect @ EcoVadis</span><span>PhD research, University of Warsaw</span><span>Top 3% on Toptal</span><span>' . $n . ' essays and counting</span></p>';
+    $html .= '<p class="proof" style="margin-top:1.1rem"><span>Solution Architect in global SaaS</span><span>PhD research, University of Warsaw</span><span>Top 3% on Toptal</span><span>' . $n . ' essays and counting</span></p>';
     $html .= '</div>';
 
     // ---- the hook: if you read only one

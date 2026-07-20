@@ -32,6 +32,7 @@ $form_message = $form['message'];
 <meta property="og:description" content="Weekly essays on software architecture, the people around it, and the corporate machine they form together. Consulting & training." />
 <meta property="og:image" content="https://bfrackowiak.pl/myself.jpeg" />
 <meta property="og:site_name" content="bfrackowiak.pl" />
+<meta property="og:locale" content="en_US" />
 <meta name="twitter:card" content="summary_large_image" />
 
 <script type="application/ld+json">
@@ -134,7 +135,7 @@ $form_message = $form['message'];
           <span>12+ years in distributed systems</span>
           <span>PhD research, University of Warsaw</span>
           <span>Top 3% on Toptal</span>
-          <span>Architect @ EcoVadis</span>
+          <span>Architect at a global SaaS platform</span>
         </p>
       </div>
       <div class="portrait rise-3">
@@ -216,7 +217,7 @@ $form_message = $form['message'];
         <li>
           <div class="tl-rail">
             <span class="tl-when">2017–2022</span>
-            <span class="tl-place">EcoVadis</span>
+            <span class="tl-place">Global SaaS platform</span>
             <span class="tl-metric"><b>15-yr</b><i>monolith moved</i></span>
           </div>
           <div class="tl-body">
@@ -233,7 +234,7 @@ $form_message = $form['message'];
         <li>
           <div class="tl-rail">
             <span class="tl-when">2022–today</span>
-            <span class="tl-place">EcoVadis</span>
+            <span class="tl-place">Global SaaS platform</span>
             <span class="tl-metric"><b>20+</b><i>bounded contexts</i></span>
           </div>
           <div class="tl-body">
@@ -250,7 +251,7 @@ $form_message = $form['message'];
         <li>
           <div class="tl-rail">
             <span class="tl-when">2025–today</span>
-            <span class="tl-place">EcoVadis</span>
+            <span class="tl-place">Global SaaS platform</span>
             <span class="tl-metric"><b>15</b><i>squads, AI-native</i></span>
           </div>
           <div class="tl-body">
