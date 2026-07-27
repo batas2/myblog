@@ -52,18 +52,16 @@ HTML;
 /** Site navigation. $active: 'blog' | 'start' | 'services' | 'home' | '' — marks the current place. */
 function site_nav(string $active = ''): string
 {
-    $blog     = $active === 'blog' ? ' aria-current="page"' : '';
-    $start    = $active === 'start' ? ' aria-current="page"' : '';
-    $services = $active === 'services' ? ' aria-current="page"' : '';
+    $blog  = $active === 'blog' ? ' aria-current="page"' : '';
+    $start = $active === 'start' ? ' aria-current="page"' : '';
     return <<<HTML
 <header class="nav">
   <div class="nav-inner">
     <a class="wordmark" href="/">bfrackowiak<span class="tld">.pl</span></a>
     <ul class="nav-links">
-      <li><a href="/blog/"{$blog}>Writing</a></li>
-      <li class="optional-sm"><a href="/blog/start/"{$start}>Start here</a></li>
+      <li><a href="/blog/start/"{$start}>Start here</a></li>
+      <li><a href="/blog/"{$blog}>Blog</a></li>
       <li class="optional"><a href="/#journey">About</a></li>
-      <li><a class="nav-cta" href="/services/"{$services}>Work with me</a></li>
     </ul>
   </div>
 </header>

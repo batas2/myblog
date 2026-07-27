@@ -52,7 +52,7 @@ $ld = json_encode([
 $extra = <<<HTML
 <script type="application/ld+json">{$ld}</script>
 <style>
-.svc-hero { padding: 6.5rem 0 1rem; }
+.svc-hero { padding-block: 6.5rem 1rem; }   /* padding-block: the shorthand would zero .wrap's gutter */
 .svc-hero h1 { margin: 0.9rem 0 1rem; }
 .svc-hero .lede { max-width: 46rem; }
 .proof-row { display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap; margin-top: 1.1rem; padding-top: 0.9rem; border-top: 1px solid var(--line); }

@@ -42,7 +42,14 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
-html { scroll-behavior: smooth; }
+html {
+  scroll-behavior: smooth;
+  /* iOS Safari inflates text when a phone turns landscape unless told not to */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  /* the nav is sticky, so an anchor jump must stop below it, not under it */
+  scroll-padding-top: 76px;
+}
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation: none !important; transition: none !important; }
@@ -71,7 +78,13 @@ textarea:focus-visible, select:focus-visible {
   border-radius: 2px;
 }
 
-.wrap { max-width: var(--max); margin-inline: auto; padding-inline: 24px; }
+/* One gutter for the whole site. max() keeps content clear of the rounded
+   corners and the camera housing when an iPhone is held sideways. */
+.wrap {
+  max-width: var(--max); margin-inline: auto;
+  padding-left: max(24px, env(safe-area-inset-left));
+  padding-right: max(24px, env(safe-area-inset-right));
+}
 
 /* ---- type roles ---------------------------------------------------------- */
 
@@ -121,7 +134,8 @@ textarea:focus-visible, select:focus-visible {
   border-bottom: 1px solid var(--line);
 }
 .nav-inner {
-  max-width: var(--max); margin-inline: auto; padding: 0 24px;
+  max-width: var(--max); margin-inline: auto;
+  padding-inline: max(24px, env(safe-area-inset-left)) max(24px, env(safe-area-inset-right));
   height: 60px; display: flex; align-items: center; justify-content: space-between;
 }
 .wordmark {
@@ -170,6 +184,17 @@ textarea:focus-visible, select:focus-visible {
 }
 @media (max-width: 560px) {
   .nav-links .optional-sm { display: none; }
+  /* Below this width the gap is narrower than the blip's own offset, so the
+     marker lands on top of the previous link. Underline the current page
+     instead — same information, no collision. */
+  .nav-links a:not(.nav-cta)::before { content: none; }
+  .nav-links a[aria-current="page"] {
+    color: var(--ink);
+    text-decoration: underline;
+    text-decoration-color: var(--accent);
+    text-underline-offset: 6px;
+    text-decoration-thickness: 2px;
+  }
 }
 @media (max-width: 430px) {
   .nav-links { gap: 0.9rem; }
@@ -205,7 +230,10 @@ textarea:focus-visible, select:focus-visible {
 
 /* ---- hero ------------------------------------------------------------------ */
 
-.hero { padding: 6.5rem 0 5.5rem; }
+/* padding-block, never the shorthand: .hero also carries .wrap, and a shorthand
+   here silently zeroes the site gutter — which only shows up on a phone, where
+   the text then runs into the edge of the screen. */
+.hero { padding-block: 6.5rem 5.5rem; }
 .hero-grid {
   display: grid; grid-template-columns: 1.25fr 0.75fr;
   gap: 4rem; align-items: center;
@@ -497,7 +525,11 @@ textarea:focus-visible, select:focus-visible {
 }
 
 /* article hero image */
-.post-hero { max-width: 1224px; margin: 2.6rem auto 0; padding-inline: 24px; }
+.post-hero {
+  max-width: 1224px; margin: 2.6rem auto 0;
+  padding-left: max(24px, env(safe-area-inset-left));
+  padding-right: max(24px, env(safe-area-inset-right));
+}
 .post-hero img {
   width: 100%; aspect-ratio: 21 / 9; object-fit: cover;
   border-radius: 16px; border: 1px solid var(--line);
@@ -721,6 +753,11 @@ a.tag:hover { color: var(--accent-deep); text-decoration: underline; text-underl
   background: var(--paper); color: var(--ink); font: inherit; font-size: 0.93rem;
 }
 .nl-form input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,82,229,.14); }
+/* iOS Safari zooms the whole page when a focused field is under 16px, and never
+   zooms back out. Anything typed into gets 16px on a touch screen. */
+@media (pointer: coarse) {
+  .nl-form input, .field input, .field textarea, .field select { font-size: 16px; }
+}
 .nl-form button {
   padding: 0.75rem 1.3rem; border: none; border-radius: 10px; cursor: pointer;
   background: var(--accent); color: #fff; font: inherit; font-size: 0.93rem; font-weight: 600;
@@ -832,7 +869,8 @@ a.tag:hover { color: var(--accent-deep); text-decoration: underline; text-underl
 
 .footer { border-top: 1px solid var(--line); margin-top: 6rem; }
 .footer-inner {
-  max-width: var(--max); margin-inline: auto; padding: 3rem 24px 2.6rem;
+  max-width: var(--max); margin-inline: auto;
+  padding: 3rem max(24px, env(safe-area-inset-right)) 2.6rem max(24px, env(safe-area-inset-left));
   display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2.5rem 4rem;
 }
 .f-brand { max-width: 23rem; }
@@ -858,7 +896,8 @@ a.tag:hover { color: var(--accent-deep); text-decoration: underline; text-underl
 .f-ext { font-size: 0.72rem; color: var(--faint); }
 .footer-base { border-top: 1px solid var(--line); }
 .fb-inner {
-  max-width: var(--max); margin-inline: auto; padding: 1.05rem 24px;
+  max-width: var(--max); margin-inline: auto;
+  padding: 1.05rem max(24px, env(safe-area-inset-right)) max(1.05rem, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
   display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.5rem 2rem;
   font-size: 0.78rem; color: var(--faint);
 }
