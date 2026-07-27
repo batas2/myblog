@@ -76,6 +76,16 @@ file_put_contents($SANDBOX . '/content/posts/2020-01-01-itest-past-post.md', $fi
 file_put_contents($SANDBOX . '/content/posts/2099-01-01-itest-future-post.md',
     str_replace('ITest Alpha', 'ITest Future', $fixture('ITest Future Post')));
 file_put_contents($SANDBOX . '/content/posts/2024-01-01-itest-draft-post.md', $fixture('ITest Draft Post', '**Status:** draft'));
+// one fully scored post with a rationale on file: the admin panel explains every
+// number from these two sources, so the pane needs both to be exercised
+$itestScores = 'tension=8 originality=6 personal=9 contrarian=4 substance=7 punch=5 trend=2';
+file_put_contents($SANDBOX . '/content/posts/2021-02-02-itest-scored-post.md', $fixture(
+    'ITest Scored Post',
+    "**Scores:** {$itestScores}\n**Scored:** 2026-07-27 rubric=" . SC_RUBRIC . ' model=itest-model'
+));
+file_put_contents($SANDBOX . '/content/score-notes.json', json_encode([
+    'itest-scored-post' => ['tension' => '8 — itest rationale quote for tension.'],
+], JSON_UNESCAPED_SLASHES));
 
 exec('cd ' . escapeshellarg($SANDBOX) . ' && ' . PHP_BINARY . ' tools/build.php 2>&1', $out, $rc);
 $buildOut = implode("\n", $out);
@@ -172,17 +182,38 @@ t_not_contains('On Medium</h2>', $index, 'medium strip removed');
 
 /* ---------------- HTTP layer ---------------- */
 section('http server');
-$serverPid = (int) exec(
-    'cd ' . escapeshellarg($SANDBOX) . ' && nohup ' . PHP_BINARY . ' -S 127.0.0.1:' . $PORT
-    . ' >/dev/null 2>&1 & echo $!'
-);
+/* The port is derived from the pid, so two runs can collide: `php -S` then loses
+   the bind, dies silently under nohup, and every request lands on the *other*
+   run's leftover server — which serves a different sandbox and fails assertions
+   in ways that look like product bugs (this ate a deploy on 2026-07-27). Serve a
+   token only this sandbox knows and refuse any server that cannot echo it back;
+   walk to the next port instead of testing a stranger. */
+$token = bin2hex(random_bytes(8));
+file_put_contents($SANDBOX . '/sandbox-id.txt', $token);
 $ready = false;
-for ($i = 0; $i < 40; $i++) {
-    usleep(150000);
-    [$code] = http_req('GET', "$BASE/");
-    if ($code === 200) { $ready = true; break; }
+for ($try = 0; $try < 6 && !$ready; $try++) {
+    $port = $PORT + $try * 91;   // 91 = one past the pid-derived spread, so tries never overlap
+    $base = "http://127.0.0.1:{$port}";
+    /* opcache off: several assertions rewrite the sandbox config.php and expect
+       the very next request to see it. With opcache on (it is, in the built-in
+       server) the compiled file is only revalidated every opcache.revalidate_freq
+       seconds — 2 by default — so a fast run reads the previous config and the
+       owner-IP exclusion silently does not apply. */
+    $pid = (int) exec(
+        'cd ' . escapeshellarg($SANDBOX) . ' && nohup ' . PHP_BINARY
+        . ' -d opcache.enable=0 -d opcache.enable_cli=0 -S 127.0.0.1:' . $port
+        . ' >/dev/null 2>&1 & echo $!'
+    );
+    for ($i = 0; $i < 20; $i++) {
+        usleep(150000);
+        [$code, $body] = http_req('GET', "$base/sandbox-id.txt");
+        if ($code === 200 && trim((string) $body) === $token) { $ready = true; break; }
+        if ($code === 200) break;   // someone else's server owns this port — move on
+    }
+    if ($ready) { $serverPid = $pid; $PORT = $port; $BASE = $base; break; }
+    exec('kill ' . $pid . ' 2>/dev/null');
 }
-t_assert($ready, "php -S serving on :{$PORT}");
+t_assert($ready, "php -S serving this sandbox on :{$PORT}");
 
 [$code, $body] = http_req('GET', "$BASE/");
 t_eq(200, $code, 'homepage 200');
@@ -203,9 +234,16 @@ t_contains('Architecture Health Check', $body, 'services page lists engagements'
 t_not_contains('PLN', $body, 'no prices on the public services page');
 t_contains('/#contact', $body, 'services page falls back to contact CTA when calendly unset');
 [, $body] = http_req('GET', "$BASE/blog/nobody-owns-the-sum/");
-t_contains('href="/services/"', $body, 'post pages link to services (nav + author box)');
+t_contains('href="/services/"', $body, 'post pages link to services (author box + footer)');
 [, $body] = http_req('GET', "$BASE/blog/nobody-owns-the-sum/");
 t_contains('/blog/start/', $body, 'post pages link to start (nav + author box)');
+preg_match('~<ul class="nav-links">(.*?)</ul>~s', $body, $navM);
+$nav = $navM[1] ?? '';
+t_contains('>Blog<', $nav, 'top nav labels the archive "Blog"');
+t_not_contains('>Writing<', $nav, 'top nav no longer says "Writing"');
+t_not_contains('nav-cta', $nav, 'top nav drops the "Work with me" CTA');
+t_not_contains('/services/', $nav, 'top nav no longer links services');
+t_eq(true, strpos($nav, '/blog/start/') < strpos($nav, 'href="/blog/"'), 'start here sits left of blog in the nav');
 [, $body] = http_req('GET', "$BASE/blog/");
 t_contains('start here', $body, 'blog index invites new readers to start page');
 [$code, $body] = http_req('GET', "$BASE/blog/data-driven-theater/index.md");
@@ -525,7 +563,7 @@ t_contains('Rebuild site', $body, 'admin actions present for the full session');
 // purpose, so this also covers the unscored path end to end
 t_contains('Editorial scores', $body, 'scores pane rendered');
 t_contains('rubric ' . SC_RUBRIC, $body, 'rubric version shown so mixed-version scores are visible');
-t_contains('Avg reach score', $body, 'reach summary card present');
+t_contains('Avg reach', $body, 'reach summary card present');
 t_contains('carry no scores', $body, 'unscored fixtures are flagged, not silently skipped');
 t_contains('Which axis actually gets read?', $body, 'score-vs-traffic correlation section present');
 foreach (SC_AXES as $axKey => $ax) {
@@ -536,6 +574,47 @@ t_eq(200, $code, 'scores table accepts a sort parameter');
 t_contains('Editorial scores', $bodySorted, 'sorted view still renders');
 [, $bodyBadSort] = $asAdmin('GET', "$BASE/admin.php?sort=" . rawurlencode("'; DROP TABLE hits;--"));
 t_contains('Editorial scores', $bodyBadSort, 'unknown sort key falls back instead of breaking the page');
+
+/* every number in the pane must be explainable: the popup is fed by one JSON
+   payload, and a score with no reasoning behind it is the failure mode */
+preg_match('~<script type="application/json" id="sc-data">(.*?)</script>~s', $body, $scM);
+$scData = json_decode($scM[1] ?? '', true);
+t_assert(is_array($scData), 'scores pane ships a reasoning payload');
+t_eq(count(SC_AXES), count($scData['axes'] ?? []), 'payload documents every axis');
+t_eq([1, 3, 5, 7, 9], array_keys($scData['axes']['tension']['anchors'] ?? []), 'payload carries the rubric anchors');
+t_assert(isset($scData['bands']['floor']['do']), 'payload carries what to do about each band');
+$scRow = $scData['rows']['itest-scored-post'] ?? null;
+t_assert($scRow !== null, 'the scored fixture is in the payload');
+t_eq(8, $scRow['scores']['tension'] ?? 0, 'payload carries the post\'s own scores');
+t_contains('itest rationale quote', (string) ($scRow['notes']['tension'] ?? ''), 'payload carries the stored rationale');
+t_eq(1.6, round((float) ($scRow['contrib']['tension']['points'] ?? 0), 2), 'payload carries the arithmetic behind the reach score');
+t_assert(($scRow['lever']['axis'] ?? '') !== '', 'payload names the axis worth fixing first');
+t_contains('data-slug="itest-scored-post" data-axis="tension"', $body, 'each score is a button that opens its reasoning');
+t_contains('The rubric in machine-readable form', file_get_contents($ROOT . '/lib/scores.php'), 'rubric text lives next to the weights');
+
+// filters answer "what needs a decision"; each keeps the sort and the range
+foreach (['floor', 'underread', 'unscored'] as $scope) {
+    [$scCode, $scBody] = $asAdmin('GET', "$BASE/admin.php?scope={$scope}&sort=reach&dir=desc");
+    t_eq(200, $scCode, "scores scope={$scope} renders");
+    t_contains('Editorial scores', $scBody, "scores scope={$scope} keeps the pane");
+}
+// the pipeline pane lists every post too, so the filter must be judged on the
+// scores pane alone
+$scorePane = function (string $html): string {
+    preg_match('~<div class="pane wide scores-t" id="scores">(.*?)<!-- /scores -->~s', $html, $m);
+    return $m[1] ?? '';
+};
+[, $scUnscored] = $asAdmin('GET', "$BASE/admin.php?scope=unscored");
+t_not_contains('>ITest Scored Post<', $scorePane($scUnscored), 'the unscored filter really excludes the scored post');
+t_contains('>ITest Past Post<', $scorePane($scUnscored), 'and keeps the posts that carry no scores');
+[, $scAll] = $asAdmin('GET', "$BASE/admin.php");
+t_contains('>ITest Scored Post<', $scorePane($scAll), 'the default view shows everything');
+[, $scBad] = $asAdmin('GET', "$BASE/admin.php?scope=" . rawurlencode('../../etc/passwd'));
+t_contains('Editorial scores', $scBad, 'unknown filter falls back instead of breaking the page');
+[, $scAsc] = $asAdmin('GET', "$BASE/admin.php?sort=reach&dir=asc");
+t_contains('dir=desc', $scAsc, 'the active column offers the opposite direction');
+[, $scLegacy] = $asAdmin('GET', "$BASE/admin.php?sort=reach_desc");
+t_contains('Editorial scores', $scLegacy, 'the old reach_desc deep link still works');
 
 preg_match('/name="csrf" value="([^"]+)"/', $body, $m);
 $csrf = $m[1] ?? '';

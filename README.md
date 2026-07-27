@@ -70,7 +70,8 @@ form, and first-party analytics.
 ├── lib/                 config, helpers, markdown, content model, templates,
 │                        analytics, geoip, admin core
 ├── tools/               build.php (generator), geoip_update.php (country db),
-│                        fetch_images.sh (CC image fetcher)
+│                        fetch_images.sh (CC image fetcher),
+│                        preview_admin.php (throwaway local copy of admin, never deployed)
 ├── docs/                strategy: improvement plan, action plan, topic engine,
 │                        post prompt, scoring rubric
 ├── drafts/              working area: unpublished drafts, diagrams, review docs (never deployed)

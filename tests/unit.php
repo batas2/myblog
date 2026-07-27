@@ -213,6 +213,53 @@ t_eq('weak', sc_band(4.5), 'band boundary: 4.5 is weak');
 t_eq('floor', sc_band(4.4), 'band boundary: 4.4 is the floor');
 t_eq('none', sc_band(null), 'unscored posts have no band');
 
+section('scores: explaining the number');
+// every axis the model scores must be explainable, or the admin popup shows a
+// number with nothing behind it
+foreach (SC_AXES as $axKey => $axDef) {
+    t_assert(isset(SC_AXIS_DOC[$axKey]), "axis {$axKey} has rubric documentation");
+    t_eq([1, 3, 5, 7, 9], array_keys(SC_AXIS_DOC[$axKey]['anchors']), "axis {$axKey} documents all five anchors");
+    t_assert(SC_AXIS_DOC[$axKey]['what'] !== '' && SC_AXIS_DOC[$axKey]['why'] !== '', "axis {$axKey} says what it measures and why it is weighted");
+}
+foreach (['strong', 'solid', 'weak', 'floor', 'none'] as $bandKey) {
+    t_assert(isset(SC_BAND_DOC[$bandKey]['do']), "band {$bandKey} says what to do about it");
+}
+
+$contrib = sc_contributions($sc);
+t_eq(7, count($contrib), 'every axis contributes a line');
+t_eq(6.4, round(array_sum(array_column($contrib, 'points')), 1), 'contributions add up to the reach score');
+t_eq('personal', array_key_first($contrib), 'biggest contributor first (9 × 0.16 beats 7 × 0.20)');
+t_eq(1.44, $contrib['personal']['points'], 'contribution is weight × score');
+t_assert(array_sum(array_column($contrib, 'share')) >= 98, 'shares account for the whole score');
+t_eq([], sc_contributions(sc_parse_scores('tension=7')), 'an incomplete set explains nothing');
+
+// the lever is weight × headroom: not simply the lowest axis, not simply the heaviest
+// contrarian=5 (0.15 × 5 = 0.75) beats both the lowest axis (trend=3, 0.56)
+// and the heaviest one (tension=7, 0.60)
+t_eq('contrarian', sc_lever($sc)['axis'], 'lever picks the axis where a rewrite buys the most reach');
+t_eq(0.75, sc_lever($sc)['gain'], 'lever reports the reach it would add');
+t_eq(null, sc_lever(array_fill_keys(array_keys(SC_AXES), 10)), 'a perfect post has no lever left');
+t_eq(null, sc_lever(sc_parse_scores('tension=7')), 'incomplete set has no lever');
+
+section('scores: score against traffic');
+$mkrow = fn(string $slug, ?float $reach, int $pv, string $status = 'published'): array => [
+    'slug' => $slug, 'reach' => $reach, 'pv' => $pv, 'status' => $status,
+];
+$gapped = sc_rank_gaps([
+    $mkrow('best-unread', 9.0, 1),
+    $mkrow('mid', 7.0, 50),
+    $mkrow('worst-viral', 5.0, 900),
+    $mkrow('scheduled-one', 8.0, 0, 'scheduled'),
+    $mkrow('never-scored', null, 400),
+]);
+t_eq(-2, $gapped[0]['gap'], 'top score with no readers ranks two places lower in views: a distribution problem');
+t_eq(2, $gapped[2]['gap'], 'weakest score with the most readers ranks two places higher: the rubric missed something');
+t_eq(0, $gapped[1]['gap'], 'a post the model ranked exactly where readers did has no gap');
+t_eq(null, $gapped[3]['gap'], 'a scheduled post has no audience to compare against');
+t_eq(null, $gapped[4]['gap'], 'an unscored post has no prediction to compare against');
+$tiny = sc_rank_gaps([$mkrow('a', 9.0, 10), $mkrow('b', 5.0, 90)]);
+t_eq(null, $tiny[0]['gap'], 'two posts are not a ranking — no gap invented');
+
 section('scores: in the post source');
 $sf = $mkpost('2020-01-05-fixture-scored.md', "**Scores:** {$full}\n**Scored:** 2026-07-27 rubric=v1 model=test-model");
 $p = parse_post_file($sf);
@@ -825,6 +872,23 @@ $fcss = (string) file_get_contents(dirname(__DIR__) . '/assets/fonts.css');
 t_contains('/assets/fonts/', $fcss, 'fonts.css points at local files');
 t_not_contains('gstatic', $fcss, 'fonts.css has no external URLs');
 t_contains('latin-ext', $fcss, 'Polish glyph subset included');
+
+/* The site gutter. Any rule that also lands on a .wrap element must set padding
+   per side: a `padding:` shorthand there silently zeroes the inline padding and
+   the text runs into the edge of a phone screen — invisible on a desktop, where
+   the max-width keeps content off the edge anyway. */
+$wrapUsers = ['.hero'];   // classes used together with .wrap in the markup
+foreach ($wrapUsers as $sel) {
+    preg_match('~\\' . $sel . ' \{([^}]*)\}~', $css, $rule);
+    t_assert(isset($rule[1]), "{$sel} rule found in site.css");
+    t_assert(!preg_match('~(^|;|\s)padding:~', $rule[1] ?? ''), "{$sel} does not use a padding shorthand over the .wrap gutter");
+}
+t_assert(preg_match('~\.wrap \{[^}]*padding-left:[^}]*padding-right:~s', $css) === 1, '.wrap sets its gutter per side');
+t_contains('env(safe-area-inset-left)', $css, 'gutters respect the notch in landscape');
+t_contains('text-size-adjust: 100%', $css, 'iOS is told not to inflate text in landscape');
+t_contains('scroll-padding-top', $css, 'anchor targets clear the sticky nav');
+$svcCss = (string) file_get_contents(dirname(__DIR__) . '/services/index.php');
+t_assert(!preg_match('~\.svc-hero \{[^}]*(^|;|\s)padding:~m', $svcCss), 'services hero keeps the .wrap gutter too');
 
 section('start page');
 $sp = render_start_page($posts);

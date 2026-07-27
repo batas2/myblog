@@ -227,6 +227,14 @@ th { font-family: 'JetBrains Mono', monospace; font-size: .62rem; letter-spacing
 td.r, th.r { text-align: right; }
 td.n { font-family: 'JetBrains Mono', monospace; font-size: .78rem; }
 td.dim, .dim { color: var(--muted); }
+/* On a phone the stat row is the first thing between you and the actual data —
+   at full size eight cards fill the whole screen, so they shrink to a strip. */
+@media (max-width: 780px) {
+  .cards { grid-template-columns: repeat(auto-fit, minmax(104px, 1fr)); gap: .5rem; margin: .8rem 0 1.2rem; }
+  .scard { padding: .55rem .65rem; }
+  .scard b { font-size: 1.15rem; }
+  .scard span { font-size: .55rem; letter-spacing: .06em; }
+}
 CSS;
 }
 

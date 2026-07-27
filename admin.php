@@ -187,30 +187,66 @@ if ($isDash) {
 
 $scoreRows = [];
 $scoreCorr = null;
+/* sort=<column>, dir=asc|desc. Every column has a direction that is interesting
+   by default (weakest scores first, biggest audiences first), and clicking the
+   header you are already on flips it. */
 $scoreSort = (string) ($_GET['sort'] ?? 'reach');
+$scoreDirRaw = (string) ($_GET['dir'] ?? '');
+$scoreFilter = (string) ($_GET['scope'] ?? 'all');
 if ($isAdmin) {
     $pages = [];
     if (is_file(an_db_path())) {
         // every post, not just the top 25 — an unread post is exactly the row we need
         try { $pages = an_top_pages(an_db(), $since, 500); } catch (Throwable) { $pages = []; }
     }
-    $scoreRows = sc_merge_analytics($pipeline, $pages);
+    $scoreRows = sc_rank_gaps(sc_merge_analytics($pipeline, $pages));
     $scoreCorr = sc_correlations($scoreRows);
-
-    // each column sorts in its own interesting direction: weakest scores first,
-    // biggest audiences first. Unscored posts sink to the bottom either way.
-    $key = match (true) {
-        $scoreSort === 'pv'          => fn(array $r) => -$r['pv'],
-        $scoreSort === 'time'        => fn(array $r) => -$r['avg_time'],
-        $scoreSort === 'date'        => fn(array $r) => -$r['publish_ts'],
-        $scoreSort === 'reach_desc'  => fn(array $r) => -($r['reach'] ?? -1),
-        isset(SC_AXES[$scoreSort])   => fn(array $r) => $r['scores'][$scoreSort] ?? 99,
-        default                      => fn(array $r) => $r['reach'] ?? 99,
-    };
-    usort($scoreRows, fn(array $a, array $b) => [$key($a), $b['publish_ts']] <=> [$key($b), $a['publish_ts']]);
 }
 $scoreNotes = $isAdmin ? sc_notes() : [];
-$scored = array_values(array_filter($scoreRows, fn(array $r): bool => $r['reach'] !== null));
+$scoreAll = $scoreRows;   // pre-filter, so the filter chips can show honest counts
+
+/* Which rows are worth a decision. 'floor' and 'unscored' are the rubric's own
+   verdicts; 'underread' is where the score and the audience disagree most —
+   at least five places lower in views than in score is a distribution problem,
+   not a writing one. */
+$scoreScopes = [
+    'all'       => ['label' => 'All posts',    fn(array $r): bool => true],
+    'floor'     => ['label' => 'Below floor',  fn(array $r): bool => $r['band'] === 'floor'],
+    'underread' => ['label' => 'Under-read',   fn(array $r): bool => ($r['gap'] ?? 0) <= -5],
+    'unscored'  => ['label' => 'Unscored',     fn(array $r): bool => $r['reach'] === null],
+];
+if (!isset($scoreScopes[$scoreFilter])) $scoreFilter = 'all';
+$scoreCounts = [];
+foreach ($scoreScopes as $k => $scope) $scoreCounts[$k] = count(array_filter($scoreAll, $scope[0]));
+
+if ($isAdmin) {
+    $scoreRows = array_values(array_filter($scoreAll, $scoreScopes[$scoreFilter][0]));
+
+    // [value, natural direction] per column; unscored posts sort last either way
+    [$key, $natural] = match (true) {
+        $scoreSort === 'pv'        => [fn(array $r) => $r['pv'], 'desc'],
+        $scoreSort === 'time'      => [fn(array $r) => $r['avg_time'], 'desc'],
+        $scoreSort === 'date'      => [fn(array $r) => $r['publish_ts'], 'desc'],
+        $scoreSort === 'gap'       => [fn(array $r) => $r['gap'] ?? 0, 'asc'],
+        $scoreSort === 'words'     => [fn(array $r) => $r['words'], 'desc'],
+        isset(SC_AXES[$scoreSort]) => [fn(array $r) => $r['scores'][$scoreSort] ?? null, 'asc'],
+        default                    => [fn(array $r) => $r['reach'], 'asc'],
+    };
+    // legacy deep links (sort=reach_desc) still mean what they used to
+    if ($scoreSort === 'reach_desc') { $scoreSort = 'reach'; $scoreDirRaw = 'desc'; }
+    $scoreDir = in_array($scoreDirRaw, ['asc', 'desc'], true) ? $scoreDirRaw : $natural;
+    $sign = $scoreDir === 'desc' ? -1 : 1;
+    usort($scoreRows, function (array $a, array $b) use ($key, $sign): int {
+        $ka = $key($a);
+        $kb = $key($b);
+        // a missing value is not a small value: those rows go to the bottom
+        if ($ka === null || $kb === null) return ($ka === null ? 1 : 0) <=> ($kb === null ? 1 : 0);
+        return $sign * ($ka <=> $kb) ?: $b['publish_ts'] <=> $a['publish_ts'];
+    });
+} else {
+    $scoreDir = 'asc';
+}
+$scored = array_values(array_filter($scoreAll, fn(array $r): bool => $r['reach'] !== null));
 $avgReach = $scored ? round(array_sum(array_column($scored, 'reach')) / count($scored), 1) : null;
 
 /* ---------------- small view helpers ---------------- */
@@ -256,20 +292,52 @@ function s_table(string $title, array $rows, ?callable $fmt = null, string $unit
     echo '</table></div>';
 }
 
-/** Sortable column header for the scores table (keeps the analytics range). */
-function sc_th(string $key, string $label, string $current, string $daysRaw, string $cls = ''): string
+/** A scores-tab URL that keeps the range, the filter and the sort you are on. */
+function sc_url(array $over, string $daysRaw, string $scope): string
 {
-    $on = $key === $current;
-    $href = 'admin.php?' . http_build_query(['days' => $daysRaw, 'sort' => $key]) . '#scores';
-    return '<th class="' . $cls . ($on ? ' sorted' : '') . '"><a href="' . e($href) . '">' . e($label) . '</a></th>';
+    $q = array_merge(['days' => $daysRaw, 'scope' => $scope === 'all' ? null : $scope], $over);
+    return 'admin.php?' . http_build_query(array_filter($q, fn($v) => $v !== null && $v !== '')) . '#scores';
 }
 
-/** One score cell: the number, shaded in proportion to it, with the rationale on hover. */
-function sc_cell(?int $v, string $note): string
+/**
+ * Sortable column header. Clicking the column you are already on flips the
+ * direction, and the arrow always points the way the rows actually run, so the
+ * table never sorts in a direction the header denies.
+ */
+function sc_th(string $key, string $label, string $current, string $dir, string $daysRaw, string $scope, string $cls = '', string $hint = ''): string
 {
-    if ($v === null) return '<td class="sc dim">·</td>';
-    $title = $note !== '' ? ' title="' . e($note) . '"' : '';
-    return '<td class="sc" style="--w:' . ($v * 10) . '%"' . $title . '>' . $v . '</td>';
+    $on = $key === $current;
+    $next = $on && $dir === 'asc' ? 'desc' : ($on ? 'asc' : '');
+    $arrow = $on ? ' <span class="sarrow">' . ($dir === 'asc' ? '↑' : '↓') . '</span>' : '';
+    $href = sc_url(['sort' => $key, 'dir' => $next], $daysRaw, $scope);
+    $title = $hint !== '' ? ' title="' . e($hint) . '"' : '';
+    return '<th class="' . $cls . ($on ? ' sorted' : '') . '"' . $title . '>'
+        . '<a href="' . e($href) . '">' . e($label) . $arrow . '</a></th>';
+}
+
+/**
+ * One score cell. The number, shaded in proportion to it, and a button that
+ * opens the reasoning behind it — a title attribute alone is unreachable on a
+ * phone, which is where half of this dashboard gets read.
+ */
+function sc_cell(string $slug, string $axis, ?int $v, string $note): string
+{
+    $label = SC_AXES[$axis]['label'];
+    if ($v === null) return '<td class="sc dim" data-ax="' . e($label) . '">·</td>';
+    return '<td class="sc" style="--w:' . ($v * 10) . '%" data-ax="' . e($label) . '">'
+        . '<button type="button" class="scbtn" data-slug="' . e($slug) . '" data-axis="' . e($axis) . '"'
+        . ($note !== '' ? ' title="' . e($note) . '"' : '')
+        . ' aria-label="' . e($label . ' ' . $v . ' — why?') . '">' . $v . '</button></td>';
+}
+
+/** Rank gap as a signed cell: negative = read less than it scored. */
+function sc_gap_cell(?int $gap): string
+{
+    if ($gap === null) return '<td class="r n dim" data-ax="Gap">—</td>';
+    if ($gap === 0) return '<td class="r n" data-ax="Gap"><span class="delta flat">→ 0</span></td>';
+    $cls = $gap > 0 ? 'up' : 'down';
+    return '<td class="r n" data-ax="Gap"><span class="delta ' . $cls . '">' . ($gap > 0 ? '+' : '−')
+        . abs($gap) . '</span></td>';
 }
 
 /** Spearman rho as a signed, coloured cell ('—' when there was nothing to correlate). */
@@ -301,7 +369,14 @@ function a_delta(int $cur, int $prev): string
 <link rel="stylesheet" href="/assets/site.css">
 <style>
 <?= dash_base_css() ?>
-.awrap { max-width: 1840px; margin: 2rem auto 4rem; padding-inline: 32px; }
+.awrap { max-width: 1840px; margin: 2rem auto 4rem;
+  padding-left: max(32px, env(safe-area-inset-left)); padding-right: max(32px, env(safe-area-inset-right)); }
+@media (max-width: 780px) {
+  /* 64px of gutter is a quarter of a phone screen */
+  .awrap { margin-top: 1rem; padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
+  h1 { font-size: 1.35rem; }
+  .tabs { margin-top: 1rem; }
+}
 .ahead { display: flex; flex-wrap: wrap; align-items: center; gap: .8rem 1.4rem; margin-bottom: .4rem; }
 h1 { font-size: 1.7rem; font-weight: 800; color: var(--ink); margin-right: auto; letter-spacing: -.01em; }
 h2 { font-size: 1.05rem; font-weight: 700; color: var(--ink); margin: 2.4rem 0 .8rem; display: flex; align-items: baseline; gap: .7rem; }
@@ -335,6 +410,9 @@ input.dt { font-family: 'JetBrains Mono', monospace; font-size: .72rem; padding:
 pre.buildout { background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 12px; padding: 1rem 1.2rem; font-size: .78rem; overflow-x: auto; white-space: pre-wrap; margin: .6rem 0 1.2rem; }
 .two-zone { display: grid; grid-template-columns: 2fr 1fr; gap: 1.8rem; align-items: start; }
 @media (max-width: 1100px) { .two-zone { grid-template-columns: 1fr; } }
+/* iOS zooms the page for any field under 16px and never zooms back; the
+   schedule input is the one place in here you type into on a phone */
+@media (pointer: coarse) { input.dt, .login input[type=password] { font-size: 16px; } }
 .login { max-width: 400px; margin: 12vh auto; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 1.8rem; }
 .login input[type=password] { width: 100%; font: inherit; padding: .65rem .9rem; margin: .8rem 0; border: 1px solid var(--line); border-radius: 10px; background: transparent; color: var(--ink); }
 .form-err { color: #b91c1c; font-size: .85rem; margin: .4rem 0; }
@@ -389,19 +467,94 @@ a.plink { text-decoration: none; }
 .warn { font-size: .85rem; color: #b45309; background: #b4530910; border: 1px solid #b4530940; border-radius: 10px; padding: .6rem .9rem; margin: .9rem 0; }
 td.email { font-family: 'JetBrains Mono', monospace; font-size: .78rem; overflow-wrap: anywhere; }
 /* editorial scores: seven 1–10 axes per post, shaded in place (docs/SCORING-RUBRIC.md) */
-td.sc { font-family: 'JetBrains Mono', monospace; font-size: .78rem; text-align: right; font-variant-numeric: tabular-nums;
-  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 22%, transparent) var(--w), transparent var(--w)); }
+/* the bar grows leftwards out of the number it belongs to, so a column of them
+   reads as seven small meters instead of one wall of colour */
+td.sc { font-family: 'JetBrains Mono', monospace; font-size: .78rem; text-align: right; font-variant-numeric: tabular-nums; padding: 0; width: 4.6rem;
+  background: linear-gradient(to left, color-mix(in srgb, var(--accent) 20%, transparent) var(--w), transparent var(--w)); }
+td.sc .scbtn { font: inherit; color: var(--ink); background: none; border: 0; width: 100%; padding: .5rem .8rem; text-align: right; cursor: pointer; }
+td.sc .scbtn:hover { color: var(--accent); text-decoration: underline; }
+td.sc.dim { padding: .5rem .8rem; }
 th.ax { font-size: .68rem; font-weight: 600; text-align: right; white-space: nowrap; }
 th.ax a, .scores-t th a { text-decoration: none; color: inherit; }
-th.sorted, th.sorted a { color: var(--ink); text-decoration: underline; }
+th.sorted, th.sorted a { color: var(--ink); }
+th.sorted .sarrow { color: var(--accent); }
 td.reach { font-family: 'JetBrains Mono', monospace; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+td.reach .scbtn { font: inherit; font-size: .74rem; cursor: pointer; }
+td.reach .scbtn:hover { border-color: var(--accent); }
 .b-strong { color: #0a7a45; border-color: #0a7a4540; background: #0a7a4512; }
 .b-solid  { color: var(--ink); }
 .b-weak   { color: #b45309; border-color: #b4530940; background: #b4530912; }
 .b-floor  { color: #b91c1c; border-color: #b91c1c40; background: #b91c1c12; }
 .b-none   { color: var(--muted); background: var(--surface); }
 tr.r-floor td:first-child { box-shadow: inset 3px 0 0 #b91c1c80; }
-.scores-t td.pathcell { max-width: 34ch; }
+.sc-table td.pathcell { max-width: 34ch; }
+.lead { font-size: .9rem; color: var(--body); max-width: 78ch; margin: .2rem 0 1rem; line-height: 1.6; }
+.lead b { color: var(--ink); }
+/* the rubric, folded away until asked for */
+.legend { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); margin: 0 0 1.2rem; }
+.legend > summary { cursor: pointer; padding: .7rem 1rem; font-size: .85rem; font-weight: 600; color: var(--ink); }
+.legend > summary::marker { color: var(--muted); }
+.legend-body { display: grid; grid-template-columns: 1fr 1fr; gap: 1.6rem; padding: .2rem 1rem 1rem; }
+.legend-body h3 { margin-top: .2rem; }
+table.mini { font-size: .8rem; border: 0; background: none; }
+table.mini td { padding: .35rem .6rem .35rem 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+table.mini tr:last-child td { border-bottom: 0; }
+.sc-controls { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .9rem; margin: 0 0 1rem; }
+.ctl-label { font-family: 'JetBrains Mono', monospace; font-size: .64rem; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+/* the reasoning popup */
+dialog.why { border: 1px solid var(--line); border-radius: 16px; background: var(--surface); color: var(--body);
+  max-width: 40rem; width: calc(100% - 2rem); margin: auto; max-height: 86dvh; overflow-y: auto;
+  padding: 1.4rem 1.5rem 1.6rem; box-shadow: 0 24px 60px rgba(0,0,0,.22); overscroll-behavior: contain; }
+dialog.why::backdrop { background: rgba(10,10,15,.45); }
+.why-x { position: absolute; top: .5rem; right: .7rem; font-size: 1.3rem; line-height: 1; background: none; border: 0; color: var(--muted); cursor: pointer; padding: .3rem .5rem; }
+.why-x:hover { color: var(--ink); }
+.why h3 { margin: 0 0 .1rem; font-size: 1.05rem; }
+.why .why-post { font-size: .78rem; color: var(--muted); margin-bottom: .9rem; }
+.why .why-big { display: flex; align-items: baseline; gap: .6rem; margin: .2rem 0 .9rem; }
+.why .why-big b { font-family: 'JetBrains Mono', monospace; font-size: 2.1rem; font-weight: 700; color: var(--ink); line-height: 1; }
+.why p { font-size: .87rem; line-height: 1.6; margin: .55rem 0; }
+.why .why-lbl { font-family: 'JetBrains Mono', monospace; font-size: .62rem; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); margin: 1.1rem 0 .35rem; }
+.why .quote { border-left: 3px solid var(--accent); background: var(--wash); border-radius: 0 8px 8px 0; padding: .6rem .85rem; font-size: .87rem; color: var(--ink); }
+.why .ladder { list-style: none; margin: .2rem 0 0; }
+.why .ladder li { display: grid; grid-template-columns: 2.1rem 1fr; gap: .6rem; padding: .32rem 0; font-size: .83rem; color: var(--muted); border-bottom: 1px solid var(--line); }
+.why .ladder li:last-child { border-bottom: 0; }
+.why .ladder li b { font-family: 'JetBrains Mono', monospace; color: var(--faint); }
+.why .ladder li.here { color: var(--ink); }
+.why .ladder li.here b { color: var(--accent); }
+.why .ladder li.here::after { content: "this post"; grid-column: 2; font-family: 'JetBrains Mono', monospace; font-size: .6rem; letter-spacing: .09em; text-transform: uppercase; color: var(--accent); }
+.why table { font-size: .82rem; }
+.why td.bar { width: 7rem; padding-right: 0; }
+.why td.bar span { display: block; height: 8px; border-radius: 999px; background: color-mix(in srgb, var(--accent) 55%, transparent); width: var(--w); min-width: 3px; }
+.why .sum td { border-top: 1px solid var(--line); font-weight: 700; color: var(--ink); }
+.why td.mult { white-space: nowrap; }
+@media (max-width: 520px) { .why td.bar, .why .sum td:nth-child(3) { display: none; } .why td, .why th { padding: .45rem .4rem; } }
+@media (max-width: 900px) { .legend-body { grid-template-columns: 1fr; gap: .8rem; } }
+/* Phone: twelve columns cannot be a table. Each post becomes a card — reach and
+   title on top, the seven axes as a wrapped strip of labelled chips, the
+   measured numbers at the foot. Every chip is still the button that explains
+   itself, which is the whole point of the view. */
+@media (max-width: 780px) {
+  .scores-t table.sc-table, .sc-table tbody, .sc-table tr, .sc-table td { display: block; width: auto; }
+  .sc-table thead { display: none; }
+  .sc-table { border: 0; background: none; }
+  .sc-table tbody tr { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; margin-bottom: .7rem; padding: .8rem .9rem; position: relative; }
+  .sc-table tbody tr.r-floor { border-color: #b91c1c55; }
+  .sc-table td { border-bottom: 0; padding: 0; }
+  .sc-table td.reach { position: absolute; top: .8rem; right: .9rem; }
+  .scores-t td.pathcell { max-width: none; padding-right: 4rem; margin-bottom: .6rem; }
+  .sc-table tbody td.sc, .sc-table tbody td[data-ax] { display: inline-flex; align-items: baseline; gap: .35rem;
+    width: auto; margin: 0 .35rem .35rem 0; padding: .2rem .5rem; border: 1px solid var(--line); border-radius: 999px; background: var(--bg, #fbfbfd); }
+  .sc-table tbody td[data-ax]::before { content: attr(data-ax); font-family: 'JetBrains Mono', monospace; font-size: .58rem;
+    letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+  .sc-table tbody td.sc .scbtn { width: auto; padding: 0; }
+  .sc-table tbody td.reach::before { content: none; }
+  /* judged and measured must not look alike: the seven scores are solid chips,
+     what analytics recorded is dashed */
+  .sc-table tbody td[data-ax="Views"], .sc-table tbody td[data-ax="Avg time"], .sc-table tbody td[data-ax="Gap"] {
+    border-style: dashed; background: none; }
+  .sc-controls { gap: .4rem .6rem; }
+  .sc-controls .seg { flex-wrap: wrap; }
+}
 </style>
 </head>
 <body>
@@ -582,20 +735,32 @@ tr.r-floor td:first-child { box-shadow: inset 3px 0 0 #b91c1c80; }
 
   <div class="pane wide scores-t" id="scores">
   <?php
-    $unscored = count($scoreRows) - count($scored);
+    $unscored = count($scoreAll) - count($scored);
     $floors = array_values(array_filter($scored, fn(array $r): bool => $r['band'] === 'floor'));
-    $rubrics = array_unique(array_filter(array_column(array_column($scoreRows, 'scored'), 'rubric')));
+    $underread = array_values(array_filter($scoreAll, fn(array $r): bool => ($r['gap'] ?? 0) <= -5));
+    $rubrics = array_unique(array_filter(array_column(array_column($scoreAll, 'scored'), 'rubric')));
+    // where the corpus loses the most reach: weight × the room left to 10, summed
+    $lost = [];
+    foreach (SC_AXES as $k => $ax) {
+        $vals = array_column(array_column($scored, 'scores'), $k);
+        $lost[$k] = $vals ? $ax['weight'] * (10 - array_sum($vals) / count($vals)) : 0;
+    }
+    arsort($lost);
+    $worstAxis = (string) array_key_first($lost);
   ?>
-  <h2>Editorial scores <span class="cnt">rubric <?= e(SC_RUBRIC) ?> · <?= count($scored) ?>/<?= count($scoreRows) ?> scored</span></h2>
+  <h2>Editorial scores <span class="cnt">rubric <?= e(SC_RUBRIC) ?> · <?= count($scored) ?>/<?= count($scoreAll) ?> scored · traffic for <?= e($rangeLabel) ?></span></h2>
+
+  <p class="lead">Every post is graded 1–10 on seven axes before it ships. <b>Reach</b> is their weighted average —
+    this model's estimate of how far a post travels, on a 1–10 scale. The two right-hand columns are what actually happened.
+    <b>Click any number to see the reasoning behind it.</b></p>
 
   <div class="cards">
-    <div class="scard"><b><?= $avgReach !== null ? number_format($avgReach, 1) : '—' ?></b><span>Avg reach score</span></div>
-    <div class="scard"><b><?= count($floors) ?></b><span>Below the floor (&lt; 4.5)</span></div>
+    <div class="scard"><b><?= $avgReach !== null ? number_format($avgReach, 1) : '—' ?></b><span>Avg reach · <?= e(sc_band($avgReach)) ?></span></div>
+    <div class="scard"><b><?= count($floors) ?></b><span>Below floor · rewrite</span></div>
+    <div class="scard"><b><?= count($underread) ?></b><span>Under-read · distribute</span></div>
     <div class="scard"><b><?= $unscored ?></b><span>Unscored</span></div>
-    <?php foreach (['tension', 'originality', 'personal'] as $ax): ?>
-      <?php $vals = array_column(array_column($scored, 'scores'), $ax); ?>
-      <div class="scard"><b><?= $vals ? number_format(array_sum($vals) / count($vals), 1) : '—' ?></b><span>Avg <?= e(SC_AXES[$ax]['label']) ?></span></div>
-    <?php endforeach; ?>
+    <div class="scard"><b><?= e(SC_AXES[$worstAxis]['label']) ?></b><span>Weakest axis corpus-wide</span></div>
+    <div class="scard"><b><?= $scoreCorr !== null && $scoreCorr['reach']['pv'] !== null ? ($scoreCorr['reach']['pv'] > 0 ? '+' : '') . number_format($scoreCorr['reach']['pv'], 2) : '—' ?></b><span>Reach ρ vs views</span></div>
   </div>
 
   <?php if (count($rubrics) > 1): ?>
@@ -605,34 +770,103 @@ tr.r-floor td:first-child { box-shadow: inset 3px 0 0 #b91c1c80; }
     <p class="warn"><?= $unscored ?> post<?= $unscored === 1 ? '' : 's' ?> carry no scores. Add a <code>**Scores:**</code> line to the markdown source and rebuild.</p>
   <?php endif; ?>
 
-  <table>
-    <tr>
-      <?= sc_th('reach', 'Reach ↑', $scoreSort, $daysRaw, 'r') ?>
-      <?= sc_th('date', 'Post', $scoreSort, $daysRaw) ?>
-      <?php foreach (SC_AXES as $k => $ax): ?>
-        <?= sc_th($k, $ax['label'], $scoreSort, $daysRaw, 'ax') ?>
+  <details class="legend">
+    <summary>What the numbers mean, and what to do about them</summary>
+    <div class="legend-body">
+      <div>
+        <h3>Reach bands</h3>
+        <table class="mini">
+          <?php foreach (['strong', 'solid', 'weak', 'floor'] as $b): ?>
+          <tr>
+            <td><span class="badge b-<?= e($b) ?>"><?= e($b) ?></span></td>
+            <td class="n dim"><?= e(SC_BAND_DOC[$b]['range']) ?></td>
+            <td><?= e(SC_BAND_DOC[$b]['do']) ?></td>
+          </tr>
+          <?php endforeach; ?>
+        </table>
+        <p class="note"><b>Gap</b> compares a published post's rank by score with its rank by views.
+          <span class="delta down">−5</span> means it sits five places lower in views than in score: the writing landed, the distribution did not.
+          <span class="delta up">+5</span> is the reverse — readers found something the rubric does not measure yet.</p>
+      </div>
+      <div>
+        <h3>The seven axes</h3>
+        <table class="mini">
+          <?php foreach (SC_AXES as $k => $ax): ?>
+          <tr>
+            <td><b><?= e($ax['label']) ?></b><br><span class="dim"><?= e($ax['cat']) ?></span></td>
+            <td class="n dim"><?= number_format($ax['weight'] * 100) ?>%</td>
+            <td><?= e(SC_AXIS_DOC[$k]['what']) ?></td>
+          </tr>
+          <?php endforeach; ?>
+        </table>
+        <p class="note">Weights are a research-backed prior, not a measurement of this blog. The correlation table below is what will eventually replace them.
+          Full rubric: <code>docs/SCORING-RUBRIC.md</code>.</p>
+      </div>
+    </div>
+  </details>
+
+  <div class="sc-controls">
+    <span class="ctl-label">Show</span>
+    <div class="seg">
+      <?php foreach ($scoreScopes as $k => $scope): ?>
+        <?php if ($scoreFilter === $k): ?>
+          <span><?= e($scope['label']) ?> <?= (int) $scoreCounts[$k] ?></span>
+        <?php else: ?>
+          <a href="<?= e(sc_url(['sort' => $scoreSort, 'dir' => $scoreDir], $daysRaw, $k)) ?>"><?= e($scope['label']) ?> <?= (int) $scoreCounts[$k] ?></a>
+        <?php endif; ?>
       <?php endforeach; ?>
-      <?= sc_th('pv', 'Views', $scoreSort, $daysRaw, 'r') ?>
-      <?= sc_th('time', 'Avg time', $scoreSort, $daysRaw, 'r') ?>
+    </div>
+    <span class="ctl-label">Jump to</span>
+    <div class="seg">
+      <a href="<?= e(sc_url(['sort' => 'reach', 'dir' => 'asc'], $daysRaw, $scoreFilter)) ?>">Weakest first</a>
+      <a href="<?= e(sc_url(['sort' => 'reach', 'dir' => 'desc'], $daysRaw, $scoreFilter)) ?>">Best first</a>
+      <a href="<?= e(sc_url(['sort' => 'pv', 'dir' => 'desc'], $daysRaw, $scoreFilter)) ?>">Most read</a>
+      <a href="<?= e(sc_url(['sort' => 'gap', 'dir' => 'asc'], $daysRaw, $scoreFilter)) ?>">Biggest gap</a>
+      <a href="<?= e(sc_url(['sort' => 'date', 'dir' => 'desc'], $daysRaw, $scoreFilter)) ?>">Newest</a>
+    </div>
+  </div>
+
+  <table class="sc-table">
+    <thead>
+    <tr>
+      <?= sc_th('reach', 'Reach', $scoreSort, $scoreDir, $daysRaw, $scoreFilter, 'r', 'Weighted average of the seven axes, 1–10') ?>
+      <?= sc_th('date', 'Post', $scoreSort, $scoreDir, $daysRaw, $scoreFilter, '', 'Sort by publish date') ?>
+      <?php foreach (SC_AXES as $k => $ax): ?>
+        <?= sc_th($k, $ax['label'], $scoreSort, $scoreDir, $daysRaw, $scoreFilter, 'ax', SC_AXIS_DOC[$k]['what'] . ' · weight ' . number_format($ax['weight'] * 100) . '%') ?>
+      <?php endforeach; ?>
+      <?= sc_th('pv', 'Views', $scoreSort, $scoreDir, $daysRaw, $scoreFilter, 'r', 'Pageviews in the selected range') ?>
+      <?= sc_th('time', 'Avg time', $scoreSort, $scoreDir, $daysRaw, $scoreFilter, 'r', 'Average engaged time per view') ?>
+      <?= sc_th('gap', 'Gap', $scoreSort, $scoreDir, $daysRaw, $scoreFilter, 'r', 'Rank by score minus rank by views: negative = read less than it scored') ?>
     </tr>
+    </thead>
+    <tbody>
     <?php foreach ($scoreRows as $r): ?>
     <tr class="r-<?= e($r['band']) ?>">
-      <td class="reach"><span class="badge b-<?= e($r['band']) ?>"><?= $r['reach'] !== null ? number_format($r['reach'], 1) : '—' ?></span></td>
+      <td class="reach" data-ax="Reach">
+        <?php if ($r['reach'] !== null): ?>
+          <button type="button" class="badge b-<?= e($r['band']) ?> scbtn" data-slug="<?= e($r['slug']) ?>" data-axis=""
+            aria-label="Reach <?= number_format($r['reach'], 1) ?> — how it adds up"><?= number_format($r['reach'], 1) ?></button>
+        <?php else: ?>
+          <span class="badge b-none">—</span>
+        <?php endif; ?>
+      </td>
       <td class="pathcell">
         <span class="post-t"><a href="<?= $r['status'] === 'published' ? e(post_path($r['slug'])) : '/preview.php?slug=' . e($r['slug']) ?>" target="_blank" rel="noopener"><?= e($r['title']) ?></a></span>
         <span class="post-sub"><?= e(date('Y-m-d', $r['publish_ts'])) ?> · <?= number_format($r['words']) ?> words<?= $r['status'] !== 'published' ? ' · ' . e($r['status']) : '' ?><?= $r['scored']['model'] !== '' ? ' · ' . e($r['scored']['model']) : '' ?></span>
       </td>
       <?php foreach (array_keys(SC_AXES) as $k): ?>
-        <?= sc_cell($r['scores'][$k] ?? null, (string) ($scoreNotes[$r['slug']][$k] ?? '')) ?>
+        <?= sc_cell($r['slug'], $k, $r['scores'][$k] ?? null, (string) ($scoreNotes[$r['slug']][$k] ?? '')) ?>
       <?php endforeach; ?>
-      <td class="r n"><?= $r['pv'] ? number_format($r['pv']) : '<span class="dim">0</span>' ?></td>
-      <td class="r n"><?= an_fmt_secs($r['avg_time']) ?></td>
+      <td class="r n" data-ax="Views"><?= $r['pv'] ? number_format($r['pv']) : '<span class="dim">0</span>' ?></td>
+      <td class="r n" data-ax="Avg time"><?= an_fmt_secs($r['avg_time']) ?></td>
+      <?= sc_gap_cell($r['gap']) ?>
     </tr>
     <?php endforeach; ?>
-    <?php if (!$scoreRows): ?><tr><td colspan="<?= 4 + count(SC_AXES) ?>" class="dim">no posts</td></tr><?php endif; ?>
+    <?php if (!$scoreRows): ?><tr><td colspan="<?= 5 + count(SC_AXES) ?>" class="dim">no posts in this view</td></tr><?php endif; ?>
+    </tbody>
   </table>
-  <p class="note">Views and average time are for <?= e($rangeLabel) ?> (use the range selector above). Hover a score for its rationale.
-    Column headers sort; <a href="<?= e('admin.php?' . http_build_query(['days' => $daysRaw, 'sort' => 'reach_desc']) . '#scores') ?>">best first</a>.</p>
+  <p class="note">Views, average time and gap are for <?= e($rangeLabel) ?> — change it with the range selector above.
+    Column headers sort, and clicking the one you are on flips the direction.</p>
 
   <h2>Which axis actually gets read? <span class="dim">— Spearman rank correlation, <?= (int) $scoreCorr['n'] ?> posts with traffic</span></h2>
   <?php if ($scoreCorr['n'] < 3): ?>
@@ -667,6 +901,37 @@ tr.r-floor td:first-child { box-shadow: inset 3px 0 0 #b91c1c80; }
     </div>
   </div>
   <?php endif; ?>
+
+  <?php
+  /* Everything the "why is this number what it is" popup needs, computed here so
+     the page and the popup can never disagree: the rubric text, the band advice,
+     and per post the stored rationale plus the arithmetic behind the reach score. */
+  $scPayload = ['axes' => [], 'bands' => SC_BAND_DOC, 'rubric' => SC_RUBRIC, 'range' => $rangeLabel, 'rows' => []];
+  foreach (SC_AXES as $k => $ax) {
+      $scPayload['axes'][$k] = SC_AXIS_DOC[$k] + ['label' => $ax['label'], 'cat' => $ax['cat'], 'weight' => $ax['weight']];
+  }
+  foreach ($scoreAll as $r) {
+      $scPayload['rows'][$r['slug']] = [
+          'title'  => $r['title'],
+          'status' => $r['status'],
+          'reach'  => $r['reach'],
+          'band'   => $r['band'],
+          'scores' => (object) $r['scores'],
+          'notes'  => (object) array_intersect_key((array) ($scoreNotes[$r['slug']] ?? []), SC_AXES),
+          'contrib' => (object) sc_contributions($r['scores']),
+          'lever'  => sc_lever($r['scores']),
+          'pv'     => $r['pv'],
+          'time'   => an_fmt_secs($r['avg_time']),
+          'gap'    => $r['gap'],
+          'scored' => $r['scored']['on'] . ($r['scored']['model'] !== '' ? ' · ' . $r['scored']['model'] : ''),
+      ];
+  }
+  ?>
+  <script type="application/json" id="sc-data"><?= json_encode($scPayload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) ?></script>
+  <dialog id="sc-why" class="why" aria-label="Why this score">
+    <form method="dialog"><button class="why-x" aria-label="Close">×</button></form>
+    <div id="sc-why-body"></div>
+  </dialog>
   </div><!-- /scores -->
 
   <div class="pane" id="newsletter">
@@ -985,6 +1250,92 @@ document.documentElement.classList.add('js');
   [].forEach.call(document.querySelectorAll('.seg a'), function (a) {
     a.addEventListener('click', function () { if (location.hash) this.href += location.hash; });
   });
+})();
+
+// "why is this number what it is": every score in the table opens the rubric
+// text, the stored rationale for this post, and its arithmetic share of the
+// reach total. Hover titles stay as the no-JS fallback.
+(function () {
+  var el = document.getElementById('sc-data'), dlg = document.getElementById('sc-why');
+  if (!el || !dlg || typeof dlg.showModal !== 'function') return;
+  var SC = JSON.parse(el.textContent), body = document.getElementById('sc-why-body');
+  var esc = function (s) {
+    return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  };
+  var fmt = function (n, d) { return Number(n).toFixed(d === undefined ? 2 : d); };
+
+  function measured(row) {
+    var gap = row.gap === null ? '' : ' · gap <b>' + (row.gap > 0 ? '+' : '−') + Math.abs(row.gap) + '</b>';
+    if (row.status !== 'published') return '<p class="note">Not published yet — no audience to compare against.</p>';
+    return '<p class="note">Measured over ' + esc(SC.range) + ': <b>' + row.pv + '</b> views · <b>' + esc(row.time) + '</b> avg time' + gap + '</p>';
+  }
+
+  // one axis: what it measures, where this post sits on the ladder, why it scored that, what it is worth
+  function axisView(row, key) {
+    var ax = SC.axes[key], v = row.scores[key], c = row.contrib[key], note = row.notes[key];
+    var h = '<h3>' + esc(ax.label) + ' <span class="dim" style="font-weight:400;font-size:.8rem">' + esc(ax.cat) + ' · weight ' + Math.round(ax.weight * 100) + '%</span></h3>'
+          + '<div class="why-post">' + esc(row.title) + (row.scored ? ' · scored ' + esc(row.scored) : '') + '</div>'
+          + '<div class="why-big"><b>' + (v == null ? '—' : v) + '</b><span class="dim">out of 10</span></div>'
+          + '<p>' + esc(ax.what) + '</p>';
+    h += '<div class="why-lbl">Why this post scored ' + (v == null ? '—' : v) + '</div>';
+    h += note ? '<div class="quote">' + esc(note) + '</div>'
+              : '<p class="note">No rationale recorded for this axis. Rubric v1 wants one verbatim quote per score — add it to <code>content/score-notes.json</code>.</p>';
+    h += '<div class="why-lbl">The rubric band it sits in</div><ul class="ladder">';
+    [1, 3, 5, 7, 9].forEach(function (a, i) {
+      var next = [1, 3, 5, 7, 9][i + 1];
+      var here = v != null && v >= a && (next === undefined || v < next);
+      h += '<li class="' + (here ? 'here' : '') + '"><b>' + a + '</b><span>' + esc(ax.anchors[a]) + '</span></li>';
+    });
+    h += '</ul>';
+    if (c) {
+      h += '<div class="why-lbl">What it is worth</div>'
+        + '<p>' + fmt(ax.weight) + ' × ' + v + ' = <b>' + fmt(c.points) + '</b> of this post\'s ' + fmt(row.reach, 1)
+        + ' reach score — ' + c.share + '% of the total. One more point here would add ' + fmt(ax.weight) + '.</p>';
+    }
+    h += '<div class="why-lbl">Why it carries this weight</div><p class="note">' + esc(ax.why) + '</p>';
+    return h;
+  }
+
+  // the reach score, taken apart into the seven numbers that made it
+  function reachView(row) {
+    var band = SC.bands[row.band] || SC.bands.none;
+    var h = '<h3>Reach ' + fmt(row.reach, 1) + ' <span class="badge b-' + esc(row.band) + '">' + esc(row.band) + '</span></h3>'
+          + '<div class="why-post">' + esc(row.title) + (row.scored ? ' · scored ' + esc(row.scored) : '') + '</div>'
+          + '<p><b>' + esc(band.range) + '.</b> ' + esc(band.do) + '</p>'
+          + '<div class="why-lbl">How it adds up</div><table><tbody>';
+    Object.keys(row.contrib).forEach(function (k) {
+      var c = row.contrib[k];
+      h += '<tr><td>' + esc(SC.axes[k].label) + '</td>'
+         + '<td class="r n mult">' + c.score + ' × ' + fmt(c.weight) + '</td>'
+         + '<td class="bar"><span style="--w:' + Math.max(4, c.share * 3) + '%"></span></td>'
+         + '<td class="r n">' + fmt(c.points) + '</td>'
+         + '<td class="r n dim">' + c.share + '%</td></tr>';
+    });
+    h += '<tr class="sum"><td>Reach score</td><td class="r n"></td><td></td><td class="r n">' + fmt(row.reach, 1) + '</td><td class="r n dim">100%</td></tr>'
+       + '</tbody></table>';
+    if (row.lever) {
+      h += '<div class="why-lbl">Biggest lever</div><p><b>' + esc(SC.axes[row.lever.axis].label) + '</b> sits at ' + row.lever.score
+         + '. Taking it to 10 would add <b>' + fmt(row.lever.gain) + '</b> — more than any other axis, because it combines weight with room left.</p>';
+    }
+    h += measured(row);
+    h += '<p class="note">Reach is a weighted average of seven 1–10 judgements made before publishing, not a measurement of traffic. '
+       + 'It is a prediction to check against the columns on the right, and rubric ' + esc(SC.rubric) + ' is what it was scored under.</p>';
+    return h;
+  }
+
+  document.addEventListener('click', function (ev) {
+    var btn = ev.target.closest ? ev.target.closest('.scbtn') : null;
+    if (!btn) return;
+    var row = SC.rows[btn.getAttribute('data-slug')];
+    if (!row) return;
+    var axis = btn.getAttribute('data-axis');
+    body.innerHTML = axis ? axisView(row, axis) : reachView(row);
+    dlg.showModal();
+  });
+  // clicking the backdrop closes it; clicking the card must not
+  dlg.addEventListener('click', function (ev) { if (ev.target === dlg) dlg.close(); });
 })();
 </script>
 </body>

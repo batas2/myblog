@@ -51,6 +51,105 @@ const SC_BANDS = [
     [0.0, 'floor',  'floor'],
 ];
 
+/**
+ * What each band means for the post, in the words the rubric uses. The admin
+ * panel shows this next to the number: a score nobody can act on is decoration.
+ */
+const SC_BAND_DOC = [
+    'strong' => ['range' => '7.5 and up', 'do' => 'Publish and push it: HN, LinkedIn, the newsletter, cross-posts.'],
+    'solid'  => ['range' => '6.0 – 7.4',  'do' => 'Publish. Normal distribution effort.'],
+    'weak'   => ['range' => '4.5 – 5.9',  'do' => 'Fix the lowest axis before promoting it anywhere.'],
+    'floor'  => ['range' => 'below 4.5',  'do' => 'Rewrite it or drop it. It is not earning its place in the archive.'],
+    'none'   => ['range' => 'not scored', 'do' => 'Add a **Scores:** line to the markdown source and rebuild.'],
+];
+
+/**
+ * The rubric in machine-readable form: what each axis measures, the anchors at
+ * 1/3/5/7/9, and why it carries the weight it does. This is a mirror of
+ * docs/SCORING-RUBRIC.md kept next to the weights on purpose — the admin panel
+ * explains every number from here, so a rubric change and the explanation of
+ * that change cannot drift apart. Prose stays short: it is read in a popup.
+ */
+const SC_AXIS_DOC = [
+    'tension' => [
+        'what' => 'How much friction, stakes or discomfort the piece creates, and whether it sustains it.',
+        'anchors' => [
+            1 => 'Pure agreement. Nothing is at risk. The reader nods and leaves.',
+            3 => 'A mild observation. A problem is named, but nobody loses anything by ignoring it.',
+            5 => 'A real problem with a named cost, resolved comfortably before the end.',
+            7 => 'Names something the reader recognises and would rather not admit. The cost is concrete.',
+            9 => 'Puts a widely-held practice on trial and refuses to let the reader off. The discomfort outlives the last line.',
+        ],
+        'why' => 'Heaviest weight. In the Upworthy RCT archive (22,743 randomised headline trials) each extra negative word lifted click-through 2.3%, while positive words lowered it. Tension is charge, not pessimism: naming a real cost and then showing the way out scores high.',
+    ],
+    'originality' => [
+        'what' => 'Distance from what the reference blogs have already published.',
+        'anchors' => [
+            1 => 'Restates a well-known post by a bigger voice without extending it.',
+            3 => 'A known idea in fresh words.',
+            5 => 'A known idea plus one genuine extension.',
+            7 => 'A framing not found elsewhere: a search of the reference list turns up nothing equivalent.',
+            9 => 'A new concept, with a name other people could cite.',
+        ],
+        'why' => 'Scored against an actual search of the reference blogs. A 7 or higher without that search is a guess, not a score.',
+    ],
+    'personal' => [
+        'what' => 'How much of the author is load-bearing in the argument.',
+        'anchors' => [
+            1 => 'Could have been written by anyone. No first person, or first person with nothing behind it.',
+            3 => 'First person, but the anchor is generic ("in my experience").',
+            5 => 'One real situation, described lightly.',
+            7 => 'A specific scene with a decision, a cost and the author\'s own mistake, inside the first four paragraphs.',
+            9 => 'The essay could not exist without this author. The scar is load-bearing.',
+        ],
+        'why' => 'On the Hacker News front page personal blogs take 26% of items against corporate blogs\' 11%. First-person is not a style preference here, it is the distribution channel.',
+    ],
+    'contrarian' => [
+        'what' => 'Distance from consensus — and whether the post defends the distance.',
+        'anchors' => [
+            1 => 'Consensus, undefended.',
+            3 => 'Consensus with a caveat.',
+            5 => 'A minority position, stated but not defended.',
+            7 => 'A position the audience half-believes but rarely says out loud, defended with reasoning or data.',
+            9 => 'Directly contradicts a norm the audience professes, and answers the obvious objection inside the text.',
+        ],
+        'why' => 'Hard rule: a position taken and not defended caps this axis at 4. Contrarian without argument is noise, and noise damages the brand it was meant to build.',
+    ],
+    'substance' => [
+        'what' => 'Transferable knowledge per thousand words.',
+        'anchors' => [
+            1 => 'Opinion only. Nothing to reuse.',
+            3 => 'One reusable idea, stated abstractly.',
+            5 => 'A clear model or heuristic the reader can still name afterwards.',
+            7 => 'A model, the conditions under which it fails, and at least one concrete artifact: a number, a diagram, code, a named tool.',
+            9 => 'The reader can apply it on Monday and knows when not to.',
+        ],
+        'why' => 'Substance keeps the archive worth linking to. It is weighted below tension because it wins the second read, not the first click.',
+    ],
+    'punch' => [
+        'what' => 'Sentence-level craft: rhythm, concrete verbs, lines that survive out of context.',
+        'anchors' => [
+            1 => 'Long undifferentiated paragraphs, hedged, adverb-heavy, no rhythm.',
+            3 => 'Readable but flat. Sentences average 25+ words. No line worth quoting.',
+            5 => 'Clean prose, some variation, one decent line.',
+            7 => 'Deliberate rhythm, concrete verbs, an aphorism that earns its bold.',
+            9 => 'Nearly every section has a line that survives out of context. No sentence could be cut without loss.',
+        ],
+        'why' => 'Adult web prose engages best around Flesch 60–70; shorter sentences track lower bounce and longer dwell. Craft is the multiplier on everything above it, not a substitute.',
+    ],
+    'trend' => [
+        'what' => 'Proximity to what the market is actively arguing about, judged against the dated trend list in the rubric.',
+        'anchors' => [
+            1 => 'A topic nobody is discussing, and not by design.',
+            3 => 'Evergreen, with no current hook.',
+            5 => 'Adjacent to a live conversation; the connection is implicit.',
+            7 => 'Explicitly inside a named live conversation from the list.',
+            9 => 'On the leading edge of one, with a position most posts do not have yet.',
+        ],
+        'why' => 'Lowest weight because it decays: this axis is re-scored whenever the trend list is refreshed, while the other six stay put.',
+    ],
+];
+
 /* ---------------- parsing ---------------- */
 
 /**
@@ -105,6 +204,48 @@ function sc_reach(array $scores): ?float
     $sum = 0.0;
     foreach (SC_AXES as $k => $a) $sum += $a['weight'] * $scores[$k];
     return round($sum, 1);
+}
+
+/**
+ * The reach score, taken apart: what every axis contributed and how much of the
+ * total it is. This is the answer to "why is this 6.8" — the same arithmetic the
+ * admin popup shows, computed once here so the page cannot invent its own.
+ *
+ * Returns axis => ['score', 'weight', 'points' (weight × score), 'share' (% of reach)],
+ * ordered by points descending: the biggest reason first.
+ */
+function sc_contributions(array $scores): array
+{
+    $reach = sc_reach($scores);
+    if ($reach === null) return [];
+    $out = [];
+    foreach (SC_AXES as $k => $ax) {
+        $points = round($ax['weight'] * $scores[$k], 2);
+        $out[$k] = [
+            'score'  => (int) $scores[$k],
+            'weight' => $ax['weight'],
+            'points' => $points,
+            'share'  => (int) round($points / $reach * 100),
+        ];
+    }
+    uasort($out, fn(array $a, array $b): int => $b['points'] <=> $a['points']);
+    return $out;
+}
+
+/**
+ * The axis worth fixing first: the one where a rewrite buys the most reach.
+ * Weight alone would always name Tension; headroom alone would name whatever
+ * scored lowest. The lever is the product — weight × room left to 10.
+ */
+function sc_lever(array $scores): ?array
+{
+    if (!sc_complete($scores)) return null;
+    $best = null;
+    foreach (SC_AXES as $k => $ax) {
+        $gain = round($ax['weight'] * (10 - $scores[$k]), 2);
+        if ($best === null || $gain > $best['gain']) $best = ['axis' => $k, 'gain' => $gain, 'score' => (int) $scores[$k]];
+    }
+    return $best !== null && $best['gain'] > 0 ? $best : null;
 }
 
 /** Band key for a reach score: strong / solid / weak / floor. */
@@ -254,6 +395,38 @@ function sc_merge_analytics(array $posts, array $pages): array
             'uv'       => (int) ($hit['uv'] ?? 0),
             'avg_time' => (int) round((float) ($hit['avg_time'] ?? 0)),
         ];
+    }
+    return $out;
+}
+
+/**
+ * Where the model and the audience disagree, per post: the post's rank by reach
+ * score minus its rank by pageviews, over published posts that were live for the
+ * whole window. Negative means it scored better than it was read (a distribution
+ * problem, not a writing one); positive means readers found something the rubric
+ * missed. Every other row gets null — a scheduled post has no audience yet, and
+ * ranking it against ones that do would invent a finding.
+ *
+ * Returns the rows with a 'gap' key added, order untouched.
+ */
+function sc_rank_gaps(array $rows): array
+{
+    $eligible = array_keys(array_filter(
+        $rows,
+        fn(array $r): bool => $r['reach'] !== null && $r['status'] === 'published'
+    ));
+    if (count($eligible) < 3) return array_map(fn(array $r): array => $r + ['gap' => null], $rows);
+
+    $byReach = $eligible;
+    usort($byReach, fn($a, $b) => (float) $rows[$b]['reach'] <=> (float) $rows[$a]['reach']);
+    $byViews = $eligible;
+    usort($byViews, fn($a, $b) => (int) $rows[$b]['pv'] <=> (int) $rows[$a]['pv']);
+
+    $reachRank = array_flip($byReach);
+    $viewsRank = array_flip($byViews);
+    $out = [];
+    foreach ($rows as $i => $r) {
+        $out[$i] = $r + ['gap' => isset($reachRank[$i]) ? $reachRank[$i] - $viewsRank[$i] : null];
     }
     return $out;
 }
