@@ -227,13 +227,22 @@
     "trend": "3 — service decomposition, off the current trend list."
   },
 
+  "the-bottleneck-moved": {
+    "tension": "7 — 'Nobody is blocked on writing anymore. Everybody is blocked on believing.' Names a constraint the reader is currently living inside.",
+    "originality": "6 — that the bottleneck moved to review is becoming a common 2026 claim. The extension is 'A diff with nobody behind it': review was always a conversation with a counterparty, and agent-authored code removes the counterparty.",
+    "personal": "7 — real instrument and real scale, 'I read squad reports for a living now. Fifteen of them, every month', plus the admission that 'it took me months to name it'. No scar, which is what keeps it off 8.",
+    "contrarian": "7 — 'A senior engineer whose main output is judgment about other people's diffs is not doing less engineering.' Argued directly against what dashboards and promotion criteria actually reward.",
+    "substance": "8 — reviewability recast as a designable system property with five concrete levers, plus the case for rewriting the definition of done around verification.",
+    "punch": "8 — 'Indexes made queries cheap long after disks made storage cheap. Reviewability is the index we now owe our own codebases.'",
+    "trend": "9 — measuring productivity under AI and agentic workflows, trends #1 and #7, with a position most posts on the topic do not have."
+  },
   "design-the-stopping-point": {
     "tension": "7 — 'I have watched initiatives with genuinely good designs leave systems worse than they found them.' A cost the reader recognises, named early and paid off.",
     "originality": "6 — 'A design cannot owe anything. Only a half-built system can.' Fresh framing, but the adjacent ground (sacrificial architecture, strangler fig, migration essays) is well covered, so the lower band.",
     "personal": "7 — 'for years I had quietly filed it under delivery's problem.' An owned mistake in a specific scene, though the scene is a whiteboard rather than a system.",
     "contrarian": "6 — 'Neither is the job. The job is to make the shortcut legible.' Refuses both positions the audience expects and defends the refusal.",
     "substance": "8 — three named properties of a stoppable step, plus a one-page artifact with an expiry trigger attached.",
-    "punch": "8 — 'optionality feels like prudence long after it has become an unpaid invoice.'",
+    "punch": "8 — 'Optionality feels like prudence long after it has quietly become an unpaid invoice.'",
     "trend": "4 — the generated current state touches the AI-for-comprehension conversation, but only in one clause."
   },
   "count-your-rejections": {
@@ -248,9 +257,9 @@
   "adoption-is-the-deliverable": {
     "tension": "7 — 'Four teams integrated with the lump.' One sentence, and the reader knows which of their own systems it is.",
     "originality": "6 — the pull/push split is standard platform-engineering material; laying it on Simon Wardley's evolution axis to locate a mandate window is the extension.",
-    "personal": "7 — 'I spent a while explaining to myself why that was the organization's failure. It was not.' Owned misreading, but no named project behind it.",
-    "contrarian": "7 — 'Pull builds the better product. Push keeps the lights on while pull gets going', argued against a community position that is close to unanimous.",
-    "substance": "8 — the open host service as the concrete mechanism for pull, plus the ceiling and what to do when you hit it.",
+    "personal": "8 — two owned misreadings, not one: 'I spent a while explaining to myself why that was the organization's failure. It was not.' and, at the close, 'Four teams had already voted with their integrations while I was still explaining why the other service deserved them.'",
+    "contrarian": "7 — 'Pull builds the better product; push keeps the lights on while pull gets going', argued against a community position that is close to unanimous.",
+    "substance": "7 — the open host service is still the concrete mechanism and the ceiling is still named, but the closing note replaced the count-your-consumers exercise, so less of it lands on Monday.",
     "punch": "8 — 'An architecture is worth precisely what other teams are willing to depend on.'",
     "trend": "6 — platform engineering is on the trend list and the essay sits inside that conversation without being about AI."
   }

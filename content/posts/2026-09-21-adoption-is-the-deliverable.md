@@ -6,7 +6,9 @@ Two services on a platform I worked on solved roughly the same problem. One was 
 
 Four teams integrated with the lump.
 
-I spent a while explaining to myself why that was the organization's failure. It was not. Field notes from one platform, not a study, but I have stopped arguing with the result: the lump was closer to what people needed on the day they needed it, and closeness beat elegance by a distance no design review was ever going to close.
+I spent a while explaining to myself why that was the organization's failure. It was not. Field notes from one platform, not a study, but I have stopped arguing with the result.
+
+The lump was closer to what people needed on the day they needed it. Closeness beat elegance, by a distance no design review was going to close.
 
 ## The responsibility line is drawn in the wrong place
 
@@ -28,9 +30,11 @@ Things spread inside an organization in two ways, and they are not variations of
 
 ![Pull compounds and cannot be scheduled. Push works to a deadline and spends coordination capacity that does not come back quickly.](/assets/img/posts/adoption-is-the-deliverable/two-engines.png)
 
-Domain-Driven Design has a name for the thing that makes pull possible, and it is one of the less fashionable patterns in the book: the **open host service**. A published protocol, designed deliberately for many consumers rather than for the one in front of you, so that integrating does not require a conversation with its author. It is the outward-facing sibling of [the anti-corruption layer](/blog/the-anti-corruption-layer-is-for-people-too/). The anti-corruption layer protects you from their model. The open host service spends your effort so nobody has to learn yours.
+Domain-Driven Design names the thing that makes pull possible, and it is one of the less fashionable patterns in the book: the **open host service**. A published protocol, built for many consumers rather than for the one in front of you. Integrating with it does not require a conversation with its author.
 
-Most internal platforms skip that work, then wonder why the room is empty. Every hour spent making the first call easy is an hour that buys adopters you never have to negotiate with.
+It is the outward-facing sibling of [the anti-corruption layer](/blog/the-anti-corruption-layer-is-for-people-too/). That one protects you from their model. This one spends your effort so nobody has to learn yours.
+
+Most internal platforms skip that work, then wonder why the room is empty. Every hour spent making the first call easy buys an adopter you never have to negotiate with.
 
 ## Where push stops being worth its price
 
@@ -44,25 +48,25 @@ Far right, at commodity, push is unnecessary. Nobody mandates that you use the c
 
 Between them sits a window where a mandate is both necessary and affordable. The thing is good enough to adopt and not yet obviously worth adopting. Most internal platform work lives in that window, and it is the only place a mandate earns what it costs.
 
-The window has a ceiling, and this is the part I genuinely have not solved. Somewhere the surface area of the change outgrows the coordination capacity available, and each additional team costs more to move than the last. I have watched initiatives sail past that point and spend a year of programme management moving the final four teams, which were never going to want it. The honest move at the ceiling is to stop pushing and go make the thing more attractive instead. I cannot yet tell you how to compute where the ceiling sits, only that I have felt it from the wrong side.
+The window has a ceiling, and this is the part I genuinely have not solved. Somewhere the surface area of a change outgrows the coordination capacity available. Past that point, each additional team costs more to move than the last.
 
-One complication I want to be fair to. The platform-engineering community is close to unanimous that you should not mandate, and there is reporting that mandated platforms hold their funding rather better than voluntary ones. Both can be true at once. Pull builds the better product. Push keeps the lights on while pull gets going. What nobody has measured, as far as I can find, is the exchange rate between them.
+I have watched initiatives sail straight through it, then spend a year of programme management on the final four teams, which were never going to want the thing anyway. The honest move at the ceiling is to stop pushing and go make it more attractive instead.
 
-## Try this
+One complication I want to be fair to. The platform-engineering community is close to unanimous that you should not mandate. There is also reporting that mandated platforms hold their funding rather better than voluntary ones. Both can be true at once. Pull builds the better product; push keeps the lights on while pull gets going. What nobody has measured, as far as I can find, is the exchange rate between them.
 
-Take the most important thing your team owns and count its external consumers. Not the ones on the roadmap. The ones calling it this week.
+## What I do with it now
 
-Then ask which engine brought each of them in. If every consumer arrived because somebody senior told them to, you own something that has never once been tested against a real preference, and you are paying a coordination bill every quarter to keep it that way.
+A design review is no longer where my involvement ends. The last question I ask about anything I helped shape is not whether it is correct. It is how many teams called it this week, and which engine brought each of them in.
 
-The cheapest experiment I know: pick the single thing that would make the first call easier for a team that has never spoken to you, and ship only that this month. Then count again in ninety days.
+The lump taught me that, and it took longer than I would like to admit. Four teams had already voted with their integrations while I was still explaining why the other service deserved them.
 
-And the question I am still working on, which I would happily trade a good answer for: where is the ceiling? At what size of change does pushing stop being cheaper than becoming worth choosing?
+The ceiling is the part I am still watching for. I cannot compute where it sits. What I can do now is recognise the feeling of being past it: another quarter of programme management, four teams left, none of them moving. That is not a measurement. It is a warning I never used to have.
 
 ---
 
-**Scores:** tension=7 originality=6 personal=7 contrarian=7 substance=8 punch=8 trend=6
+**Scores:** tension=7 originality=6 personal=8 contrarian=7 substance=7 punch=8 trend=6
 **Scored:** 2026-07-27 rubric=v1 model=claude-opus-5
 
-**Publish:** 2026-09-07 09:00
+**Publish:** 2026-09-21 09:00
 
 **Tags:** Software Architecture, Domain-Driven Design, Organizational Design, Engineering Leadership, Systems Thinking

@@ -45,6 +45,7 @@ declare -A Q=(
   [design-the-stopping-point]="unfinished bridge construction river|incomplete bridge span"
   [count-your-rejections]="no vacancy neon sign|vacancy sign motel night"
   [adoption-is-the-deliverable]="network patch panel cables|server rack patch cables"
+  [the-bottleneck-moved]="stack of paper documents pile|paperwork stacked desk office"
 )
 
 TMP=$(mktemp -d)

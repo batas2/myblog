@@ -12,7 +12,9 @@ I had a target state. I always have a target state. What I did not have was a go
 
 A solution design describes two worlds.
 
-The first is the system as it stands today. That description should barely be written by a person at all. It should be read out of the code, the pipelines, the infrastructure definitions, whatever a tool or an agent can see for itself. The moment a current-state diagram becomes an opinion, it becomes a flattering one. Nobody draws their own system messier than it is, and I have argued the harder version of this before: [a model that no compiler checks will drift](/blog/the-diagram-that-cannot-lie/).
+The first is the system as it stands today. A person should barely write that description at all. It should be read out of the code, the pipelines, the infrastructure definitions, whatever a tool or an agent can see for itself.
+
+The moment a current-state diagram becomes an opinion, it becomes a flattering one. Nobody draws their own system messier than it is. I have argued the harder version of this before: [a model that no compiler checks will drift](/blog/the-diagram-that-cannot-lie/).
 
 The second world is the target state. What the system looks like once the requirement is genuinely met. That one is a claim about a future that does not exist yet, so a named human has to own it.
 
@@ -26,7 +28,9 @@ One sentence from that conversation reorganized how I work.
 
 A design does not create technical debt. It cannot. It is a document. It has never touched a running system, never shipped a schema, never left a compatibility shim in place for three years.
 
-Debt appears the moment execution stops somewhere other than the target state. And execution almost always stops somewhere other than the target state, because budgets are annual, priorities rotate, and the reorganization does not read your migration plan ;) I have watched initiatives with genuinely good designs leave systems worse than they found them. Not because the design was wrong. Because the funding ended between step two and step three, in a place nobody had ever considered as a resting position.
+Debt appears the moment execution stops somewhere other than the target state. And it almost always does. Budgets are annual, priorities rotate, and the reorganization does not read your migration plan ;)
+
+I have watched initiatives with genuinely good designs leave systems worse than they found them. Not because the design was wrong. Because the funding ended between step two and step three, in a place nobody had ever considered as a resting position.
 
 **A design cannot owe anything. Only a half-built system can.**
 
@@ -40,7 +44,7 @@ Three properties, in the order I check them:
 
 - **It stands alone.** After the step, the system is internally consistent. One model at a smaller scope, not two half-models with a translation layer nobody owns.
 - **It is reversible, or it is finished.** Either the step walks back with a configuration change, or it completed something. What I avoid is the middle: irreversible and unfinished. Decomposing until [every step is a two-way door](/blog/the-migration-that-never-starts/) is the same instinct pointed at a different problem.
-- **It closes an option on purpose.** A good step removes a path and says which one. A step that keeps every option open has not decided anything, and optionality feels like prudence long after it has become an unpaid invoice.
+- **It closes an option on purpose.** A good step removes a path and names which one. A step that keeps every option open has not decided anything. Optionality feels like prudence long after it has quietly become an unpaid invoice.
 
 ![Both steps move toward the same target. Only one of them leaves a system that can be lived in if the next step is never funded.](/assets/img/posts/design-the-stopping-point/two-first-steps.png)
 
@@ -52,21 +56,25 @@ The first step. What it deliberately leaves unfinished. The risk of that state p
 
 That last part I stole from my own hobby repository, where one decision record exists purely to [record a decision not to decide, with a written trigger](/blog/adrs-for-an-audience-of-one/). It transfers to organizational scale better than it has any right to.
 
-It also answers the question every engineering director eventually asks. Should the architect be hard on quality, or should the architect plan the shortcut? Neither is the job. **The job is to make the shortcut legible**: to say exactly what is being traded, for how long, and by whom, so the organization is choosing rather than drifting. An accepted risk with a name on it is engineering. The same risk unnamed is just something that happened to you.
+It also answers the question every engineering director eventually asks. Should the architect be hard on quality, or should the architect plan the shortcut? Neither is the job. **The job is to make the shortcut legible.** Say exactly what is being traded, for how long, and by whom. Then the organization is choosing rather than drifting.
 
-## Try this
+An accepted risk with a name on it is engineering. The same risk unnamed is just something that happened to you.
 
-Pick the initiative in your portfolio most likely to lose its funding next. Spend one hour drawing where it would stop if that happened this quarter, and what the system would look like standing there.
+## What it changed
 
-That hour is cheap, and it is the only part of the plan that is certain to happen.
+That whiteboard conversation never produced a clean answer, and I have stopped expecting one. What it changed was smaller than an answer.
 
-So: if your current migration froze on Friday, would anyone be able to describe the system you were left with? And would they call it a system?
+I still deliver a target state. I still let a tool draw the current one. But the page I spend the longest on now is the shortest of the three: the first step, what it deliberately leaves undone, and the name of the person who agreed to live with that.
+
+It takes an hour to write. It is also the only part of the plan I can be sure will happen, because it happens first. And often enough, it turns out to be the part that happens last.
+
+The design never owed anything. The trail did.
 
 ---
 
 **Scores:** tension=7 originality=6 personal=7 contrarian=6 substance=8 punch=8 trend=4
 **Scored:** 2026-07-27 rubric=v1 model=claude-opus-5
 
-**Publish:** 2026-08-10 09:00
+**Publish:** 2026-08-24 09:00
 
 **Tags:** Software Architecture, Technical Debt, Decision Making, Engineering Leadership, Systems Thinking
