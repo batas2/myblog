@@ -71,6 +71,6 @@ The queue did not shrink. It moved one seat to the right, and it is quieter over
 **Scores:** tension=7 originality=6 personal=7 contrarian=7 substance=8 punch=8 trend=9
 **Scored:** 2026-07-27 rubric=v1 model=claude-opus-5
 
-**Publish:** 2026-07-27 19:00
+**Publish:** 2026-08-03 09:00
 
 **Tags:** Artificial Intelligence, AI Transformation, Engineering Leadership, Organizational Design, Software Architecture

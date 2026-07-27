@@ -67,6 +67,6 @@ The ceiling is the part I am still watching for. I cannot compute where it sits.
 **Scores:** tension=7 originality=6 personal=8 contrarian=7 substance=7 punch=8 trend=6
 **Scored:** 2026-07-27 rubric=v1 model=claude-opus-5
 
-**Publish:** 2026-08-17 09:00
+**Publish:** 2026-08-24 09:00
 
 **Tags:** Software Architecture, Domain-Driven Design, Organizational Design, Engineering Leadership, Systems Thinking
