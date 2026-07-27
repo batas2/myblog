@@ -82,7 +82,7 @@ form, and first-party analytics.
 ├── assets/              css + post images (+ credits.json with licenses)
 ├── blog/                generated output (gitignored)
 ├── tests/               dependency-free unit + integration suite
-└── deploy.sh            tests → build → backup remote → rsync to shared hosting
+└── deploy.sh            tests → build → geoip → backup remote → rsync to hosting
 ```
 
 ## Quickstart
@@ -177,10 +177,19 @@ prints the queue after every deploy so nothing waits unnoticed.
 ## Deploying
 
 `deploy.sh` reads its SSH target from a gitignored `deploy.env` (copy
-`deploy.env.example`), runs the tests, rebuilds, **backs up the remote docroot to a local
-`_remote-backup/<timestamp>.tar.gz`**, then rsyncs. Runtime data on the server
-(comments, analytics) is excluded in both directions and can never be overwritten.
-`--dry-run` previews, `--clean` also removes remotely deleted files.
+`deploy.env.example`), runs the tests, rebuilds, refreshes the GeoIP database,
+**backs up the remote docroot to a local `_remote-backup/<timestamp>.tar.gz`**,
+then rsyncs. Runtime data on the server (comments, analytics, subscribers,
+scores mirror) is excluded in both directions and can never be overwritten.
+`--dry-run` previews, `--clean` also removes remotely deleted files,
+`--no-geoip` skips the refresh.
+
+`content/geoip.dat` is the one data file that ships *from* your machine, so a
+stale local copy would overwrite a fresher one on the server. The deploy
+re-runs `tools/geoip_update.php` whenever the local database is older than
+`GEOIP_MAX_AGE_DAYS` (default 7, set it in `deploy.env`; DB-IP publishes
+monthly). If that refresh cannot run or fails, the file is excluded from the
+sync instead, so the server's copy is never replaced by an older one.
 
 ## License
 

@@ -4,13 +4,17 @@ set -euo pipefail
 # deploy.sh — build, back up the remote, push bfrackowiak.pl to MyDevil.
 #
 # Usage:
-#   ./deploy.sh            build + backup remote + rsync (additive, no deletions)
-#   ./deploy.sh --clean    same, but also delete remote files that no longer
-#                          exist locally (runtime data stays protected)
-#   ./deploy.sh --dry-run  show what would be transferred, touch nothing
+#   ./deploy.sh             refresh geoip + build + backup remote + rsync
+#                           (additive, no deletions)
+#   ./deploy.sh --clean     same, but also delete remote files that no longer
+#                           exist locally (runtime data stays protected)
+#   ./deploy.sh --dry-run   show what would be transferred, touch nothing
+#   ./deploy.sh --no-geoip  skip the geoip refresh (offline deploys: the
+#                           updater would otherwise wait out its own timeout)
 #
 # Runtime data on the server is NEVER overwritten or deleted:
-# content/comments/*.json, content/analytics.db, content/analytics.seed
+# content/comments/*.json, content/analytics.db, content/analytics.seed,
+# content/newsletter.db, content/scores.db, content/.sessions/
 
 # --- config ---
 # The deployment target lives in deploy.env (gitignored) — copy
@@ -37,7 +41,7 @@ RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; BO
 
 # --- output helpers ---
 STEP_NUM=0
-STEP_TOTAL=4
+STEP_TOTAL=5
 STEP_START=0
 step() {
   STEP_NUM=$((STEP_NUM + 1))
@@ -53,14 +57,16 @@ die() { echo -e "${RED}✗ $1${NC}"; exit 1; }
 
 DELETE_FLAG=()
 RSYNC_MODE=()
+SKIP_GEOIP=0
 for arg in "$@"; do
   case "$arg" in
-    --clean)   DELETE_FLAG=(--delete) ;;
-    --dry-run) RSYNC_MODE=(--dry-run) ;;
+    --clean)    DELETE_FLAG=(--delete) ;;
+    --dry-run)  RSYNC_MODE=(--dry-run) ;;
+    --no-geoip) SKIP_GEOIP=1 ;;
     *) die "Unknown option: ${arg}" ;;
   esac
 done
-[ ${#RSYNC_MODE[@]} -eq 0 ] || STEP_TOTAL=3   # --dry-run skips the backup step
+[ ${#RSYNC_MODE[@]} -eq 0 ] || STEP_TOTAL=4   # --dry-run skips the backup step
 
 echo -e "${BOLD}Deploying bfrackowiak.pl${NC}"
 echo -e "  target: ${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}"
@@ -69,14 +75,6 @@ echo -e "  mode:   $([ ${#RSYNC_MODE[@]} -eq 0 ] && echo 'live' || echo 'dry-run
 # --- sanity: config must exist (endpoints read it at runtime) ---
 if [ ! -f "${LOCAL_DIR}config.php" ]; then
   die "Missing config.php — copy config.example.php and fill it in."
-fi
-
-# geoip.dat may live only on the server (generated there by tools/geoip_update.php);
-# when there is no local copy, protect the remote one from --clean deletion
-GEOIP_PROTECT=()
-if [ ! -f "${LOCAL_DIR}content/geoip.dat" ]; then
-  GEOIP_PROTECT=(--exclude='content/geoip.dat')
-  echo -e "  ${YELLOW}note: no local content/geoip.dat — remote copy protected from --clean${NC}"
 fi
 
 # --- 1. tests ---
@@ -89,7 +87,46 @@ step "Building site (php tools/build.php)"
 php "${LOCAL_DIR}tools/build.php"
 step_done "Build complete"
 
-# --- 3. backup remote -> local archive (skipped on --dry-run) ---
+# --- 3. geoip database ---
+# content/geoip.dat ships with everything else, so whatever is on this machine
+# lands on the server. A stale local copy therefore *overwrites* a fresher
+# remote one. Refresh it here so the deploy always carries the newest data, and
+# whenever the refresh does not happen, exclude the file rather than regress the
+# server. DB-IP publishes monthly; GEOIP_MAX_AGE_DAYS (deploy.env) decides how
+# eagerly we re-fetch inside that month.
+step "Refreshing content/geoip.dat"
+: "${GEOIP_MAX_AGE_DAYS:=7}"
+# hand-edited in deploy.env: a typo must not silently disable the age check
+[[ "${GEOIP_MAX_AGE_DAYS}" =~ ^[0-9]+$ ]] || GEOIP_MAX_AGE_DAYS=7
+GEOIP_PROTECT=()
+GEOIP_AGE="$(cd "${LOCAL_DIR}" && php -r '
+require "lib/config.php"; require "lib/geoip.php";
+echo geoip_db_age_days() ?? -1;
+' 2>/dev/null || true)"
+[[ "${GEOIP_AGE}" =~ ^-?[0-9]+$ ]] || GEOIP_AGE=-1
+[ "${GEOIP_AGE}" -ge 0 ] && GEOIP_WAS="${GEOIP_AGE}d old" || GEOIP_WAS="missing"
+
+if [ "${GEOIP_AGE}" -ge 0 ] && [ "${GEOIP_AGE}" -lt "${GEOIP_MAX_AGE_DAYS}" ]; then
+  step_done "Current (${GEOIP_WAS}, threshold ${GEOIP_MAX_AGE_DAYS}d)"
+elif [ "${SKIP_GEOIP}" -eq 1 ] || [ ${#RSYNC_MODE[@]} -ne 0 ]; then
+  # --no-geoip or --dry-run: never touch the network or the local file, and
+  # never push the copy we just declined to verify
+  GEOIP_PROTECT=(--exclude='content/geoip.dat')
+  step_done "Skipped (${GEOIP_WAS}) — remote copy left untouched"
+elif (cd "${LOCAL_DIR}" && php tools/geoip_update.php); then
+  step_done "Updated (was ${GEOIP_WAS})"
+else
+  # geoip_compile writes through a temp file and renames, and a failed download
+  # exits before touching anything, so the old database is always still intact
+  # here. Pushing it could still replace a newer copy on the server, so protect
+  # the remote one and carry on: country lookup is not worth failing a deploy.
+  GEOIP_PROTECT=(--exclude='content/geoip.dat')
+  echo -e "${YELLOW}⚠ geoip refresh failed (local copy: ${GEOIP_WAS})${NC}"
+  echo -e "  the existing database was not modified and the remote one is protected"
+  echo -e "  deploy continues; retry later with: php tools/geoip_update.php"
+fi
+
+# --- 4. backup remote -> local archive (skipped on --dry-run) ---
 if [ ${#RSYNC_MODE[@]} -eq 0 ]; then
   step "Backing up remote -> ${BACKUP_ARCHIVE}"
   mkdir -p "${BACKUP_STAGE}"
@@ -114,7 +151,7 @@ if [ ${#RSYNC_MODE[@]} -eq 0 ]; then
   step_done "Backup saved (${BACKUP_SIZE}, ${BACKUP_FILES} files)"
 fi
 
-# --- 4. deploy ---
+# --- 5. deploy ---
 step "Syncing to ${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}"
 
 # What ships: index.php, comments.php, a.php, stats.php, admin.php, .htaccess,
