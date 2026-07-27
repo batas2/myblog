@@ -292,8 +292,10 @@ $sdb = null;
 /* ---------------- load_posts against real content ---------------- */
 section('load_posts');
 $all = load_posts(true);
-t_eq(25, count($all), '25 posts on disk (all statuses)');
-t_eq('a-feature-is-not-a-service', $all[0]['slug'], 'newest post first in all-mode');
+// a floor, not an exact count: this must catch a glob or parse regression that
+// silently drops posts, without needing an edit every time one is written
+t_assert(count($all) >= 25, count($all) . ' posts on disk (all statuses)');
+t_eq(max(array_column($all, 'publish_ts')), $all[0]['publish_ts'], 'newest publish moment first in all-mode');
 $posts = load_posts();
 t_eq(count(array_filter($all, fn($p) => $p['status'] === 'published')), count($posts), 'default load = published subset of all');
 foreach ($posts as $p) if ($p['status'] !== 'published') { t_assert(false, 'published-only load leaked ' . $p['slug']); }
