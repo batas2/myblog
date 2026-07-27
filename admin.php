@@ -936,6 +936,12 @@ tr.r-floor td:first-child { box-shadow: inset 3px 0 0 #b91c1c80; }
         <tr><td>Newsletter database</td><td class="n r"><?= is_file(nl_db_path()) ? round(filesize(nl_db_path()) / 1024) . ' KB' : 'not created yet' ?></td></tr>
         <tr><td>Outbound mail (SMTP)</td><td class="n r"><?= nl_mail_enabled() ? 'configured' : 'disabled — empty smtp password' ?></td></tr>
         <tr><td>GeoIP database</td><td class="n r"><?= geoip_db_age_days() === null ? 'missing — run php tools/geoip_update.php' : round(filesize(geoip_db_path()) / 1048576, 1) . ' MB · ' . geoip_db_age_days() . 'd old' ?></td></tr>
+        <?php $ipExcluded = an_is_excluded_ip($ip); ?>
+        <tr><td>Your connection<br><span class="dim" style="font-size:.78rem">add it to <code>analytics_exclude_ips</code> in config.php to stop counting this line</span></td>
+          <td class="n r"><code><?= e($ip !== '' ? $ip : 'unknown') ?></code><br>
+            <span class="badge b-<?= $ipExcluded ? 'published' : 'draft' ?>"><?= $ipExcluded ? 'excluded by IP' : 'counted' ?></span></td></tr>
+        <tr><td>Excluded networks</td><td class="n r"><?php $exIps = (array) cfg('analytics_exclude_ips', []); ?>
+          <?= $exIps ? e(implode(', ', array_map('strval', $exIps))) : '<span class="dim">none</span>' ?></td></tr>
         <tr><td>Timezone</td><td class="n r"><?= e((string) cfg('timezone', 'Europe/Warsaw')) ?></td></tr>
         <tr><td>PHP</td><td class="n r"><?= PHP_VERSION ?></td></tr>
         <tr><td>Last build</td><td class="n r"><?= admin_last_build_ts() ? date('Y-m-d H:i', admin_last_build_ts()) : 'never' ?></td></tr>

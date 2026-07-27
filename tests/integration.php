@@ -358,6 +358,30 @@ t_eq('Chrome', $row['browser'], 'browser parsed');
 t_eq('Linux', $row['os'], 'os parsed');
 t_eq('desktop', $row['device'], 'device parsed');
 t_eq('pl', $row['lang'], 'language stored as primary subtag');
+
+/* owner exclusion by IP: the cookie only covers one browser, a static address
+   covers the whole connection. Proven both ways so a pass cannot come from the
+   beacon being broken. */
+$sbxConfig = function (array $over) use ($SANDBOX): void {
+    $cfg = require $SANDBOX . '/config.php';
+    file_put_contents($SANDBOX . '/config.php', '<?php return ' . var_export(array_merge($cfg, $over), true) . ";\n");
+};
+$hitCount = fn(string $path): int => (int) $adb->query(
+    "SELECT COUNT(*) FROM hits WHERE path = " . $adb->quote($path))->fetchColumn();
+
+$sbxConfig(['analytics_exclude_ips' => ['127.0.0.1', '::1']]);
+[$code] = $beacon($chromeUa, '{"p":"/from-my-line/","r":""}');
+t_eq(204, $code, 'beacon from an excluded address still answers 204');
+t_eq(0, $hitCount('/from-my-line/'), 'a hit from an excluded address is never stored');
+
+$sbxConfig(['analytics_exclude_ips' => ['198.51.100.0/24']]);
+[$code] = $beacon($chromeUa, '{"p":"/from-someone-else/","r":""}');
+t_eq(204, $code, 'beacon from a non-excluded address accepted');
+t_eq(1, $hitCount('/from-someone-else/'), 'and it is stored, so the exclusion was what dropped the other one');
+
+// leave the fixture exactly as it was found: later assertions count these rows
+$adb->exec("DELETE FROM hits WHERE path = '/from-someone-else/'");
+$sbxConfig(['analytics_exclude_ips' => []]);
 t_eq('laptop', $row['screen'], 'screen bucketed');
 t_eq('Europe/Warsaw', $row['tz'], 'timezone stored');
 t_eq('newsletter', $row['utm_source'], 'utm source stored');

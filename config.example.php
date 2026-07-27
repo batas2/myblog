@@ -37,6 +37,14 @@ return [
     // generate: php -r "echo password_hash('your-password', PASSWORD_DEFAULT), PHP_EOL;"
     'admin_password_hash' => '',
 
+    // your own connection, never counted in analytics. Plain addresses or CIDR
+    // blocks, IPv4 and IPv6: ['203.0.113.7', '2001:db8:1234::/48', '10.0.0.0/8'].
+    // Complements the /a.php?me=off cookie, which only covers one browser and
+    // dies with an incognito window. The address is compared in memory on the
+    // beacon and is never stored, so nothing about the privacy model changes.
+    // Admin → System shows the address you are connecting from right now.
+    'analytics_exclude_ips' => [],
+
     // publish times ("**Publish:**" lines and filename dates) are read in this zone
     'timezone' => 'Europe/Warsaw',
 

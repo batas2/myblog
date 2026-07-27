@@ -43,6 +43,9 @@ http_response_code(204);
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') exit;
 if (an_is_opted_out()) exit;
+// the owner's own connection, from any browser on it: the cookie above only
+// covers the browser that was told, this covers the line it came in on
+if (an_is_excluded_ip((string) ($_SERVER['REMOTE_ADDR'] ?? ''))) exit;
 
 $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
 if (an_is_bot($ua)) exit;

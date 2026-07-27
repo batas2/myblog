@@ -388,6 +388,38 @@ t_assert(!post_is_public('no-such-post-anywhere'), 'an unknown slug is not publi
 t_assert(!post_is_public('../../config'), 'a traversal attempt is not public');
 t_assert(!post_is_public(''), 'an empty slug is not public');
 
+section('analytics ip exclusion');
+// getting the mask wrong here silently excludes everybody, or nobody
+t_assert(an_ip_in_block('203.0.113.7', '203.0.113.7'), 'exact IPv4 match');
+t_assert(!an_ip_in_block('203.0.113.8', '203.0.113.7'), 'neighbouring address is not a match');
+t_assert(an_ip_in_block('203.0.113.7', '203.0.113.0/24'), 'inside a /24');
+t_assert(!an_ip_in_block('203.0.114.7', '203.0.113.0/24'), 'outside a /24');
+t_assert(an_ip_in_block('203.0.113.7', '203.0.113.0/29'), 'inside a /29, partial byte');
+t_assert(!an_ip_in_block('203.0.113.8', '203.0.113.0/29'), 'just past a /29 boundary');
+t_assert(an_ip_in_block('203.0.113.7', '0.0.0.0/0'), 'a /0 matches everything in family');
+t_assert(an_ip_in_block('203.0.113.7', '203.0.113.7/32'), 'a /32 is the address itself');
+t_assert(!an_ip_in_block('203.0.113.6', '203.0.113.7/32'), 'and only that address');
+
+t_assert(an_ip_in_block('2001:db8:1234::1', '2001:db8:1234::/48'), 'inside an IPv6 /48');
+t_assert(!an_ip_in_block('2001:db8:9999::1', '2001:db8:1234::/48'), 'outside an IPv6 /48');
+// packed comparison, so notation cannot slip past
+t_assert(an_ip_in_block('2001:0db8:0000::1', '2001:db8::1'), 'IPv6 written two ways is one address');
+t_assert(!an_ip_in_block('203.0.113.7', '2001:db8::/32'), 'a v4 address is never inside a v6 block');
+t_assert(!an_ip_in_block('2001:db8::1', '203.0.113.0/24'), 'and the reverse');
+
+t_assert(!an_ip_in_block('203.0.113.7', ''), 'an empty block matches nothing');
+t_assert(!an_ip_in_block('203.0.113.7', 'not-an-ip'), 'garbage matches nothing');
+t_assert(!an_ip_in_block('203.0.113.7', '203.0.113.0/99'), 'an impossible prefix length matches nothing');
+t_assert(!an_ip_in_block('', '203.0.113.0/24'), 'an empty address matches nothing');
+
+$exBlocks = ['203.0.113.7', '198.51.100.0/24', '2001:db8::/32'];
+t_assert(an_is_excluded_ip('203.0.113.7', $exBlocks), 'excluded by exact address');
+t_assert(an_is_excluded_ip('198.51.100.55', $exBlocks), 'excluded by IPv4 block');
+t_assert(an_is_excluded_ip('2001:db8:aaaa::9', $exBlocks), 'excluded by IPv6 block');
+t_assert(!an_is_excluded_ip('192.0.2.1', $exBlocks), 'an unrelated visitor is still counted');
+t_assert(!an_is_excluded_ip('', $exBlocks), 'a missing REMOTE_ADDR is not an exclusion');
+t_assert(!an_is_excluded_ip('203.0.113.7', []), 'no configured blocks excludes nobody');
+
 section('analytics column guard');
 // an_check_col is the only thing standing between a query parameter and an
 // interpolated SQL identifier in an_breakdown.

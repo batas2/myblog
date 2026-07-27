@@ -46,6 +46,55 @@ function an_optout_cookie(bool $on): void
     ]);
 }
 
+/**
+ * Is this address inside the given address or CIDR block? IPv4 and IPv6 both,
+ * compared on the packed form so notation differences (leading zeros, ::)
+ * cannot smuggle a match past a string compare. A block with no /bits is an
+ * exact address.
+ */
+function an_ip_in_block(string $ip, string $block): bool
+{
+    $block = trim($block);
+    if ($block === '') return false;
+    [$net, $bits] = array_pad(explode('/', $block, 2), 2, null);
+
+    $ipBin = @inet_pton($ip);
+    $netBin = @inet_pton((string) $net);
+    // same family only: a v4 address is never inside a v6 block
+    if ($ipBin === false || $netBin === false || strlen($ipBin) !== strlen($netBin)) return false;
+    if ($bits === null || $bits === '') return $ipBin === $netBin;
+
+    if (!preg_match('/^\d{1,3}$/', $bits)) return false;
+    $bits = (int) $bits;
+    if ($bits > strlen($ipBin) * 8) return false;
+
+    $whole = intdiv($bits, 8);
+    if ($whole > 0 && strncmp($ipBin, $netBin, $whole) !== 0) return false;
+    $spare = $bits % 8;
+    if ($spare === 0) return true;
+    $mask = chr((0xFF << (8 - $spare)) & 0xFF);
+    return ($ipBin[$whole] & $mask) === ($netBin[$whole] & $mask);
+}
+
+/**
+ * Traffic from the author's own connection, never counted. Config
+ * 'analytics_exclude_ips' holds plain addresses or CIDR blocks, v4 or v6.
+ *
+ * This complements the opt-out cookie rather than replacing it: the cookie
+ * dies with a new browser, an incognito window or a cleared profile, while a
+ * static address survives all three. The match happens in memory on the beacon
+ * and the address is never written anywhere, so the privacy model is unchanged.
+ */
+function an_is_excluded_ip(string $ip, ?array $blocks = null): bool
+{
+    if ($ip === '') return false;
+    $blocks ??= (array) cfg('analytics_exclude_ips', []);
+    foreach ($blocks as $block) {
+        if (is_string($block) && an_ip_in_block($ip, $block)) return true;
+    }
+    return false;
+}
+
 /** Bump when the schema below changes; an_db() fast-paths matching databases. */
 const AN_SCHEMA_VERSION = 2;
 
