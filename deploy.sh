@@ -11,6 +11,9 @@ set -euo pipefail
 #   ./deploy.sh --dry-run   show what would be transferred, touch nothing
 #   ./deploy.sh --no-geoip  skip the geoip refresh (offline deploys: the
 #                           updater would otherwise wait out its own timeout)
+#   ./deploy.sh --verbose   stream every command's raw output (-v works too).
+#                           Without it the deploy prints one line per step and
+#                           a summary; a failing step still dumps its full log.
 #
 # Runtime data on the server is NEVER overwritten or deleted:
 # content/comments/*.json, content/analytics.db, content/analytics.seed,
@@ -53,24 +56,60 @@ step_done() {
   local elapsed=$((SECONDS - STEP_START))
   echo -e "${GREEN}✓ $1 (${elapsed}s)${NC}"
 }
+note() { echo -e "  ${1}"; }
+warn() { echo -e "${YELLOW}⚠ $1${NC}"; }
 die() { echo -e "${RED}✗ $1${NC}"; exit 1; }
 
 DELETE_FLAG=()
 RSYNC_MODE=()
 SKIP_GEOIP=0
+VERBOSE=0
 for arg in "$@"; do
   case "$arg" in
     --clean)    DELETE_FLAG=(--delete) ;;
     --dry-run)  RSYNC_MODE=(--dry-run) ;;
     --no-geoip) SKIP_GEOIP=1 ;;
+    --verbose|-v) VERBOSE=1 ;;
     *) die "Unknown option: ${arg}" ;;
   esac
 done
+
+# --- quiet-by-default plumbing ---
+# Every noisy command runs through run(): verbose streams it, quiet captures it.
+# Nothing is ever lost — a failing step replays its whole log before dying, so
+# the clean output only ever hides successful noise.
+LOG_DIR="$(mktemp -d)"
+trap 'rm -rf "${LOG_DIR}"' EXIT
+RSYNC_PROGRESS=()
+[ "${VERBOSE}" -eq 0 ] || RSYNC_PROGRESS=(--progress)
+
+run() {
+  local log="$1"; shift
+  local rc=0
+  if [ "${VERBOSE}" -eq 1 ]; then
+    "$@" 2>&1 | tee "${log}" || rc=$?
+  else
+    "$@" >"${log}" 2>&1 || rc=$?
+  fi
+  return "${rc}"
+}
+
+# Replay a captured log (no-op in verbose mode, where it was already streamed).
+dump_log() {
+  [ "${VERBOSE}" -eq 0 ] || return 0
+  [ -s "$1" ] || return 0
+  echo
+  sed 's/^/  │ /' "$1"
+  echo
+}
+
+# run() failed: show what happened, then stop.
+fail_with_log() { dump_log "$1"; die "$2"; }
 [ ${#RSYNC_MODE[@]} -eq 0 ] || STEP_TOTAL=5   # --dry-run skips the backup step
 
 echo -e "${BOLD}Deploying bfrackowiak.pl${NC}"
 echo -e "  target: ${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}"
-echo -e "  mode:   $([ ${#RSYNC_MODE[@]} -eq 0 ] && echo 'live' || echo 'dry-run')$([ ${#DELETE_FLAG[@]} -eq 0 ] || echo ', clean (deletes stale remote files)')"
+echo -e "  mode:   $([ ${#RSYNC_MODE[@]} -eq 0 ] && echo 'live' || echo 'dry-run')$([ ${#DELETE_FLAG[@]} -eq 0 ] || echo ', clean (deletes stale remote files)')$([ "${VERBOSE}" -eq 1 ] && echo ', verbose')"
 
 # --- sanity: config must exist (endpoints read it at runtime) ---
 if [ ! -f "${LOCAL_DIR}config.php" ]; then
@@ -79,13 +118,24 @@ fi
 
 # --- 1. tests ---
 step "Running test suite"
-php "${LOCAL_DIR}tests/run.php"
-step_done "Tests passed"
+run "${LOG_DIR}/tests.log" php "${LOCAL_DIR}tests/run.php" \
+  || fail_with_log "${LOG_DIR}/tests.log" "Test suite failed — nothing was deployed."
+# run.php prints one tally per script (unit, integration) and no grand total
+TEST_TALLY="$(grep -oE 'PASS: [0-9]+ +FAIL: [0-9]+' "${LOG_DIR}/tests.log" \
+  | awk '{p += $2} END {if (NR) printf "%d checks", p}' || true)"
+step_done "Tests passed${TEST_TALLY:+ — ${TEST_TALLY}}"
 
 # --- 2. build ---
 step "Building site (php tools/build.php)"
-php "${LOCAL_DIR}tools/build.php"
-step_done "Build complete"
+run "${LOG_DIR}/build.log" php "${LOCAL_DIR}tools/build.php" \
+  || fail_with_log "${LOG_DIR}/build.log" "Build failed — nothing was deployed."
+# Surface the build's headline and anything that wants a human, even when quiet.
+BUILT="$(grep -m1 '^built ' "${LOG_DIR}/build.log" || true)"
+step_done "Build complete${BUILT:+ — ${BUILT%% →*}}"
+if [ "${VERBOSE}" -eq 0 ]; then
+  while IFS= read -r line; do [ -z "${line}" ] || note "${line}"; done \
+    < <(grep -E '^(removed stale|UNSCORED|scheduled:|draft:|scores:)' "${LOG_DIR}/build.log" || true)
+fi
 
 # --- 3. geoip database ---
 # content/geoip.dat ships with everything else, so whatever is on this machine
@@ -113,7 +163,7 @@ elif [ "${SKIP_GEOIP}" -eq 1 ] || [ ${#RSYNC_MODE[@]} -ne 0 ]; then
   # never push the copy we just declined to verify
   GEOIP_PROTECT=(--exclude='content/geoip.dat')
   step_done "Skipped (${GEOIP_WAS}) — remote copy left untouched"
-elif (cd "${LOCAL_DIR}" && php tools/geoip_update.php); then
+elif run "${LOG_DIR}/geoip.log" bash -c "cd '${LOCAL_DIR}' && php tools/geoip_update.php"; then
   step_done "Updated (was ${GEOIP_WAS})"
 else
   # geoip_compile writes through a temp file and renames, and a failed download
@@ -121,20 +171,23 @@ else
   # here. Pushing it could still replace a newer copy on the server, so protect
   # the remote one and carry on: country lookup is not worth failing a deploy.
   GEOIP_PROTECT=(--exclude='content/geoip.dat')
-  echo -e "${YELLOW}⚠ geoip refresh failed (local copy: ${GEOIP_WAS})${NC}"
-  echo -e "  the existing database was not modified and the remote one is protected"
-  echo -e "  deploy continues; retry later with: php tools/geoip_update.php"
+  dump_log "${LOG_DIR}/geoip.log"
+  warn "geoip refresh failed (local copy: ${GEOIP_WAS})"
+  note "the existing database was not modified and the remote one is protected"
+  note "deploy continues; retry later with: php tools/geoip_update.php"
 fi
 
 # --- 4. backup remote -> local archive (skipped on --dry-run) ---
+BACKUP_HINT=""   # only points at an archive once one actually exists
 if [ ${#RSYNC_MODE[@]} -eq 0 ]; then
   step "Backing up remote -> ${BACKUP_ARCHIVE}"
   mkdir -p "${BACKUP_STAGE}"
 
-  rsync -az --progress \
+  run "${LOG_DIR}/backup.log" rsync -az "${RSYNC_PROGRESS[@]}" \
     -e "ssh -p ${SSH_PORT}" \
     "${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}/" \
-    "${BACKUP_STAGE}/"
+    "${BACKUP_STAGE}/" \
+    || fail_with_log "${LOG_DIR}/backup.log" "Remote backup failed — nothing was deployed."
 
   # sanity: an (almost) empty remote means something is very wrong — pushing over
   # it would make the loss permanent and silent (this exact thing ate the
@@ -148,6 +201,7 @@ if [ ${#RSYNC_MODE[@]} -eq 0 ]; then
   rm -rf "${BACKUP_STAGE}"
 
   BACKUP_SIZE="$(du -h "${BACKUP_ARCHIVE}" | cut -f1)"
+  BACKUP_HINT=" — backup: ${BACKUP_ARCHIVE}"
   step_done "Backup saved (${BACKUP_SIZE}, ${BACKUP_FILES} files)"
 fi
 
@@ -160,8 +214,8 @@ step "Syncing to ${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}"
 # content/posts/ (the generator + comment-slug validation read it),
 # content/geoip.dat (offline IP→country db) and content/.htaccess.
 # What never ships: docs, drafts, tests, archives, backups, git, runtime data.
-RSYNC_LOG="$(mktemp)"
-rsync -az --progress --stats "${RSYNC_MODE[@]}" "${DELETE_FLAG[@]}" "${GEOIP_PROTECT[@]}" \
+RSYNC_LOG="${LOG_DIR}/sync.log"
+run "${RSYNC_LOG}" rsync -az "${RSYNC_PROGRESS[@]}" --stats --itemize-changes "${RSYNC_MODE[@]}" "${DELETE_FLAG[@]}" "${GEOIP_PROTECT[@]}" \
   --exclude='.git/' \
   --exclude='.gitignore' \
   --exclude='.claude/' \
@@ -172,6 +226,7 @@ rsync -az --progress --stats "${RSYNC_MODE[@]}" "${DELETE_FLAG[@]}" "${GEOIP_PRO
   --exclude='README.md' \
   --exclude='LICENSE' \
   --exclude='config.example.php' \
+  --exclude='tools/preview_admin.php' \
   --exclude='_archive/' \
   --exclude='_remote-backup/' \
   --exclude='content/comments/' \
@@ -192,11 +247,25 @@ rsync -az --progress --stats "${RSYNC_MODE[@]}" "${DELETE_FLAG[@]}" "${GEOIP_PRO
   -e "ssh -p ${SSH_PORT}" \
   "${LOCAL_DIR}" \
   "${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}" \
-  | tee "${RSYNC_LOG}"
+  || fail_with_log "${RSYNC_LOG}" "Sync failed — the remote may be half-updated${BACKUP_HINT}."
 
-XFERRED="$(grep -m1 'Number of regular files transferred' "${RSYNC_LOG}" | grep -oE '[0-9,]+$' || echo '?')"
-rm -f "${RSYNC_LOG}"
-step_done "Synced (${XFERRED} files transferred)"
+# rsync groups digits with the locale's separator — dot here, comma elsewhere
+XFERRED="$(grep -m1 'Number of regular files transferred' "${RSYNC_LOG}" | grep -oE '[0-9.,]+$' || echo '?')"
+SENT="$(grep -m1 -oE 'Total transferred file size: [0-9.,]+ bytes' "${RSYNC_LOG}" | grep -oE '[0-9.,]+ bytes' || true)"
+DELETED="$(grep -c '^\*deleting' "${RSYNC_LOG}" || true)"
+step_done "Synced (${XFERRED} files transferred${SENT:+, ${SENT}}$([ "${DELETED}" -eq 0 ] || echo ", ${DELETED} deleted"))"
+
+# A dry run exists to be read: quiet mode still lists what would move, capped so
+# a first-time sync cannot bury the summary.
+if [ ${#RSYNC_MODE[@]} -ne 0 ] && [ "${VERBOSE}" -eq 0 ]; then
+  # files only — directory entries are itemized too and say nothing useful
+  CHANGES="$(grep -E '^(\*deleting|[<>ch.][fLDS])' "${RSYNC_LOG}" | sed -E 's/^[^ ]+ //' || true)"
+  CHANGED_N="$([ -z "${CHANGES}" ] && echo 0 || printf '%s\n' "${CHANGES}" | wc -l | tr -d ' ')"
+  if [ "${CHANGED_N}" -gt 0 ]; then
+    while IFS= read -r line; do note "${line}"; done < <(printf '%s\n' "${CHANGES}" | head -15)
+    [ "${CHANGED_N}" -le 15 ] || note "… and $((CHANGED_N - 15)) more (run with --verbose for the full list)"
+  fi
+fi
 
 # --- 6. mirror content/posts ---
 # The sync above is additive on purpose: it must never delete runtime data it
@@ -205,14 +274,19 @@ step_done "Synced (${XFERRED} files transferred)"
 # filename lives on forever on the server, the post parses twice, and the
 # pipeline lists it twice. Mirror that directory exactly, every deploy.
 step "Mirroring content/posts (clearing renamed leftovers)"
-POSTS_LOG="$(mktemp)"
-rsync -az --delete --itemize-changes "${RSYNC_MODE[@]}" \
+POSTS_LOG="${LOG_DIR}/posts.log"
+run "${POSTS_LOG}" rsync -az --delete --itemize-changes "${RSYNC_MODE[@]}" \
   -e "ssh -p ${SSH_PORT}" \
   "${LOCAL_DIR}content/posts/" \
-  "${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}/content/posts/" | tee "${POSTS_LOG}"
+  "${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}/content/posts/" \
+  || fail_with_log "${POSTS_LOG}" "content/posts mirror failed${BACKUP_HINT}."
 GONE="$(grep -c '^\*deleting' "${POSTS_LOG}" || true)"
-rm -f "${POSTS_LOG}"
 step_done "content/posts mirrored (${GONE} stale file(s) removed)"
+# Deletions are the whole point of this step — name them even in clean output.
+if [ "${VERBOSE}" -eq 0 ] && [ "${GONE}" -gt 0 ]; then
+  while IFS= read -r line; do note "removed ${line##* }"; done \
+    < <(grep '^\*deleting' "${POSTS_LOG}")
+fi
 
 echo
 if [ ${#RSYNC_MODE[@]} -eq 0 ]; then
