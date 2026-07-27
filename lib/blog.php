@@ -112,12 +112,18 @@ function parse_post_file(string $file): ?array
 
     $lines = preg_split('/\r?\n/', (string) file_get_contents($file));
     $title = $subtitle = '';
-    $medium = $publishRaw = $updatedRaw = null;
-    $scoresRaw = $scoredRaw = '';
-    $draft = false;
-    $tags = [];
     $body = [];
     $inFence = false;
+
+    /* Every `**Key:** value` line the format understands: the capture pattern
+       for the value, and where the raw value lands. Adding a meta key is one
+       row here rather than another near-identical branch in the loop below. */
+    $meta = ['Medium' => null, 'Status' => null, 'Publish' => null, 'Updated' => null,
+             'Scores' => null, 'Scored' => null, 'Tags' => null];
+    $metaPattern = [
+        'Medium' => '\S+',           // a bare URL
+        'Status' => '[a-zA-Z]+',
+    ];
 
     // meta lines are stripped from the body together with any hr that only separated them
     $dropTrailingRule = function () use (&$body): void {
@@ -142,49 +148,37 @@ function parse_post_file(string $file): ?array
             $subtitle = trim($mm[1]);
             continue;
         }
-        if (preg_match('/^\*\*Medium:\*\*\s*(\S+)\s*$/', trim($line), $mm)) {
-            $medium = $mm[1];
-            $dropTrailingRule();
-            continue;
-        }
-        if (preg_match('/^\*\*Status:\*\*\s*([a-zA-Z]+)\s*$/', trim($line), $mm)) {
-            $draft = strtolower($mm[1]) === 'draft';
-            $dropTrailingRule();
-            continue;
-        }
-        if (preg_match('/^\*\*Publish:\*\*\s*(.+?)\s*$/', trim($line), $mm)) {
-            $publishRaw = $mm[1];
-            $dropTrailingRule();
-            continue;
-        }
-        if (preg_match('/^\*\*Updated:\*\*\s*(.+?)\s*$/', trim($line), $mm)) {
-            $updatedRaw = $mm[1];
-            $dropTrailingRule();
-            continue;
-        }
-        if (preg_match('/^\*\*Scores:\*\*\s*(.+?)\s*$/', trim($line), $mm)) {
-            $scoresRaw = $mm[1];
-            $dropTrailingRule();
-            continue;
-        }
-        if (preg_match('/^\*\*Scored:\*\*\s*(.+?)\s*$/', trim($line), $mm)) {
-            $scoredRaw = $mm[1];
-            $dropTrailingRule();
-            continue;
-        }
-        if (preg_match('/^\*\*Tags:\*\*\s*(.+)$/', trim($line), $mm)) {
-            $tags = array_map('trim', explode(',', $mm[1]));
+        if (preg_match('/^\*\*([A-Za-z]+):\*\*\s*(.+?)\s*$/', trim($line), $mm) && array_key_exists($mm[1], $meta)) {
+            $value = $mm[2];
+            $pattern = $metaPattern[$mm[1]] ?? null;
+            // a key with a stricter value shape only counts when the value matches it
+            if ($pattern !== null && !preg_match('/^' . $pattern . '$/', $value)) {
+                if ($title !== '') $body[] = $line;
+                continue;
+            }
+            $meta[$mm[1]] = $value;
             $dropTrailingRule();
             continue;
         }
         if ($title !== '') $body[] = $line;
     }
 
+    $medium     = $meta['Medium'];
+    $publishRaw = $meta['Publish'];
+    $updatedRaw = $meta['Updated'];
+    $scoresRaw  = $meta['Scores'] ?? '';
+    $scoredRaw  = $meta['Scored'] ?? '';
+    $draft      = strtolower((string) $meta['Status']) === 'draft';
+    $tags       = $meta['Tags'] === null ? [] : array_map('trim', explode(',', $meta['Tags']));
+
     if ($inFence) {
         blog_warn("{$name}.md: unclosed code fence — any metadata after it (Status/Publish/Tags) is treated as fenced text and ignored");
     }
 
-    $plain = trim(preg_replace('/\s+/', ' ', strip_tags(md_to_html($body))));
+    // render once: the word count and the page were both re-running the whole
+    // markdown pass over the same lines
+    $html = md_to_html($body);
+    $plain = trim(preg_replace('/\s+/', ' ', strip_tags($html)));
     $words = str_word_count($plain);
 
     $publishTs = post_publish_ts($date, $publishRaw);
@@ -225,7 +219,7 @@ function parse_post_file(string $file): ?array
         'scored'      => sc_parse_scored($scoredRaw),
         'words'       => $words,
         'minutes'     => max(1, (int) ceil($words / 215)),
-        'html'        => md_to_html($body),
+        'html'        => $html,
         'md'          => trim(implode("\n", $body)),
     ];
 }
@@ -473,6 +467,29 @@ function hero_meta(string $slug): ?array
         'source'  => $c['source'] ?? '',
         'caption' => $c['title'] ?? '',
     ];
+}
+
+/**
+ * The figures inside a post body: [src, w, h, caption] each, in document order.
+ * Reads the markdown rather than the rendered HTML so it sees exactly the
+ * standalone image lines that md_to_html turns into <figure> elements, and the
+ * alt text that doubles as the caption.
+ */
+function post_body_images(array $p): array
+{
+    if (!preg_match_all('/^!\[([^\]]*)\]\((\S+)\)\s*$/m', (string) ($p['md'] ?? ''), $m, PREG_SET_ORDER)) return [];
+    $out = [];
+    foreach ($m as [, $caption, $src]) {
+        if (!str_starts_with($src, '/') || str_starts_with($src, '//')) continue;   // our own assets only
+        $size = @getimagesize(APP_ROOT . $src);
+        $out[] = [
+            'src'     => $src,
+            'w'       => $size ? (int) $size[0] : null,
+            'h'       => $size ? (int) $size[1] : null,
+            'caption' => $caption,
+        ];
+    }
+    return $out;
 }
 
 /* ---------------- plain-text renderings ---------------- */

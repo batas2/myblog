@@ -7,6 +7,30 @@
 
 declare(strict_types=1);
 
+/**
+ * ` width="W" height="H"` for a site-relative image, or '' when the file is not
+ * on disk. Writing the intrinsic size into the tag is what stops the article
+ * reflowing as each figure loads: the browser reserves the box up front instead
+ * of shoving the text down when the bytes arrive. Readers feel that as the page
+ * jumping under them, and Core Web Vitals counts it against the page.
+ *
+ * Cached per src because parse_post_file renders each body twice, once for the
+ * word count and once for the page.
+ */
+function md_img_dimensions(string $src): string
+{
+    static $cache = [];
+    if (isset($cache[$src])) return $cache[$src];
+
+    $attr = '';
+    // only our own assets: an absolute path under APP_ROOT, never a remote URL
+    if (defined('APP_ROOT') && str_starts_with($src, '/') && !str_starts_with($src, '//')) {
+        $size = @getimagesize(APP_ROOT . $src);
+        if ($size && $size[0] > 0 && $size[1] > 0) $attr = ' width="' . (int) $size[0] . '" height="' . (int) $size[1] . '"';
+    }
+    return $cache[$src] = $attr;
+}
+
 /* ============================== markdown ============================== */
 
 function md_inline(string $s): string
@@ -21,7 +45,9 @@ function md_inline(string $s): string
     }, $s);
 
     // images (before links so ![alt](src) is not parsed as a link)
-    $s = preg_replace('/!\[([^\]]*)\]\(([^)\s]+)\)/', '<img src="$2" alt="$1" loading="lazy" style="max-width:100%;height:auto">', $s);
+    $s = preg_replace_callback('/!\[([^\]]*)\]\(([^)\s]+)\)/', fn(array $m): string =>
+        '<img src="' . $m[2] . '" alt="' . $m[1] . '"' . md_img_dimensions($m[2])
+        . ' loading="lazy" style="max-width:100%;height:auto">', $s);
     // links
     $s = preg_replace('/\[([^\]]+)\]\(([^)\s]+)\)/', '<a href="$2">$1</a>', $s);
     // bold, then italic
@@ -75,7 +101,7 @@ function md_to_html(array $lines): string
             $src = htmlspecialchars($m[2], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
             $cap = md_inline($m[1]);
             $alt = htmlspecialchars($m[1], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-            $html .= '<figure class="post-figure"><img src="' . $src . '" alt="' . $alt . '" loading="lazy" style="max-width:100%;height:auto">'
+            $html .= '<figure class="post-figure"><img src="' . $src . '" alt="' . $alt . '"' . md_img_dimensions($m[2]) . ' loading="lazy" style="max-width:100%;height:auto">'
                    . ($m[1] !== '' ? '<figcaption style="font-size:.85em;color:var(--muted);margin-top:.4em">' . $cap . '</figcaption>' : '')
                    . "</figure>\n";
             continue;

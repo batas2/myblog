@@ -80,9 +80,25 @@ function schema_blog_posting(array $p, ?array $hero, string $url, string $publis
         'articleSection' => $p['tags'][0] ?? 'Software Architecture',
         'isPartOf' => ['@type' => 'Blog', '@id' => cfg('site_url') . '/blog/#blog', 'name' => 'Field Notes'],
     ];
+    // Hero first, then the diagrams drawn for this essay. They are original
+    // work and the only images on the page a search or answer engine could
+    // usefully surface, so leaving them out of the article's structured data
+    // was hiding the best assets the post has.
+    $images = [];
     if ($hero) {
-        $posting['image'] = ['@type' => 'ImageObject', 'url' => cfg('site_url') . $hero['src'], 'width' => $hero['w'], 'height' => $hero['h']];
+        $images[] = ['@type' => 'ImageObject', 'url' => cfg('site_url') . $hero['src'], 'width' => $hero['w'], 'height' => $hero['h']];
     }
+    foreach (post_body_images($p) as $fig) {
+        $images[] = array_filter([
+            '@type'   => 'ImageObject',
+            'url'     => cfg('site_url') . $fig['src'],
+            'width'   => $fig['w'],
+            'height'  => $fig['h'],
+            'caption' => $fig['caption'],
+        ], static fn($v): bool => $v !== null && $v !== '');
+    }
+    if ($images) $posting['image'] = count($images) === 1 ? $images[0] : $images;
+
     if ($p['medium']) {
         $posting['sameAs'] = $p['medium'];
     }

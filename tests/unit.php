@@ -113,6 +113,20 @@ t_eq(null, parse_post_file($mkpost('2020-01-05-fixture-noupdate.md'))['updated_t
 t_eq(null, parse_post_file($mkpost('2020-01-05-fixture-badupdate.md', '**Updated:** garbage'))['updated_ts'], 'unparsable Updated ignored');
 t_eq(null, parse_post_file($mkpost('2020-01-05-fixture-preupdate.md', '**Updated:** 2019-01-01'))['updated_ts'], 'Updated before publish ignored');
 
+// meta keys are table-driven: anything not in the table is prose, and a key
+// whose value does not fit its shape is prose too, not a silently wrong value
+$p = parse_post_file($mkpost('2020-01-05-fixture-unknownmeta.md', '**Footnote:** not a meta key'));
+t_contains('<strong>Footnote:</strong> not a meta key', $p['html'], 'an unrecognised **Key:** line stays in the body');
+$p = parse_post_file($mkpost('2020-01-05-fixture-badstatus.md', '**Status:** draft but with prose'));
+t_eq('published', $p['status'], 'a Status value that is not one word is not a status');
+t_contains('Status', $p['html'], 'and it stays visible in the body rather than vanishing');
+$p = parse_post_file($mkpost('2020-01-05-fixture-badmedium.md', '**Medium:** two words here'));
+t_eq(null, $p['medium'], 'a Medium value that is not a bare URL is not a link');
+$p = parse_post_file($mkpost('2020-01-05-fixture-statusok.md', '**Status:** published'));
+t_eq('published', $p['status'], 'a non-draft Status word leaves the post published');
+$p = parse_post_file($mkpost('2020-01-05-fixture-twice.md', "**Publish:** 2021-01-01 08:00\n**Publish:** 2099-01-01 08:00"));
+t_eq('scheduled', $p['status'], 'a repeated meta key takes the last value');
+
 // meta markers inside code fences are examples, not metadata
 $f = sys_get_temp_dir() . '/bf-unit-posts/2020-01-05-fixture-fenced.md';
 file_put_contents($f, "# Fenced\n\n*Sub.*\n\nHow to schedule:\n\n```\n**Status:** draft\n**Publish:** 2099-01-01 00:00\n```\n\nAfter the fence.\n\n**Tags:** One\n");
@@ -317,6 +331,74 @@ t_eq(null, $bySlug['mathematicians-vs-lawyers']['medium'], 'no medium link where
 t_not_contains('**Tags:**', $bySlug['data-driven-theater']['html'], 'tags line stripped from body');
 t_not_contains('**Medium:**', $bySlug['stop-calling-it-legacy-code']['html'], 'medium line stripped from body');
 t_not_contains($bySlug['data-driven-theater']['subtitle'], $bySlug['data-driven-theater']['html'], 'subtitle not duplicated into body');
+
+/* ---------------- figures: dimensions and schema ---------------- */
+// 13 diagrams across the corpus render into post bodies. Without intrinsic
+// dimensions each one reflows the article as it loads, which readers feel and
+// Core Web Vitals scores. Nothing covered this before.
+section('figures');
+$realImg = '/assets/img/posts/a-feature-is-not-a-service/identity.png';
+[$iw, $ih] = getimagesize(APP_ROOT . $realImg);
+
+$fig = md_to_html(["![A caption that stands alone.]({$realImg})"]);
+t_contains('<figure class="post-figure">', $fig, 'standalone image line becomes a figure');
+t_contains('width="' . $iw . '" height="' . $ih . '"', $fig, 'figure carries the intrinsic dimensions');
+t_contains('<figcaption', $fig, 'alt text is rendered as the visible caption');
+t_contains('alt="A caption that stands alone."', $fig, 'alt text preserved');
+t_contains('loading="lazy"', $fig, 'body figures stay lazy');
+
+t_contains('width="' . $iw . '"', md_inline("![x]({$realImg})"), 'inline images are measured too');
+t_not_contains('width=', md_to_html(['![x](/assets/img/posts/does-not-exist.png)']), 'a missing file yields no dimensions rather than zeros');
+t_not_contains('width=', md_to_html(['![x](https://example.com/remote.png)']), 'remote images are never probed from disk');
+t_not_contains('width=', md_to_html(['![x](//cdn.example.com/p.png)']), 'protocol-relative URLs are not treated as local paths');
+t_eq('', md_img_dimensions('/../config.php'), 'a non-image path yields nothing');
+
+$figPost = parse_post_file(post_source_file('a-feature-is-not-a-service'));
+$bodyImgs = post_body_images($figPost);
+t_eq(3, count($bodyImgs), 'body figures found in the markdown');
+t_assert($bodyImgs[0]['w'] > 0 && $bodyImgs[0]['h'] > 0, 'each body figure is measured');
+t_assert($bodyImgs[0]['caption'] !== '', 'each body figure carries its caption');
+t_eq([], post_body_images(['md' => 'no images here at all']), 'a post without figures yields none');
+t_eq([], post_body_images(['md' => 'inline ![x](/a.png) mid-sentence']), 'only standalone image lines count as figures');
+
+$figSchema = schema_blog_posting($figPost, hero_meta('a-feature-is-not-a-service'), post_url('a-feature-is-not-a-service'), $figPost['publish_iso']);
+t_assert(isset($figSchema['image'][0]), 'schema image is a list when the post has diagrams');
+t_eq(4, count($figSchema['image']), 'hero plus three diagrams are all published to structured data');
+t_contains('a-feature-is-not-a-service.jpg', $figSchema['image'][0]['url'], 'hero leads the image list');
+t_assert(!empty($figSchema['image'][1]['caption']), 'diagram captions reach the schema');
+$noFig = schema_blog_posting(parse_post_file(post_source_file('nobody-owns-the-sum')), hero_meta('nobody-owns-the-sum'), post_url('nobody-owns-the-sum'), '2025-12-22T09:00:00+01:00');
+t_assert(isset($noFig['image']['@type']), 'a post with only a hero keeps a single image object');
+
+/* ---------------- gates that fail silently ---------------- */
+section('publication gate');
+// post_is_public decides whether comments.php will accept a comment at all.
+// A regression here opens drafts and scheduled essays to the public.
+t_assert(post_is_public('mathematicians-vs-lawyers'), 'a published post is public');
+t_assert(!post_is_public('the-bottleneck-moved'), 'a scheduled post is not public');
+t_assert(!post_is_public('no-such-post-anywhere'), 'an unknown slug is not public');
+t_assert(!post_is_public('../../config'), 'a traversal attempt is not public');
+t_assert(!post_is_public(''), 'an empty slug is not public');
+
+section('analytics column guard');
+// an_check_col is the only thing standing between a query parameter and an
+// interpolated SQL identifier in an_breakdown.
+foreach (['country', 'browser', 'os', 'device', 'lang', 'screen', 'tz', 'ref', 'path', 'utm_source'] as $col) {
+    $ok = true;
+    try { an_check_col($col); } catch (Throwable) { $ok = false; }
+    t_assert($ok, "known dimension accepted: {$col}");
+}
+foreach (['duration', 'visitor; DROP TABLE hits', '1=1', '', 'DAY', 'ref--'] as $bad) {
+    $threw = false;
+    try { an_check_col($bad); } catch (InvalidArgumentException) { $threw = true; }
+    t_assert($threw, 'rejected: ' . ($bad === '' ? '(empty)' : $bad));
+}
+
+$whereArgs = [];
+t_eq('day >= ?', an_where('2026-01-01', '', $whereArgs), 'bare period clause');
+t_eq(['2026-01-01'], $whereArgs, 'period bound as an argument, never interpolated');
+$whereArgs = [];
+t_eq('day >= ? AND day < ? AND path = ?', an_where('2026-01-01', '/blog/x/', $whereArgs, '2026-02-01'), 'period plus until plus path');
+t_eq(['2026-01-01', '2026-02-01', '/blog/x/'], $whereArgs, 'all three bound in clause order');
 
 /* ---------------- one slug, two source files ---------------- */
 // Rescheduling renames a post file. The deploy is additive, so the old name can
@@ -720,7 +802,10 @@ t_not_contains('class="d-flag"', $spEmpty, 'missing curated slugs skipped silent
 section('schema builders');
 $bp = schema_blog_posting($posts[0], hero_meta($posts[0]['slug']), post_url($posts[0]['slug']), $posts[0]['publish_iso']);
 t_eq('BlogPosting', $bp['@type'], 'blog posting type');
-t_assert(isset($bp['image']['width']), 'posting image has dimensions');
+// image is a single object for a hero-only post and a list once the post has
+// diagrams; either way the hero leads and carries its dimensions
+$bpHero = $bp['image'][0] ?? $bp['image'];
+t_assert(isset($bpHero['width'], $bpHero['height']), 'posting image has dimensions');
 t_eq($posts[0]['publish_iso'], $bp['datePublished'], 'posting datePublished = publish moment');
 t_eq($posts[0]['publish_iso'], $bp['dateModified'], 'dateModified falls back to the publish moment');
 t_contains('linkedin.com', implode(',', $bp['author']['sameAs']), 'article author entity carries sameAs');
