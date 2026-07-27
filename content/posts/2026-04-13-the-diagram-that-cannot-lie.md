@@ -54,4 +54,7 @@ So let me pass it on: how old is your "current state" diagram, and would you bet
 
 ---
 
+**Scores:** tension=8 originality=8 personal=8 contrarian=7 substance=8 punch=9 trend=6
+**Scored:** 2026-07-27 rubric=v1 model=claude-opus-5
+
 **Tags:** Software Architecture, Developer Tools, Docs as Code, Architecture Diagrams, Side Projects

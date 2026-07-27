@@ -64,4 +64,7 @@ Well. Enjoy the theater. You're the audience.
 
 ---
 
+**Scores:** tension=8 originality=6 personal=4 contrarian=8 substance=6 punch=8 trend=4
+**Scored:** 2026-07-27 rubric=v1 model=claude-opus-5
+
 **Tags:** Data-Driven Decision Making, Data Quality, Organizational Culture, Engineering Leadership, Software Architecture

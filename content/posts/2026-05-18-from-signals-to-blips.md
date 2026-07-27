@@ -57,4 +57,7 @@ Until then, one question. You've just seen my tool for driving change across sev
 
 ---
 
+**Scores:** tension=5 originality=7 personal=7 contrarian=5 substance=9 punch=7 trend=8
+**Scored:** 2026-07-27 rubric=v1 model=claude-opus-5
+
 **Tags:** Tech Radar, AI Transformation, Software Architecture, Engineering Leadership, Data-Driven Decision Making

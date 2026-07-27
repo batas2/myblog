@@ -56,4 +56,7 @@ Then the real question: what's the biggest number sitting invisible in your orga
 
 ---
 
+**Scores:** tension=8 originality=6 personal=4 contrarian=7 substance=8 punch=8 trend=3
+**Scored:** 2026-07-27 rubric=v1 model=claude-opus-5
+
 **Tags:** Software Architecture, Technical Debt, Prioritization, Engineering Leadership, Data-Driven Decision Making

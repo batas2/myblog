@@ -40,4 +40,7 @@ What is the "merge back to develop" of your team, the recurring chore everyone d
 
 ---
 
+**Scores:** tension=4 originality=5 personal=5 contrarian=2 substance=7 punch=6 trend=2
+**Scored:** 2026-07-27 rubric=v1 model=claude-opus-5
+
 **Tags:** Developer Tools, Automation, Engineering Practices, DevOps, Software Engineering

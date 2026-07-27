@@ -152,6 +152,143 @@ t_contains("```\n**Status:** draft\n```", $raw, 'fenced example preserved verbat
 t_eq('published', parse_post_file($ff)['status'], 'fenced file published');
 t_assert(!post_write_status($ff . '.missing', 'publish'), 'missing file rejected');
 
+/* ---------------- editorial scores (docs/SCORING-RUBRIC.md) ---------------- */
+section('scores: parsing');
+$full = 'tension=7 originality=6 personal=9 contrarian=5 substance=8 punch=4 trend=3';
+$sc = sc_parse_scores($full);
+t_eq(7, count($sc), 'all seven axes parsed');
+t_eq(array_keys(SC_AXES), array_keys($sc), 'axes come back in canonical order, not written order');
+t_eq($sc, sc_parse_scores('trend=3 punch=4 substance=8 contrarian=5 personal=9 originality=6 tension=7'), 'written order does not matter');
+t_assert(sc_complete($sc), 'full set is complete');
+t_eq(3, count(sc_parse_scores('tension=7 punch=4 trend=3')), 'partial set parses what is there');
+t_assert(!sc_complete(sc_parse_scores('tension=7')), 'partial set is not complete');
+t_eq([], sc_parse_scores('nonsense'), 'no pairs = empty');
+t_eq([], sc_parse_scores('tension=0 punch=11 trend=-4'), 'out-of-range values dropped, never clamped');
+t_eq(['tension' => 7], sc_parse_scores('tension=7 vibes=9 charisma=10'), 'unknown axes dropped');
+t_eq(['tension' => 7], sc_parse_scores('TENSION = 7'), 'case and spacing tolerated');
+
+$meta = sc_parse_scored('2026-07-27 rubric=v1 model=claude-opus-5');
+t_eq('2026-07-27', $meta['on'], 'scored date parsed');
+t_eq('v1', $meta['rubric'], 'rubric version parsed');
+t_eq('claude-opus-5', $meta['model'], 'model parsed');
+t_eq(['on' => '', 'rubric' => '', 'model' => ''], sc_parse_scored(''), 'empty Scored line yields empty parts');
+t_eq($full, sc_fmt_scores($sc), 'format round-trips the canonical line');
+
+section('scores: reach');
+t_eq(1.0, round(array_sum(array_column(SC_AXES, 'weight')), 10), 'axis weights sum to exactly 1.0');
+$flat = array_fill_keys(array_keys(SC_AXES), 7);
+t_eq(7.0, sc_reach($flat), 'all-sevens scores exactly 7.0 (weights normalised)');
+t_eq(1.0, sc_reach(array_fill_keys(array_keys(SC_AXES), 1)), 'floor of the scale is 1.0');
+t_eq(10.0, sc_reach(array_fill_keys(array_keys(SC_AXES), 10)), 'ceiling of the scale is 10.0');
+t_eq(null, sc_reach(sc_parse_scores('tension=7')), 'incomplete set has no reach score');
+t_eq(6.4, sc_reach($sc), 'weighted composite of a mixed set');
+t_eq('strong', sc_band(7.5), 'band boundary: 7.5 is strong');
+t_eq('solid', sc_band(7.4), 'band boundary: 7.4 is solid');
+t_eq('solid', sc_band(6.0), 'band boundary: 6.0 is solid');
+t_eq('weak', sc_band(5.9), 'band boundary: 5.9 is weak');
+t_eq('weak', sc_band(4.5), 'band boundary: 4.5 is weak');
+t_eq('floor', sc_band(4.4), 'band boundary: 4.4 is the floor');
+t_eq('none', sc_band(null), 'unscored posts have no band');
+
+section('scores: in the post source');
+$sf = $mkpost('2020-01-05-fixture-scored.md', "**Scores:** {$full}\n**Scored:** 2026-07-27 rubric=v1 model=test-model");
+$p = parse_post_file($sf);
+t_eq(7, count($p['scores']), 'scores parsed off the post');
+t_eq(6.4, sc_reach($p['scores']), 'reach computed from the post');
+t_eq('test-model', $p['scored']['model'], 'scoring model recorded on the post');
+t_not_contains('Scores', $p['html'], 'scores line stripped from the rendered body');
+t_not_contains('Scored', $p['html'], 'scored line stripped from the rendered body');
+t_eq([], parse_post_file($mkpost('2020-01-05-fixture-unscored.md'))['scores'], 'unscored post has an empty score set');
+
+// a scores line inside a fence is documentation, not metadata
+$sfence = sys_get_temp_dir() . '/bf-unit-posts/2020-01-05-fixture-scorefence.md';
+file_put_contents($sfence, "# S\n\n*Sub.*\n\nHow to score:\n\n```\n**Scores:** tension=1 originality=1 personal=1 contrarian=1 substance=1 punch=1 trend=1\n```\n\n**Tags:** One\n");
+t_eq([], parse_post_file($sfence)['scores'], 'fenced Scores example is not metadata');
+
+section('scores: writer');
+$swf = $mkpost('2026-01-05-fixture-scorewrite.md');
+t_assert(sc_write_meta($swf, $sc, 'test-model', '2026-07-27'), 'score write ok');
+$p = parse_post_file($swf);
+t_eq(6.4, sc_reach($p['scores']), 'written scores parse back identically');
+t_eq('v1', $p['scored']['rubric'], 'writer stamps the current rubric version');
+t_contains('Fixture subtitle line.', (string) file_get_contents($swf), 'body untouched by score write');
+// the file is rewritten before every publish: repeated writes must not drift
+$after1 = (string) file_get_contents($swf);
+t_assert(sc_write_meta($swf, $sc, 'test-model', '2026-07-27'), 'second identical write ok');
+t_eq($after1, (string) file_get_contents($swf), 'rewriting identical scores is byte-for-byte idempotent');
+t_assert(sc_write_meta($swf, array_fill_keys(array_keys(SC_AXES), 2), 'test-model', '2026-07-27'), 'rescore ok');
+$raw = (string) file_get_contents($swf);
+t_eq(1, substr_count($raw, '**Scores:**'), 'rescoring keeps exactly one Scores line');
+t_eq(1, substr_count($raw, '**Scored:**'), 'rescoring keeps exactly one Scored line');
+t_eq(2.0, sc_reach(parse_post_file($swf)['scores']), 'rescored values win');
+t_assert(!sc_write_meta($swf, sc_parse_scores('tension=7'), 'test-model'), 'incomplete set refused: half-scored looks measured');
+t_assert(!sc_write_meta($swf, $sc, 'test-model', 'yesterday'), 'bad scoring date refused');
+t_eq(2.0, sc_reach(parse_post_file($swf)['scores']), 'refused writes change nothing');
+// status writes and score writes share post_meta_write and must not disturb each other
+t_assert(post_write_status($swf, 'draft'), 'status write on a scored file ok');
+$p = parse_post_file($swf);
+t_eq('draft', $p['status'], 'status applied');
+t_eq(2.0, sc_reach($p['scores']), 'scores survive a status write');
+
+section('scores: correlation');
+t_eq(1.0, sc_spearman([1, 2, 3, 4], [10, 20, 30, 40]), 'perfectly concordant series = +1');
+t_eq(-1.0, sc_spearman([1, 2, 3, 4], [40, 30, 20, 10]), 'perfectly discordant series = -1');
+t_eq(1.0, sc_spearman([1, 2, 3, 4], [1, 4, 9, 16]), 'rank-based: monotonic but non-linear still +1');
+t_eq(null, sc_spearman([5, 5, 5, 5], [1, 2, 3, 4]), 'a flat series correlates with nothing');
+t_eq(null, sc_spearman([1, 2], [1, 2]), 'fewer than three pairs is not a correlation');
+t_eq(null, sc_spearman([1, 2, 3], [1, 2]), 'mismatched lengths rejected');
+t_eq([1.5, 1.5, 3.0], sc_ranks([4, 4, 9]), 'ties share their average rank');
+// one runaway post must not decide the whole correlation — the reason this is rank-based
+t_assert(sc_spearman([1, 2, 3, 4, 5], [1, 2, 3, 4, 500]) === 1.0, 'an outlier cannot inflate a rank correlation');
+
+section('scores: analytics join');
+$rows = [
+    ['slug' => 'a', 'scores' => array_fill_keys(array_keys(SC_AXES), 9)],
+    ['slug' => 'b', 'scores' => array_fill_keys(array_keys(SC_AXES), 5)],
+    ['slug' => 'c', 'scores' => array_fill_keys(array_keys(SC_AXES), 2)],
+    ['slug' => 'd', 'scores' => []],
+];
+$merged = sc_merge_analytics($rows, [
+    ['path' => '/blog/a/', 'pv' => 300, 'uv' => 200, 'avg_time' => 180.4],
+    ['path' => '/blog/b/', 'pv' => 100, 'uv' => 80, 'avg_time' => 90.0],
+    ['path' => '/blog/c/', 'pv' => 10, 'uv' => 9, 'avg_time' => 20.0],
+]);
+t_eq(4, count($merged), 'every post survives the join');
+t_eq(300, $merged[0]['pv'], 'traffic attached by post path');
+t_eq(180, $merged[0]['avg_time'], 'average engaged time rounded to whole seconds');
+t_eq(0, $merged[3]['pv'], 'a post with no recorded traffic joins as zero, not as missing');
+t_eq('strong', $merged[0]['band'], 'band attached on the joined row');
+t_eq('none', $merged[3]['band'], 'unscored row carries no band');
+
+$corr = sc_correlations($merged);
+t_eq(3, $corr['n'], 'only scored posts with traffic enter the correlation');
+t_eq(1.0, $corr['axes']['tension']['pv'], 'higher-scored posts read more in this fixture');
+t_eq(1.0, $corr['reach']['pv'], 'reach score correlates with pageviews in this fixture');
+t_eq(0, sc_correlations([['slug' => 'x', 'scores' => [], 'reach' => null, 'pv' => 0, 'avg_time' => 0]])['n'], 'nothing to correlate = n of zero');
+
+section('scores: mirror db');
+$scTmp = sys_get_temp_dir() . '/bf-unit-scores.db';
+@unlink($scTmp);
+$sdb = sc_db($scTmp);
+$posts = [
+    ['slug' => 'scored-one', 'title' => 'One', 'status' => 'published', 'publish_ts' => 1700000000, 'words' => 900,
+     'scores' => $sc, 'scored' => ['on' => '2026-07-27', 'rubric' => 'v1', 'model' => 'test-model']],
+    ['slug' => 'unscored-one', 'title' => 'Two', 'status' => 'draft', 'publish_ts' => 1700000001, 'words' => 100,
+     'scores' => [], 'scored' => ['on' => '', 'rubric' => '', 'model' => '']],
+];
+t_eq(2, sc_sync($sdb, $posts), 'both posts mirrored');
+$row = $sdb->query("SELECT * FROM scores WHERE slug = 'scored-one'")->fetch(PDO::FETCH_ASSOC);
+t_eq(7, (int) $row['tension'], 'axis stored per column');
+t_eq(6.4, round((float) $row['reach'], 1), 'reach stored alongside the axes');
+t_eq('v1', $row['rubric'], 'rubric version stored for comparability checks');
+$row2 = $sdb->query("SELECT * FROM scores WHERE slug = 'unscored-one'")->fetch(PDO::FETCH_ASSOC);
+t_eq(null, $row2['reach'], 'unscored post stores a null reach, not a zero');
+// the mirror is a cache: a re-sync must not leave a removed post behind as still-scored
+t_eq(1, sc_sync($sdb, [$posts[0]]), 're-sync with one post');
+t_eq(1, (int) $sdb->query('SELECT COUNT(*) FROM scores')->fetchColumn(), 'removed post swept from the mirror');
+$sdb = null;
+@unlink($scTmp); @unlink($scTmp . '-wal'); @unlink($scTmp . '-shm');
+
 /* ---------------- load_posts against real content ---------------- */
 section('load_posts');
 $all = load_posts(true);

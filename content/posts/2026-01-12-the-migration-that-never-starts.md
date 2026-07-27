@@ -52,4 +52,7 @@ Maybe don't refresh it this quarter. Maybe pick the smallest reversible step it 
 
 ---
 
+**Scores:** tension=8 originality=7 personal=6 contrarian=7 substance=8 punch=8 trend=4
+**Scored:** 2026-07-27 rubric=v1 model=claude-opus-5
+
 **Tags:** Software Architecture, Decision Making, Legacy Systems, Engineering Leadership, Organizational Culture

@@ -66,4 +66,7 @@ What's the oldest undecided decision in your organization right now? And does it
 
 ---
 
+**Scores:** tension=6 originality=6 personal=7 contrarian=6 substance=7 punch=8 trend=3
+**Scored:** 2026-07-27 rubric=v1 model=claude-opus-5
+
 **Tags:** Decision Making, Software Architecture, Governance, Corporate Culture, Engineering Leadership

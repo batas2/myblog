@@ -20,6 +20,16 @@ form, and first-party analytics.
 - **Admin control room** — `/admin.php` (password-protected, sessions + CSRF): the
   publishing pipeline with countdowns, one-click "rebuild now", comment moderation,
   analytics overview, system health.
+- **Editorial scoring** — every post carries seven 1–10 scores in its own markdown
+  (`**Scores:**` / `**Scored:**`): tension, originality, personal stake,
+  contrarianism, substance, punch, and trend fit. The rubric
+  ([docs/SCORING-RUBRIC.md](docs/SCORING-RUBRIC.md)) has anchored band descriptors and
+  requires an evidence quote per score, because bare 1–10 scales drift between runs.
+  A weighted reach score gates publishing; the build mirrors everything into
+  `content/scores.db`, and the admin Scores tab puts each axis next to the pageviews
+  and engaged time the post actually earned, with a per-axis rank correlation. The
+  weights start as a research-backed prior and are meant to be re-fitted against that
+  measured traffic.
 - **Optional Cloudflare Turnstile** — one config block arms the widget on the
   contact form, comments, and newsletter (server-side siteverify, fails closed);
   without keys every form falls back to the built-in dependency-free defenses.
@@ -61,10 +71,13 @@ form, and first-party analytics.
 │                        analytics, geoip, admin core
 ├── tools/               build.php (generator), geoip_update.php (country db),
 │                        fetch_images.sh (CC image fetcher)
-├── docs/                strategy: improvement plan, action plan, topic engine, post prompt
+├── docs/                strategy: improvement plan, action plan, topic engine,
+│                        post prompt, scoring rubric
 ├── drafts/              working area: unpublished drafts, diagrams, review docs (never deployed)
 ├── content/posts/       markdown sources: YYYY-MM-DD-slug.md
 ├── content/comments/    runtime comment JSON (gitignored)
+├── content/score-notes.json  per-axis evidence quotes behind each score
+├── content/scores.db    mirror of the post scores (gitignored; rebuilt by build.php)
 ├── content/geoip.dat    compiled IP→country db (gitignored; tools/geoip_update.php)
 ├── assets/              css + post images (+ credits.json with licenses)
 ├── blog/                generated output (gitignored)
@@ -97,11 +110,18 @@ Body in markdown (h2, lists, quotes, code fences, links)…
 
 **Medium:** https://medium.com/... (optional cross-post link)
 
+**Scores:** tension=7 originality=6 personal=9 contrarian=5 substance=8 punch=4 trend=3
+**Scored:** 2026-07-27 rubric=v1 model=claude-opus-5
+
 **Tags:** Tag One, Tag Two, Tag Three, Tag Four, Tag Five
 ```
 
 Optionally drop a hero image at `assets/img/posts/my-slug.jpg` (the build picks it up,
 generates dimensions and uses the `.thumb.jpg` variant in lists), then `php tools/build.php`.
+
+Score the draft against [docs/SCORING-RUBRIC.md](docs/SCORING-RUBRIC.md) before publishing.
+The meta lines are stripped from the rendered page, the feed, and the markdown mirrors, so
+the scores stay private to `/admin.php`. The build prints any published post that has none.
 
 ## Drafts, scheduling, publishing
 

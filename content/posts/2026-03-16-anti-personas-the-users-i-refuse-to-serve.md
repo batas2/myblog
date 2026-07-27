@@ -48,4 +48,7 @@ So, two questions to leave you with. Does your product have anti-personas? And i
 
 ---
 
+**Scores:** tension=6 originality=6 personal=8 contrarian=6 substance=7 punch=8 trend=2
+**Scored:** 2026-07-27 rubric=v1 model=claude-opus-5
+
 **Tags:** Product Strategy, Software Architecture, Side Projects, Product Management, Minimalism

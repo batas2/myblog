@@ -1,0 +1,52 @@
+<mxfile host="app.diagrams.net" agent="bfrackowiak.pl diagram-gen" version="24.7.17">
+  <diagram name="the-mandate-window" id="the-mandate-window">
+    <mxGraphModel dx="880" dy="245" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="880" pageHeight="245" background="none" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="c1" value="push fails&lt;br&gt;&lt;br&gt;nothing is adoptable yet" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#767884;fontColor=#767884;fontSize=13;fontFamily=Inter;strokeWidth=1.6;dashed=1;dashPattern=5 4;" vertex="1" parent="1">
+          <mxGeometry x="60" y="56" width="230" height="88" as="geometry"/>
+        </mxCell>
+        <mxCell id="c2" value="the mandate window&lt;br&gt;&lt;br&gt;good enough to adopt,&lt;br&gt;not yet obviously worth it" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#6366E8;fontColor=#6366E8;fontSize=13;fontFamily=Inter;strokeWidth=1.6;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="310" y="56" width="270" height="88" as="geometry"/>
+        </mxCell>
+        <mxCell id="c3" value="push is unnecessary&lt;br&gt;&lt;br&gt;pull already did it" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#767884;fontColor=#767884;fontSize=13;fontFamily=Inter;strokeWidth=1.6;dashed=1;dashPattern=5 4;" vertex="1" parent="1">
+          <mxGeometry x="600" y="56" width="220" height="88" as="geometry"/>
+        </mxCell>
+        <mxCell id="c4" style="endArrow=block;endFill=1;html=1;strokeColor=#767884;strokeWidth=1.6;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="60" y="170" as="sourcePoint"/>
+            <mxPoint x="830" y="170" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c5" style="endArrow=none;endFill=1;html=1;strokeColor=#767884;strokeWidth=1.6;dashed=1;dashPattern=5 4;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="300" y="146" as="sourcePoint"/>
+            <mxPoint x="300" y="166" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c6" style="endArrow=none;endFill=1;html=1;strokeColor=#767884;strokeWidth=1.6;dashed=1;dashPattern=5 4;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="590" y="146" as="sourcePoint"/>
+            <mxPoint x="590" y="166" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c7" value="genesis" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontColor=#767884;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="125" y="181" width="60" height="23" as="geometry"/>
+        </mxCell>
+        <mxCell id="c8" value="custom built" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontColor=#767884;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="305" y="181" width="81" height="23" as="geometry"/>
+        </mxCell>
+        <mxCell id="c9" value="product" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontColor=#767884;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="505" y="181" width="60" height="23" as="geometry"/>
+        </mxCell>
+        <mxCell id="c10" value="commodity" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontColor=#767884;fontSize=12;fontFamily=Inter;" vertex="1" parent="1">
+          <mxGeometry x="695" y="181" width="60" height="23" as="geometry"/>
+        </mxCell>
+        <mxCell id="c11" value="evolution" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontColor=#767884;fontSize=12;fontFamily=Inter;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="415" y="209" width="60" height="23" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

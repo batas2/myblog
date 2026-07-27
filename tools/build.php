@@ -124,6 +124,25 @@ build_write(APP_ROOT . '/sitemap.xml', render_sitemap($posts));
 echo "built {$n} posts + " . count($tags) . " tag pages → blog/, index, _latest partial, feed.xml, sitemap.xml\n";
 if ($removed) echo 'removed stale pages: ' . implode(', ', $removed) . "\n";
 
+// mirror the editorial scores into content/scores.db for the admin panel
+// (docs/SCORING-RUBRIC.md). Best effort: an unwritable mirror is a reporting
+// problem, never a reason to fail a site build that already produced pages.
+try {
+    echo 'scores: mirrored ' . sc_sync(sc_db(), $all) . " posts → content/scores.db\n";
+} catch (Throwable $e) {
+    fwrite(STDERR, 'warning: could not sync content/scores.db: ' . $e->getMessage() . "\n");
+}
+
+// the publish gate: a published post with no scores was never judged
+$unscored = array_column(array_filter($posts, fn(array $p): bool => !sc_complete($p['scores'])), 'slug');
+if ($unscored) echo 'UNSCORED published posts: ' . implode(', ', $unscored) . "\n";
+
+// mixed rubric versions make the numbers incomparable — see the rubric's calibration rules
+$rubrics = array_unique(array_filter(array_column(array_column($all, 'scored'), 'rubric')));
+if (count($rubrics) > 1) {
+    fwrite(STDERR, 'warning: mixed rubric versions in the corpus (' . implode(', ', $rubrics) . ") — re-score to one version before comparing\n");
+}
+
 // publishing queue — what is waiting, and when it goes live (server cron rebuilds pick it up)
 foreach ($all as $p) {
     if ($p['status'] === 'scheduled') {

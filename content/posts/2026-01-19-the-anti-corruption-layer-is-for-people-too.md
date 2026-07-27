@@ -46,4 +46,7 @@ Which word in your domain has a foreign accent? And do you remember deciding to 
 
 ---
 
+**Scores:** tension=6 originality=7 personal=4 contrarian=7 substance=8 punch=7 trend=3
+**Scored:** 2026-07-27 rubric=v1 model=claude-opus-5
+
 **Tags:** Domain-Driven Design, Software Architecture, Team Communication, Organizational Culture, Software Engineering

@@ -54,4 +54,7 @@ If the room goes quiet somewhere between "unlimited" and the asterisk: congratul
 
 ---
 
+**Scores:** tension=7 originality=8 personal=9 contrarian=6 substance=9 punch=8 trend=3
+**Scored:** 2026-07-27 rubric=v1 model=claude-opus-5
+
 **Tags:** SaaS, Software Architecture, Pricing Strategy, Multi-Tenancy, Product Management

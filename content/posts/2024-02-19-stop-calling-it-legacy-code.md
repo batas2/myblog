@@ -50,4 +50,7 @@ Now, I just wonder: if we stop tracking Technical Debt, how long will it take fo
 
 **Medium:** https://medium.com/@bfrackowiak/stop-calling-it-legacy-code-02308db28cb2
 
+**Scores:** tension=8 originality=7 personal=3 contrarian=7 substance=5 punch=7 trend=8
+**Scored:** 2026-07-27 rubric=v1 model=claude-opus-5
+
 **Tags:** Legacy Systems, Artificial Intelligence, Software Architecture, Knowledge Management, Software Development

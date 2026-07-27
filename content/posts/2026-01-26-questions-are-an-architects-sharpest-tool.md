@@ -50,4 +50,7 @@ And a question to leave you with, naturally. What's the best question anyone eve
 
 ---
 
+**Scores:** tension=5 originality=6 personal=7 contrarian=6 substance=8 punch=8 trend=2
+**Scored:** 2026-07-27 rubric=v1 model=claude-opus-5
+
 **Tags:** Software Architecture, Solution Design, Critical Thinking, Engineering Leadership, Communication

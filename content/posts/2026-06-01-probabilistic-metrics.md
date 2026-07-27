@@ -55,4 +55,7 @@ Because that is the actual offer on the table now. The classic excuse for not me
 
 ---
 
+**Scores:** tension=7 originality=8 personal=6 contrarian=8 substance=9 punch=8 trend=8
+**Scored:** 2026-07-27 rubric=v1 model=claude-opus-5
+
 **Tags:** Metrics, Artificial Intelligence, Data-Driven Decision Making, AI Transformation, Engineering Leadership

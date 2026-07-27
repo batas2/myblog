@@ -50,4 +50,7 @@ So, a question for your next architecture review: which of your internal APIs wo
 
 ---
 
+**Scores:** tension=6 originality=8 personal=8 contrarian=7 substance=8 punch=8 trend=3
+**Scored:** 2026-07-27 rubric=v1 model=claude-opus-5
+
 **Tags:** Software Architecture, Government Technology, Domain-Driven Design, Legacy Systems, E-Invoicing

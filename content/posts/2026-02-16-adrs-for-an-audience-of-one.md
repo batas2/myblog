@@ -55,4 +55,7 @@ And what exactly is your plan for the day they hand in their notice?
 
 ---
 
+**Scores:** tension=5 originality=6 personal=9 contrarian=5 substance=8 punch=8 trend=6
+**Scored:** 2026-07-27 rubric=v1 model=claude-opus-5
+
 **Tags:** Architecture Decision Records, Software Architecture, Side Projects, Engineering Practices, Documentation

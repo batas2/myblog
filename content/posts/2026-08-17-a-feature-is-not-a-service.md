@@ -56,4 +56,7 @@ If it cannot answer yes three times, it was never a service. It was a table wear
 
 ---
 
+**Scores:** tension=6 originality=5 personal=8 contrarian=5 substance=8 punch=8 trend=3
+**Scored:** 2026-07-27 rubric=v1 model=claude-opus-5
+
 **Tags:** Software Architecture, Domain-Driven Design, Decision Making, Systems Thinking, API Security

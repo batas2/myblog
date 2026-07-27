@@ -52,4 +52,7 @@ If you have to think back more than a few years, that repo full of graph algorit
 
 ---
 
+**Scores:** tension=8 originality=6 personal=9 contrarian=8 substance=6 punch=8 trend=2
+**Scored:** 2026-07-27 rubric=v1 model=claude-opus-5
+
 **Tags:** Technical Interviews, Career Development, Engineering Leadership, Personal Growth, Software Engineering

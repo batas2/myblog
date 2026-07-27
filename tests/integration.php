@@ -17,6 +17,9 @@
 declare(strict_types=1);
 
 require __DIR__ . '/bootstrap.php';
+// constants only (no config, no side effects) — the scores assertions below
+// check the page against the same axis list and rubric version the site ships
+require_once dirname(__DIR__) . '/lib/scores.php';
 
 $ROOT = dirname(__DIR__);
 $SANDBOX = sys_get_temp_dir() . '/bfrackowiak-test-' . getmypid();
@@ -44,7 +47,8 @@ function sbx_php(string $code): string
 section('sandbox build');
 exec('rsync -a --exclude=_remote-backup/ --exclude=_archive/ --exclude=docs/ --exclude=tests/ '
    . '--exclude=.claude/ --exclude=.git/ --exclude=content/comments/ --exclude=content/analytics.db '
-   . '--exclude=content/analytics.seed --exclude=content/geoip.dat --exclude=content/newsletter.db --exclude=content/newsletter.db-* --exclude=blog/ '
+   . '--exclude=content/analytics.seed --exclude=content/geoip.dat --exclude=content/newsletter.db --exclude=content/newsletter.db-* '
+   . '--exclude=content/scores.db --exclude=content/scores.db-* --exclude=blog/ '
    . escapeshellarg($ROOT . '/') . ' ' . escapeshellarg($SANDBOX . '/'), $o, $rc);
 t_eq(0, $rc, 'sandbox copied');
 mkdir($SANDBOX . '/content/comments', 0755, true);
@@ -492,6 +496,23 @@ t_contains('tester@example.com', $body, 'comment listed for moderation (full ema
 t_contains('Acquisition', $body, 'analytics tabs folded into the admin page');
 t_contains('Recent visits', $body, 'activity pane rendered inline');
 t_contains('Rebuild site', $body, 'admin actions present for the full session');
+
+// editorial scores pane (docs/SCORING-RUBRIC.md): the fixtures are unscored on
+// purpose, so this also covers the unscored path end to end
+t_contains('Editorial scores', $body, 'scores pane rendered');
+t_contains('rubric ' . SC_RUBRIC, $body, 'rubric version shown so mixed-version scores are visible');
+t_contains('Avg reach score', $body, 'reach summary card present');
+t_contains('carry no scores', $body, 'unscored fixtures are flagged, not silently skipped');
+t_contains('Which axis actually gets read?', $body, 'score-vs-traffic correlation section present');
+foreach (SC_AXES as $axKey => $ax) {
+    t_contains('sort=' . $axKey, $body, "scores table sortable by {$axKey}");
+}
+[, $bodySorted] = $asAdmin('GET', "$BASE/admin.php?sort=pv");
+t_eq(200, $code, 'scores table accepts a sort parameter');
+t_contains('Editorial scores', $bodySorted, 'sorted view still renders');
+[, $bodyBadSort] = $asAdmin('GET', "$BASE/admin.php?sort=" . rawurlencode("'; DROP TABLE hits;--"));
+t_contains('Editorial scores', $bodyBadSort, 'unknown sort key falls back instead of breaking the page');
+
 preg_match('/name="csrf" value="([^"]+)"/', $body, $m);
 $csrf = $m[1] ?? '';
 t_assert($csrf !== '', 'csrf token in dashboard forms');

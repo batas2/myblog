@@ -46,4 +46,7 @@ So here is my closing challenge. Imagine writing your practice's `prompt.md` tom
 
 ---
 
+**Scores:** tension=7 originality=6 personal=8 contrarian=6 substance=8 punch=8 trend=9
+**Scored:** 2026-07-27 rubric=v1 model=claude-opus-5
+
 **Tags:** AI Transformation, Software Architecture, Prompt Engineering, Knowledge Management, Engineering Leadership

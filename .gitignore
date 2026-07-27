@@ -15,6 +15,9 @@ content/analytics.db-*
 content/analytics.seed
 content/newsletter.db
 content/newsletter.db-*
+# generated mirror of the scores held in content/posts/*.md (tools/build.php)
+content/scores.db
+content/scores.db-*
 content/.ratelimit/
 content/comments/*.json
 
@@ -33,8 +36,12 @@ content/newsletter.lock
 content/.sessions/
 content/.buildlock
 
-# never publish: unpublished essays and working drafts
-drafts/
+# never publish: unpublished essays and working drafts.
+# Exception: drafts/diagrams/ holds the .drawio sources behind the PNGs in
+# assets/img/posts/ — an export you cannot edit is a dead end, so the sources
+# are versioned. deploy.sh still excludes drafts/ entirely, so nothing is served.
+drafts/*
+!drafts/diagrams/
 
 # deployment target (per-machine, holds the SSH coordinates)
 deploy.env

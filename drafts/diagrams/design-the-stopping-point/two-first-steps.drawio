@@ -1,0 +1,34 @@
+<mxfile host="app.diagrams.net" agent="bfrackowiak.pl diagram-gen" version="24.7.17">
+  <diagram name="two-first-steps" id="two-first-steps">
+    <mxGraphModel dx="880" dy="220" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="880" pageHeight="220" background="none" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="c1" value="move one consumer&lt;br&gt;to the new contract" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#767884;fontColor=#767884;fontSize=13;fontFamily=Inter;strokeWidth=1.6;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="170" y="44" width="250" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="c2" value="one model, smaller scope,&lt;br&gt;nothing left to explain" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#6366E8;fontColor=#6366E8;fontSize=13;fontFamily=Inter;strokeWidth=1.6;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="490" y="44" width="370" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="c3" value="stand up the new store,&lt;br&gt;keep writing to both" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#767884;fontColor=#767884;fontSize=13;fontFamily=Inter;strokeWidth=1.6;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="170" y="140" width="250" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="c4" value="two half models and a shim&lt;br&gt;nobody owns" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#767884;fontColor=#767884;fontSize=13;fontFamily=Inter;strokeWidth=1.6;dashed=1;dashPattern=5 4;" vertex="1" parent="1">
+          <mxGeometry x="490" y="140" width="370" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="c5" value="" style="edgeStyle=none;rounded=0;html=1;strokeColor=#6366E8;fontColor=#6366E8;fontSize=12;fontFamily=Inter;strokeWidth=1.6;endArrow=block;endFill=1;" edge="1" parent="1" source="c1" target="c2">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="c6" value="" style="edgeStyle=none;rounded=0;html=1;strokeColor=#767884;fontColor=#767884;fontSize=12;fontFamily=Inter;strokeWidth=1.6;endArrow=block;endFill=1;dashed=1;dashPattern=5 4;" edge="1" parent="1" source="c3" target="c4">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="c7" value="a place to stop" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontColor=#6366E8;fontSize=13;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="60" width="109" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="c8" value="not a place to stop" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontColor=#767884;fontSize=13;fontFamily=Inter;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="156" width="138" height="24" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

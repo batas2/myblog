@@ -180,6 +180,39 @@ if ($isDash) {
     } catch (Throwable) { $an = null; }
 }
 
+/* ---------------- editorial scores (admin only) ---------------- */
+/* Assembled after the analytics block so the Scores tab honours the same date
+   range: the whole point of the view is scores standing next to what the page
+   actually did in that window. */
+
+$scoreRows = [];
+$scoreCorr = null;
+$scoreSort = (string) ($_GET['sort'] ?? 'reach');
+if ($isAdmin) {
+    $pages = [];
+    if (is_file(an_db_path())) {
+        // every post, not just the top 25 — an unread post is exactly the row we need
+        try { $pages = an_top_pages(an_db(), $since, 500); } catch (Throwable) { $pages = []; }
+    }
+    $scoreRows = sc_merge_analytics($pipeline, $pages);
+    $scoreCorr = sc_correlations($scoreRows);
+
+    // each column sorts in its own interesting direction: weakest scores first,
+    // biggest audiences first. Unscored posts sink to the bottom either way.
+    $key = match (true) {
+        $scoreSort === 'pv'          => fn(array $r) => -$r['pv'],
+        $scoreSort === 'time'        => fn(array $r) => -$r['avg_time'],
+        $scoreSort === 'date'        => fn(array $r) => -$r['publish_ts'],
+        $scoreSort === 'reach_desc'  => fn(array $r) => -($r['reach'] ?? -1),
+        isset(SC_AXES[$scoreSort])   => fn(array $r) => $r['scores'][$scoreSort] ?? 99,
+        default                      => fn(array $r) => $r['reach'] ?? 99,
+    };
+    usort($scoreRows, fn(array $a, array $b) => [$key($a), $b['publish_ts']] <=> [$key($b), $a['publish_ts']]);
+}
+$scoreNotes = $isAdmin ? sc_notes() : [];
+$scored = array_values(array_filter($scoreRows, fn(array $r): bool => $r['reach'] !== null));
+$avgReach = $scored ? round(array_sum(array_column($scored, 'reach')) / count($scored), 1) : null;
+
 /* ---------------- small view helpers ---------------- */
 
 /** dashboard link that keeps the current analytics filters (auth rides in the session) */
@@ -221,6 +254,30 @@ function s_table(string $title, array $rows, ?callable $fmt = null, string $unit
            . '</tr>';
     }
     echo '</table></div>';
+}
+
+/** Sortable column header for the scores table (keeps the analytics range). */
+function sc_th(string $key, string $label, string $current, string $daysRaw, string $cls = ''): string
+{
+    $on = $key === $current;
+    $href = 'admin.php?' . http_build_query(['days' => $daysRaw, 'sort' => $key]) . '#scores';
+    return '<th class="' . $cls . ($on ? ' sorted' : '') . '"><a href="' . e($href) . '">' . e($label) . '</a></th>';
+}
+
+/** One score cell: the number, shaded in proportion to it, with the rationale on hover. */
+function sc_cell(?int $v, string $note): string
+{
+    if ($v === null) return '<td class="sc dim">·</td>';
+    $title = $note !== '' ? ' title="' . e($note) . '"' : '';
+    return '<td class="sc" style="--w:' . ($v * 10) . '%"' . $title . '>' . $v . '</td>';
+}
+
+/** Spearman rho as a signed, coloured cell ('—' when there was nothing to correlate). */
+function sc_rho(?float $rho): string
+{
+    if ($rho === null) return '<td class="r n dim">—</td>';
+    $cls = abs($rho) < 0.2 ? 'flat' : ($rho > 0 ? 'up' : 'down');
+    return '<td class="r n"><span class="delta ' . $cls . '">' . ($rho > 0 ? '+' : '') . number_format($rho, 2) . '</span></td>';
 }
 
 /** ↑ 3 / ↓ 2 vs the previous 30 days — absolute, the list is small ('' when no history). */
@@ -331,6 +388,20 @@ td.n { font-variant-numeric: tabular-nums; }
 a.plink { text-decoration: none; }
 .warn { font-size: .85rem; color: #b45309; background: #b4530910; border: 1px solid #b4530940; border-radius: 10px; padding: .6rem .9rem; margin: .9rem 0; }
 td.email { font-family: 'JetBrains Mono', monospace; font-size: .78rem; overflow-wrap: anywhere; }
+/* editorial scores: seven 1–10 axes per post, shaded in place (docs/SCORING-RUBRIC.md) */
+td.sc { font-family: 'JetBrains Mono', monospace; font-size: .78rem; text-align: right; font-variant-numeric: tabular-nums;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 22%, transparent) var(--w), transparent var(--w)); }
+th.ax { font-size: .68rem; font-weight: 600; text-align: right; white-space: nowrap; }
+th.ax a, .scores-t th a { text-decoration: none; color: inherit; }
+th.sorted, th.sorted a { color: var(--ink); text-decoration: underline; }
+td.reach { font-family: 'JetBrains Mono', monospace; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+.b-strong { color: #0a7a45; border-color: #0a7a4540; background: #0a7a4512; }
+.b-solid  { color: var(--ink); }
+.b-weak   { color: #b45309; border-color: #b4530940; background: #b4530912; }
+.b-floor  { color: #b91c1c; border-color: #b91c1c40; background: #b91c1c12; }
+.b-none   { color: var(--muted); background: var(--surface); }
+tr.r-floor td:first-child { box-shadow: inset 3px 0 0 #b91c1c80; }
+.scores-t td.pathcell { max-width: 34ch; }
 </style>
 </head>
 <body>
@@ -394,6 +465,7 @@ td.email { font-family: 'JetBrains Mono', monospace; font-size: .78rem; overflow
   <nav class="tabs">
     <?php if ($isAdmin): ?>
     <a href="#pipeline" class="active">Pipeline</a>
+    <a href="#scores">Scores</a>
     <a href="#newsletter">Newsletter</a>
     <a href="#comments">Comments</a>
     <span class="tsep"></span>
@@ -437,7 +509,7 @@ td.email { font-family: 'JetBrains Mono', monospace; font-size: .78rem; overflow
   <?php if ($flash !== ''): ?><pre class="buildout"><?= e($flash) ?></pre><?php endif; ?>
 
   <table>
-    <tr><th>Status</th><th>Goes live</th><th>Post</th><th class="r">Read</th><th class="r">Comments</th><th>Change status</th></tr>
+    <tr><th>Status</th><th>Goes live</th><th>Post</th><th class="r">Reach</th><th class="r">Read</th><th class="r">Comments</th><th>Change status</th></tr>
     <?php foreach ($pipeline as $p): ?>
     <tr class="r-<?= e($p['status']) ?>">
       <td><span class="badge b-<?= e($p['status']) ?>"><?= e($p['status']) ?></span></td>
@@ -455,6 +527,8 @@ td.email { font-family: 'JetBrains Mono', monospace; font-size: .78rem; overflow
         </span>
         <span class="post-sub"><?= e($p['subtitle']) ?></span>
       </td>
+      <?php $r = sc_reach($p['scores']); ?>
+      <td class="r"><a class="plink badge b-<?= e(sc_band($r)) ?>" href="#scores" title="editorial reach score, rubric <?= e(SC_RUBRIC) ?>"><?= $r !== null ? number_format($r, 1) : 'unscored' ?></a></td>
       <td class="r n"><?= $p['minutes'] ?> min</td>
       <td class="r n"><?= $p['comments'] ?: '·' ?></td>
       <td>
@@ -494,6 +568,95 @@ td.email { font-family: 'JetBrains Mono', monospace; font-size: .78rem; overflow
     the buttons rewrite the source file and rebuild, so a change here is immediately real.
     On the server, remember the next deploy re-syncs <code>content/posts/</code> from your machine: mirror any status change locally before deploying.</p>
   </div><!-- /pipeline -->
+
+  <div class="pane wide scores-t" id="scores">
+  <?php
+    $unscored = count($scoreRows) - count($scored);
+    $floors = array_values(array_filter($scored, fn(array $r): bool => $r['band'] === 'floor'));
+    $rubrics = array_unique(array_filter(array_column(array_column($scoreRows, 'scored'), 'rubric')));
+  ?>
+  <h2>Editorial scores <span class="cnt">rubric <?= e(SC_RUBRIC) ?> · <?= count($scored) ?>/<?= count($scoreRows) ?> scored</span></h2>
+
+  <div class="cards">
+    <div class="scard"><b><?= $avgReach !== null ? number_format($avgReach, 1) : '—' ?></b><span>Avg reach score</span></div>
+    <div class="scard"><b><?= count($floors) ?></b><span>Below the floor (&lt; 4.5)</span></div>
+    <div class="scard"><b><?= $unscored ?></b><span>Unscored</span></div>
+    <?php foreach (['tension', 'originality', 'personal'] as $ax): ?>
+      <?php $vals = array_column(array_column($scored, 'scores'), $ax); ?>
+      <div class="scard"><b><?= $vals ? number_format(array_sum($vals) / count($vals), 1) : '—' ?></b><span>Avg <?= e(SC_AXES[$ax]['label']) ?></span></div>
+    <?php endforeach; ?>
+  </div>
+
+  <?php if (count($rubrics) > 1): ?>
+    <p class="warn">Mixed rubric versions in the corpus (<?= e(implode(', ', $rubrics)) ?>). Scores from different rubrics are not comparable. Re-score everything to one version.</p>
+  <?php endif; ?>
+  <?php if ($unscored > 0): ?>
+    <p class="warn"><?= $unscored ?> post<?= $unscored === 1 ? '' : 's' ?> carry no scores. Add a <code>**Scores:**</code> line to the markdown source and rebuild.</p>
+  <?php endif; ?>
+
+  <table>
+    <tr>
+      <?= sc_th('reach', 'Reach ↑', $scoreSort, $daysRaw, 'r') ?>
+      <?= sc_th('date', 'Post', $scoreSort, $daysRaw) ?>
+      <?php foreach (SC_AXES as $k => $ax): ?>
+        <?= sc_th($k, $ax['label'], $scoreSort, $daysRaw, 'ax') ?>
+      <?php endforeach; ?>
+      <?= sc_th('pv', 'Views', $scoreSort, $daysRaw, 'r') ?>
+      <?= sc_th('time', 'Avg time', $scoreSort, $daysRaw, 'r') ?>
+    </tr>
+    <?php foreach ($scoreRows as $r): ?>
+    <tr class="r-<?= e($r['band']) ?>">
+      <td class="reach"><span class="badge b-<?= e($r['band']) ?>"><?= $r['reach'] !== null ? number_format($r['reach'], 1) : '—' ?></span></td>
+      <td class="pathcell">
+        <span class="post-t"><?php if ($r['status'] === 'published'): ?><a href="<?= e(post_path($r['slug'])) ?>" target="_blank" rel="noopener"><?= e($r['title']) ?></a><?php else: ?><?= e($r['title']) ?><?php endif; ?></span>
+        <span class="post-sub"><?= e(date('Y-m-d', $r['publish_ts'])) ?> · <?= number_format($r['words']) ?> words<?= $r['status'] !== 'published' ? ' · ' . e($r['status']) : '' ?><?= $r['scored']['model'] !== '' ? ' · ' . e($r['scored']['model']) : '' ?></span>
+      </td>
+      <?php foreach (array_keys(SC_AXES) as $k): ?>
+        <?= sc_cell($r['scores'][$k] ?? null, (string) ($scoreNotes[$r['slug']][$k] ?? '')) ?>
+      <?php endforeach; ?>
+      <td class="r n"><?= $r['pv'] ? number_format($r['pv']) : '<span class="dim">0</span>' ?></td>
+      <td class="r n"><?= an_fmt_secs($r['avg_time']) ?></td>
+    </tr>
+    <?php endforeach; ?>
+    <?php if (!$scoreRows): ?><tr><td colspan="<?= 4 + count(SC_AXES) ?>" class="dim">no posts</td></tr><?php endif; ?>
+  </table>
+  <p class="note">Views and average time are for <?= e($rangeLabel) ?> (use the range selector above). Hover a score for its rationale.
+    Column headers sort; <a href="<?= e('admin.php?' . http_build_query(['days' => $daysRaw, 'sort' => 'reach_desc']) . '#scores') ?>">best first</a>.</p>
+
+  <h2>Which axis actually gets read? <span class="dim">— Spearman rank correlation, <?= (int) $scoreCorr['n'] ?> posts with traffic</span></h2>
+  <?php if ($scoreCorr['n'] < 3): ?>
+    <p class="dim" style="font-size:.86rem">Not enough scored posts with recorded traffic yet. This table fills in as analytics accumulates; it needs at least 3.</p>
+  <?php else: ?>
+  <div class="two-zone">
+    <div>
+      <table>
+        <tr><th>Axis</th><th class="r">Weight</th><th class="r">ρ vs views</th><th class="r">ρ vs engaged time</th></tr>
+        <?php foreach (SC_AXES as $k => $ax): ?>
+        <tr>
+          <td><?= e($ax['label']) ?> <span class="dim" style="font-size:.75rem"><?= e($ax['cat']) ?></span></td>
+          <td class="r n dim"><?= number_format($ax['weight'], 2) ?></td>
+          <?= sc_rho($scoreCorr['axes'][$k]['pv']) ?>
+          <?= sc_rho($scoreCorr['axes'][$k]['time']) ?>
+        </tr>
+        <?php endforeach; ?>
+        <tr>
+          <td><b>Reach score</b></td>
+          <td class="r n dim">—</td>
+          <?= sc_rho($scoreCorr['reach']['pv']) ?>
+          <?= sc_rho($scoreCorr['reach']['time']) ?>
+        </tr>
+      </table>
+    </div>
+    <div>
+      <p class="note">ρ runs from −1 to +1. Above about +0.4 means posts scoring high on that axis really do get read more; near 0 means the axis predicts nothing here.
+        <b>Rank-based on purpose</b>: one post that hits Hacker News would otherwise dominate the whole correlation.</p>
+      <p class="note">With <?= (int) $scoreCorr['n'] ?> posts this is directional, not proof. Once the sign and size are stable across a few months,
+        re-fit the weights in <code>SC_AXES</code> (<code>lib/scores.php</code>), bump <code>SC_RUBRIC</code>, and re-score the corpus.
+        The current weights are a prior taken from published research, not from this blog's own traffic.</p>
+    </div>
+  </div>
+  <?php endif; ?>
+  </div><!-- /scores -->
 
   <div class="pane" id="newsletter">
   <?php $ns = $nl['stats'] ?? null; ?>
@@ -783,6 +946,9 @@ document.documentElement.classList.add('js');
   var tabs = [].slice.call(document.querySelectorAll('.tabs a'));
   if (!tabs.length) return;
   var ids = tabs.map(function (a) { return a.hash.slice(1); });
+  // the range selector also drives the Scores tab (scores sit next to traffic there);
+  // the privacy footnote belongs to the analytics tabs only
+  var barIds = { overview: 1, content: 1, acquisition: 1, audience: 1, activity: 1, scores: 1 };
   var anIds = { overview: 1, content: 1, acquisition: 1, audience: 1, activity: 1 };
   var bar = document.getElementById('anbar'), foot = document.getElementById('anfoot');
   function show(id) {
@@ -793,7 +959,7 @@ document.documentElement.classList.add('js');
       if (el) el.classList.toggle('on', p === id);
     });
     // the range selector and the privacy footnote belong to the analytics tabs
-    if (bar) bar.style.display = anIds[id] ? '' : 'none';
+    if (bar) bar.style.display = barIds[id] ? '' : 'none';
     if (foot) foot.style.display = anIds[id] ? '' : 'none';
   }
   addEventListener('hashchange', function () { show(location.hash.slice(1)); scrollTo(0, 0); });

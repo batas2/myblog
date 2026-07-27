@@ -57,4 +57,7 @@ Name it in the next meeting. Watch what happens ;)
 
 ---
 
+**Scores:** tension=7 originality=7 personal=8 contrarian=5 substance=8 punch=8 trend=4
+**Scored:** 2026-07-27 rubric=v1 model=claude-opus-5
+
 **Tags:** Software Architecture, Organizational Design, Conways Law, Engineering Leadership, Ownership

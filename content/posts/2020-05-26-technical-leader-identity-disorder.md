@@ -92,4 +92,7 @@ If you find yourself in the same corporate position as mine, please share your e
 
 ---
 
+**Scores:** tension=2 originality=3 personal=5 contrarian=1 substance=5 punch=3 trend=2
+**Scored:** 2026-07-27 rubric=v1 model=claude-opus-5
+
 **Tags:** Technical Leadership, Engineering Leadership, Team Building, Knowledge Sharing, Corporate Culture

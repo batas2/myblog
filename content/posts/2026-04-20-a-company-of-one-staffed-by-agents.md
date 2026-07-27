@@ -46,4 +46,7 @@ So here's my question for you: the "I don't have a team" excuse for not building
 
 ---
 
+**Scores:** tension=8 originality=6 personal=9 contrarian=7 substance=8 punch=9 trend=9
+**Scored:** 2026-07-27 rubric=v1 model=claude-opus-5
+
 **Tags:** AI Agents, Solopreneurship, SaaS, Software Development, Artificial Intelligence

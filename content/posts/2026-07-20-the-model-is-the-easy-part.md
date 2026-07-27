@@ -60,4 +60,7 @@ So what did you have to add to let the AI in? And if the answer is "a new way to
 
 ---
 
+**Scores:** tension=7 originality=7 personal=8 contrarian=8 substance=9 punch=9 trend=9
+**Scored:** 2026-07-27 rubric=v1 model=claude-opus-5
+
 **Tags:** Software Architecture, Artificial Intelligence, API Security, Domain-Driven Design, Decision Making

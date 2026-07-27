@@ -7,6 +7,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/scores.php';
+
 /** Posts that belong to a named series: slug => [series name, part]. */
 const SERIES = [
     'from-signals-to-blips'      => ['Tools That Scale', 1],
@@ -111,6 +113,7 @@ function parse_post_file(string $file): ?array
     $lines = preg_split('/\r?\n/', (string) file_get_contents($file));
     $title = $subtitle = '';
     $medium = $publishRaw = $updatedRaw = null;
+    $scoresRaw = $scoredRaw = '';
     $draft = false;
     $tags = [];
     $body = [];
@@ -159,6 +162,16 @@ function parse_post_file(string $file): ?array
             $dropTrailingRule();
             continue;
         }
+        if (preg_match('/^\*\*Scores:\*\*\s*(.+?)\s*$/', trim($line), $mm)) {
+            $scoresRaw = $mm[1];
+            $dropTrailingRule();
+            continue;
+        }
+        if (preg_match('/^\*\*Scored:\*\*\s*(.+?)\s*$/', trim($line), $mm)) {
+            $scoredRaw = $mm[1];
+            $dropTrailingRule();
+            continue;
+        }
         if (preg_match('/^\*\*Tags:\*\*\s*(.+)$/', trim($line), $mm)) {
             $tags = array_map('trim', explode(',', $mm[1]));
             $dropTrailingRule();
@@ -189,6 +202,13 @@ function parse_post_file(string $file): ?array
         }
     }
 
+    // editorial scores (docs/SCORING-RUBRIC.md). A partial set is a typo, not a
+    // measurement, so it is reported rather than quietly averaged over.
+    $scores = sc_parse_scores($scoresRaw);
+    if ($scoresRaw !== '' && !sc_complete($scores)) {
+        blog_warn("{$name}.md: incomplete **Scores:** line — " . count($scores) . ' of ' . count(SC_AXES) . ' axes parsed');
+    }
+
     return [
         'slug'        => $slug,
         'date'        => $date,
@@ -201,6 +221,8 @@ function parse_post_file(string $file): ?array
         'publish_iso' => (new DateTimeImmutable('@' . $publishTs))->setTimezone(site_tz())->format('c'),
         'updated_ts'  => $updatedTs,
         'updated_iso' => $updatedTs !== null ? (new DateTimeImmutable('@' . $updatedTs))->setTimezone(site_tz())->format('c') : null,
+        'scores'      => $scores,
+        'scored'      => sc_parse_scored($scoredRaw),
         'words'       => $words,
         'minutes'     => max(1, (int) ceil($words / 215)),
         'html'        => md_to_html($body),
@@ -263,18 +285,67 @@ function post_is_public(string $slug): bool
 }
 
 /**
+ * Replace a block of meta lines in a post source, atomically.
+ *
+ * Lines matching $dropRe are removed first (never inside code fences, where an
+ * identical-looking line is a literal example), then $newLines are inserted just
+ * above the trailing **Tags:** line, or appended at EOF when there is none.
+ * Everything else in the file stays byte-identical.
+ *
+ * Shared by the publishing pipeline (Status/Publish) and the scoring pass
+ * (Scores/Scored) so both kinds of meta are written by one tested routine.
+ */
+function post_meta_write(string $file, string $dropRe, array $newLines): bool
+{
+    if (!is_file($file) || !$newLines) return false;
+
+    $lines = preg_split('/\r?\n/', (string) file_get_contents($file));
+    $kept = [];
+    $inFence = false;
+    $justDropped = false;
+    foreach ($lines as $line) {
+        if (preg_match('/^```/', $line)) $inFence = !$inFence;
+        if (!$inFence && preg_match($dropRe, trim($line))) { $justDropped = true; continue; }
+        // a removed meta block leaves its separating blank line behind; swallow it,
+        // or every rewrite of this file would insert one more blank than it removed
+        if ($justDropped && !$inFence && trim($line) === '') { $justDropped = false; continue; }
+        $justDropped = false;
+        $kept[] = $line;
+    }
+
+    // insert above the trailing Tags line when there is one, else append
+    $at = null;
+    $inFence = false;
+    foreach ($kept as $i => $line) {
+        if (preg_match('/^```/', $line)) $inFence = !$inFence;
+        if (!$inFence && preg_match('/^\*\*Tags:\*\*/', trim($line))) $at = $i;
+    }
+    if ($at !== null) {
+        array_splice($kept, $at, 0, [...$newLines, '']);
+    } else {
+        while ($kept && trim(end($kept)) === '') array_pop($kept);
+        $kept[] = '';
+        foreach ($newLines as $l) $kept[] = $l;
+    }
+
+    // exactly one trailing newline, no matter how often this runs: the file is
+    // rewritten on every status change and every scoring pass, and without this
+    // each write would leave one more blank line behind than the last
+    while ($kept && trim(end($kept)) === '') array_pop($kept);
+
+    $tmp = $file . '.tmp';
+    if (file_put_contents($tmp, implode("\n", $kept) . "\n") === false) return false;
+    return rename($tmp, $file);
+}
+
+/**
  * Rewrite a post file's publication meta in place (atomically):
  *   'publish'  → live now  (**Publish:** <now>, any draft flag removed)
  *   'draft'    → hidden    (**Status:** draft appended)
  *   'schedule' → goes live at $when ('YYYY-MM-DD HH:MM', site timezone)
- * Existing Status/Publish lines are removed first (never inside code
- * fences); the new line lands just above the **Tags:** line, or at EOF.
- * Everything else in the file stays byte-identical.
  */
 function post_write_status(string $file, string $action, string $when = ''): bool
 {
-    if (!is_file($file)) return false;
-
     if ($action === 'schedule') {
         try {
             $when = (new DateTimeImmutable($when, site_tz()))->format('Y-m-d H:i');
@@ -287,35 +358,11 @@ function post_write_status(string $file, string $action, string $when = ''): boo
         return false;
     }
 
-    $lines = preg_split('/\r?\n/', (string) file_get_contents($file));
-    $kept = [];
-    $inFence = false;
-    foreach ($lines as $line) {
-        if (preg_match('/^```/', $line)) $inFence = !$inFence;
-        if (!$inFence && preg_match('/^\*\*(Status|Publish):\*\*/', trim($line))) continue;
-        $kept[] = $line;
-    }
-
-    $meta = $action === 'draft' ? '**Status:** draft' : "**Publish:** {$when}";
-
-    // insert above the trailing Tags line when there is one, else append
-    $at = null;
-    $inFence = false;
-    foreach ($kept as $i => $line) {
-        if (preg_match('/^```/', $line)) $inFence = !$inFence;
-        if (!$inFence && preg_match('/^\*\*Tags:\*\*/', trim($line))) $at = $i;
-    }
-    if ($at !== null) {
-        array_splice($kept, $at, 0, [$meta, '']);
-    } else {
-        while ($kept && trim(end($kept)) === '') array_pop($kept);
-        $kept[] = '';
-        $kept[] = $meta;
-    }
-
-    $tmp = $file . '.tmp';
-    if (file_put_contents($tmp, implode("\n", $kept) . "\n") === false) return false;
-    return rename($tmp, $file);
+    return post_meta_write(
+        $file,
+        '/^\*\*(Status|Publish):\*\*/',
+        [$action === 'draft' ? '**Status:** draft' : "**Publish:** {$when}"]
+    );
 }
 
 /** Up to $n other posts sharing the most tags with $post; recency breaks ties. */

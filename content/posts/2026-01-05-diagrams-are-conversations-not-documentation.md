@@ -52,4 +52,7 @@ And if you want a sobering metric for your organization, try this one: when did 
 
 ---
 
+**Scores:** tension=7 originality=6 personal=9 contrarian=7 substance=8 punch=8 trend=6
+**Scored:** 2026-07-27 rubric=v1 model=claude-opus-5
+
 **Tags:** Software Architecture, Diagrams, Communication, Technical Leadership, Artificial Intelligence
