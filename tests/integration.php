@@ -520,6 +520,46 @@ preg_match('/name="key" value="([0-9a-f]{12})"/', $body, $m);
 $commentKey = $m[1] ?? '';
 t_assert($commentKey !== '', 'comment delete form carries content fingerprint');
 
+/* ---------------- draft preview ---------------- */
+// unpublished posts have no page on disk; preview.php renders one on demand,
+// for the admin only, and must not confirm anything to anyone else
+foreach (['itest-draft-post', 'itest-future-post', 'itest-past-post', 'no-such-post-at-all'] as $s) {
+    [$code] = http_req('GET', "$BASE/preview.php?slug={$s}");
+    t_eq(404, $code, "preview 404s without a session ({$s})");
+    [$code] = $asStats('GET', "$BASE/preview.php?slug={$s}");
+    t_eq(404, $code, "preview 404s for a stats-only session ({$s})");
+}
+[$code, $body, , $hdrs] = $asAdmin('GET', "$BASE/preview.php?slug=itest-draft-post");
+t_eq(200, $code, 'admin previews a draft');
+t_contains('ITest Draft Post', $body, 'draft title rendered');
+t_contains('Integration fixture subtitle.', $body, 'draft body rendered');
+t_contains('pvbar', $body, 'preview banner present');
+t_contains('draft', $body, 'banner names the status');
+t_not_contains('<?php', $body, 'the generated comment island is never emitted as source');
+t_assert((bool) array_filter($hdrs, fn($h) => stripos($h, 'X-Robots-Tag:') === 0 && stripos($h, 'noindex') !== false),
+    'preview sends noindex');
+t_assert((bool) array_filter($hdrs, fn($h) => stripos($h, 'Cache-Control:') === 0 && stripos($h, 'no-store') !== false),
+    'preview sends no-store');
+
+[$code, $body] = $asAdmin('GET', "$BASE/preview.php?slug=itest-future-post");
+t_eq(200, $code, 'admin previews a scheduled post');
+t_contains('goes live', $body, 'banner shows the publish moment for a scheduled post');
+[$code, $body] = $asAdmin('GET', "$BASE/preview.php?slug=itest-past-post");
+t_eq(200, $code, 'admin previews a published post too');
+t_contains('published', $body, 'banner marks it as already published');
+
+foreach (['../../config', 'Bad_Slug', '', str_repeat('a', 90)] as $bad) {
+    [$code] = $asAdmin('GET', "$BASE/preview.php?slug=" . rawurlencode($bad));
+    t_eq(404, $code, "preview rejects a malformed slug (" . substr($bad, 0, 14) . ')');
+}
+[$code] = $asAdmin('GET', "$BASE/preview.php?slug=nothing-here-either");
+t_eq(404, $code, 'preview 404s on a well-formed slug with no source file');
+
+// the pipeline has to actually offer the link, which is the whole point
+[, $body] = $asAdmin('GET', "$BASE/admin.php");
+t_contains('preview.php?slug=itest-draft-post', $body, 'pipeline links the draft to its preview');
+t_contains('preview.php?slug=itest-future-post', $body, 'pipeline links the scheduled post to its preview');
+
 [$code, , $loc] = $asAdmin('GET', "$BASE/stats.php");
 t_eq(302, $code, 'old stats URL redirects the admin session');
 t_contains('admin.php', $loc, 'shim points at the unified dashboard');

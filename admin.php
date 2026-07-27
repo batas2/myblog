@@ -522,7 +522,10 @@ tr.r-floor td:first-child { box-shadow: inset 3px 0 0 #b91c1c80; }
         <?php if ($p['status'] === 'published' && $p['built']): ?>
           <a href="<?= e(post_path($p['slug'])) ?>" target="_blank" rel="noopener"><?= e($p['title']) ?></a>
         <?php else: ?>
-          <?= e($p['title']) ?><?= $p['status'] === 'published' && !$p['built'] ? ' <span class="dim">· not built yet</span>' : '' ?>
+          <?php /* no page exists on disk for these, so send them to the on-demand preview */ ?>
+          <a href="/preview.php?slug=<?= e($p['slug']) ?>" target="_blank" rel="noopener"
+             title="read it in the real layout without publishing"><?= e($p['title']) ?></a>
+          <?= $p['status'] === 'published' && !$p['built'] ? ' <span class="dim">· not built yet</span>' : '' ?>
         <?php endif; ?>
         </span>
         <span class="post-sub"><?= e($p['subtitle']) ?></span>
@@ -608,7 +611,7 @@ tr.r-floor td:first-child { box-shadow: inset 3px 0 0 #b91c1c80; }
     <tr class="r-<?= e($r['band']) ?>">
       <td class="reach"><span class="badge b-<?= e($r['band']) ?>"><?= $r['reach'] !== null ? number_format($r['reach'], 1) : '—' ?></span></td>
       <td class="pathcell">
-        <span class="post-t"><?php if ($r['status'] === 'published'): ?><a href="<?= e(post_path($r['slug'])) ?>" target="_blank" rel="noopener"><?= e($r['title']) ?></a><?php else: ?><?= e($r['title']) ?><?php endif; ?></span>
+        <span class="post-t"><a href="<?= $r['status'] === 'published' ? e(post_path($r['slug'])) : '/preview.php?slug=' . e($r['slug']) ?>" target="_blank" rel="noopener"><?= e($r['title']) ?></a></span>
         <span class="post-sub"><?= e(date('Y-m-d', $r['publish_ts'])) ?> · <?= number_format($r['words']) ?> words<?= $r['status'] !== 'published' ? ' · ' . e($r['status']) : '' ?><?= $r['scored']['model'] !== '' ? ' · ' . e($r['scored']['model']) : '' ?></span>
       </td>
       <?php foreach (array_keys(SC_AXES) as $k): ?>
