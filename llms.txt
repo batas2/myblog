@@ -24,6 +24,7 @@ For LLM ingestion: the complete blog content in one plain-text file is at https:
 
 Selected posts:
 
+- A Feature Is Not a Service: https://bfrackowiak.pl/blog/a-feature-is-not-a-service/
 - The Model Is the Easy Part: https://bfrackowiak.pl/blog/the-model-is-the-easy-part/
 - Mathematicians vs. Lawyers: https://bfrackowiak.pl/blog/mathematicians-vs-lawyers/
 - Pricing the Invisible: https://bfrackowiak.pl/blog/pricing-the-invisible/

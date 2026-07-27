@@ -68,6 +68,6 @@ And if both piles are nearly empty: what did you decide not to ask for this year
 **Scores:** tension=7 originality=5 personal=9 contrarian=7 substance=6 punch=8 trend=3
 **Scored:** 2026-07-27 rubric=v1 model=claude-opus-5
 
-**Publish:** 2026-09-14 09:00
+**Publish:** 2026-08-24 09:00
 
 **Tags:** Career Development, Engineering Leadership, Personal Growth, Corporate Culture, Technical Interviews

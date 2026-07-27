@@ -36,7 +36,7 @@ So **the user id is never in the request body.** It comes from the authenticated
 
 There is always a temptation to design the storage from scratch. Saved filters can hold nested AND/OR logic, so surely it needs a clever relational schema.
 
-It did not. The platform already had a filter model, the exact tree the search feature passes around every day. A saved filter is just that tree, parked in a JSON column, next to the user who owns it. I found the closest existing feature that already did per-user CRUD with that model, and I copied its shape almost line for line. **Reuse over invention is not laziness.** It is the difference between a feature that behaves like the rest of the system and one that surprises whoever reads it next. It is also [the rule that kept an MCP connector boring](/blog/the-model-is-the-easy-part/) a few weeks ago: reuse the trust you already have, invent nothing you will have to guard.
+It did not. The platform already had a filter model, the exact tree the search feature passes around every day. A saved filter is just that tree, parked in a JSON column, next to the user who owns it. I found the closest existing feature that already did per-user CRUD with that model, and I copied its shape almost line for line. **Reuse over invention is not laziness.** It is the difference between a feature that behaves like the rest of the system and one that surprises whoever reads it next. It is also [the rule that kept an MCP connector boring](/blog/the-model-is-the-easy-part/) last week: reuse the trust you already have, invent nothing you will have to guard.
 
 This is the [mathematician's move](/blog/mathematicians-vs-lawyers/): do not add a new concept when an attribute of an existing one will do. The people who wanted a rich new "saved filter" model were about to breed a small universe of edge cases that a JSON blob of an existing tree simply never has.
 
@@ -58,5 +58,7 @@ If it cannot answer yes three times, it was never a service. It was a table wear
 
 **Scores:** tension=6 originality=5 personal=8 contrarian=5 substance=8 punch=8 trend=3
 **Scored:** 2026-07-27 rubric=v1 model=claude-opus-5
+
+**Publish:** 2026-07-27 13:13
 
 **Tags:** Software Architecture, Domain-Driven Design, Decision Making, Systems Thinking, API Security

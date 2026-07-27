@@ -1,11 +1,23 @@
 #!/usr/bin/env bash
 # fetch_images.sh — pull one licensed header image per post from Openverse.
 # Prefers cc0/pdm, then by, then by-sa; wide, large photographs only.
-# Writes assets/img/posts/<slug>.jpg + assets/img/posts/credits.json
+# Writes assets/img/posts/<slug>.jpg, the 480px .thumb.jpg the lists load,
+# and merges the licence into assets/img/posts/credits.json.
+#
+# Usage:
+#   ./tools/fetch_images.sh          fetch only the posts that have no image yet
+#   ./tools/fetch_images.sh --force  re-fetch everything in the query map
+#
+# Adding a post means adding one line to Q below and running it. Posts that
+# already have an image are skipped: Openverse results drift between runs, so
+# a plain re-run must never swap out the picture a published essay is using.
 set -u
 cd "$(dirname "$0")/.."
 mkdir -p assets/img/posts
 UA="bfrackowiak.pl-blog/1.0 (kontakt@bfrackowiak.pl)"
+FORCE=0
+[ "${1:-}" = "--force" ] && FORCE=1
+IM="$(command -v magick || command -v convert || true)"
 
 declare -A Q=(
   [mathematicians-vs-lawyers]="mathematics chalkboard equations|blackboard math"
@@ -30,11 +42,14 @@ declare -A Q=(
   [pricing-the-invisible]="iceberg ocean|iceberg"
   [the-model-is-the-easy-part]="revolving door glass entrance|turnstile gate entrance"
   [a-feature-is-not-a-service]="library card catalog drawers|card catalog wooden drawers"
+  [design-the-stopping-point]="unfinished bridge construction river|incomplete bridge span"
+  [count-your-rejections]="no vacancy neon sign|vacancy sign motel night"
+  [adoption-is-the-deliverable]="network patch panel cables|server rack patch cables"
 )
 
 TMP=$(mktemp -d)
 : > "$TMP/credits.tsv"
-ok=0; fail=""
+ok=0; skip=0; fail=""
 
 pick() { # $1 = json file -> tsv: url creator license landing title
   jq -r '
@@ -42,13 +57,15 @@ pick() { # $1 = json file -> tsv: url creator license landing title
      | select(.width >= 900 and .height >= 450 and (.width > .height))
      | {url, creator, license, landing: .foreign_landing_url, title, w: .width}]
     | (map(select(.license=="cc0" or .license=="pdm"))
-       + map(select(.license=="by"))
-       + map(select(.license=="by-sa")))
+       + map(select(.license=="by")))
     | .[0] // empty
     | [.url, (.creator // "unknown"), .license, (.landing // .url), (.title // "")] | @tsv' "$1" 2>/dev/null
 }
 
 for slug in "${!Q[@]}"; do
+  if [ "$FORCE" -eq 0 ] && [ -f "assets/img/posts/$slug.jpg" ]; then
+    skip=$((skip+1)); continue
+  fi
   IFS='|' read -r q1 q2 <<< "${Q[$slug]}"
   hit=""
   for q in "$q1" "$q2"; do
@@ -68,6 +85,9 @@ for slug in "${!Q[@]}"; do
      && [ "$(stat -c%s "assets/img/posts/$slug.jpg")" -gt 25000 ] \
      && file "assets/img/posts/$slug.jpg" | grep -qiE 'jpeg|png|image'; then
     printf '%s\t%s\t%s\t%s\t%s\n' "$slug" "$creator" "$license" "$landing" "$title" >> "$TMP/credits.tsv"
+    # the lists and the related-posts rail load the thumbnail, not the hero
+    [ -n "$IM" ] && "$IM" "assets/img/posts/$slug.jpg" -resize 480x -strip -quality 82 \
+      "assets/img/posts/$slug.thumb.jpg" 2>/dev/null
     ok=$((ok+1)); echo "OK  $slug  ($license, $creator)"
   else
     rm -f "assets/img/posts/$slug.jpg"; fail="$fail $slug"
@@ -75,9 +95,17 @@ for slug in "${!Q[@]}"; do
   sleep 1
 done
 
-jq -R -s 'split("\n") | map(select(length>0) | split("\t") | {(.[0]): {creator: .[1], license: .[2], source: .[3], title: .[4]}}) | add' \
-  "$TMP/credits.tsv" > assets/img/posts/credits.json
+# merge, never replace: a run that fetches one new post must not drop the
+# licence lines for every other image on the site (they are a CC BY obligation)
+CREDITS=assets/img/posts/credits.json
+[ -s "$CREDITS" ] || echo '{}' > "$CREDITS"
+jq -R -s 'split("\n") | map(select(length>0) | split("\t")
+  | {(.[0]): {creator: .[1], license: .[2], source: .[3], title: .[4]}}) | add // {}' \
+  "$TMP/credits.tsv" > "$TMP/new.json"
+jq -s '.[0] * .[1]' "$CREDITS" "$TMP/new.json" > "$TMP/merged.json" && mv "$TMP/merged.json" "$CREDITS"
 rm -rf "$TMP"
 echo "----"
-echo "downloaded: $ok / 20"
+echo "downloaded: $ok  skipped (already had an image): $skip  of ${#Q[@]} in the map"
 [ -n "$fail" ] && echo "missing:$fail"
+[ -z "$IM" ] && echo "note: no ImageMagick — thumbnails not generated"
+exit 0

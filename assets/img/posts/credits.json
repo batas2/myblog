@@ -128,13 +128,13 @@
   "technical-leader-identity-disorder": {
     "creator": "",
     "license": "",
-    "source": "https://medium.com/ecovadis-engineering/technical-leader-identity-disorder-c5bfd797f871",
+    "source": "",
     "title": "Image from the Medium original"
   },
   "the-automerger": {
     "creator": "",
     "license": "",
-    "source": "https://medium.com/ecovadis-engineering/the-automerger-216d1b060396",
+    "source": "",
     "title": "Image from the Medium original"
   },
   "the-model-is-the-easy-part": {
@@ -148,5 +148,23 @@
     "license": "cc0",
     "source": "https://www.rawpixel.com/image/6067832/free-public-domain-cc0-photo",
     "title": "Card catalog drawers"
+  },
+  "adoption-is-the-deliverable": {
+    "creator": "dmitrybarsky",
+    "license": "by",
+    "source": "https://www.flickr.com/photos/84816487@N00/2261404199",
+    "title": "Ethernet Patch Panel - Rear"
+  },
+  "design-the-stopping-point": {
+    "creator": "Queensland State Archives",
+    "license": "pdm",
+    "source": "https://www.flickr.com/photos/60455048@N02/39956249631",
+    "title": "University of Queensland construction, St Lucia - Brisbane"
+  },
+  "count-your-rejections": {
+    "creator": "unknown",
+    "license": "cc0",
+    "source": "https://www.rawpixel.com/image/3303539/free-photo-image-alphabet-cc0-creative-commons",
+    "title": "Neon 'no vacancy' sign lit"
   }
 }
