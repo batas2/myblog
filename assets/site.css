@@ -734,7 +734,8 @@ a.tag:hover { color: var(--accent-deep); text-decoration: underline; text-underl
 }
 
 /* cross-post badge under the hero */
-.syndication { max-width: var(--prose); margin: 1.1rem auto 0; padding-inline: 24px; }
+.syndication { max-width: var(--prose); margin: 1.1rem auto 0; padding-inline: 24px;
+  display: flex; flex-wrap: wrap; gap: 0.5rem 1.6rem; }
 .syndication a {
   display: inline-flex; align-items: center; gap: 0.55rem;
   font-family: 'JetBrains Mono', ui-monospace, monospace;

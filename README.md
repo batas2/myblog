@@ -110,6 +110,8 @@ Body in markdown (h2, lists, quotes, code fences, links)…
 
 **Medium:** https://medium.com/... (optional cross-post link)
 
+**DevTo:** https://dev.to/... (optional cross-post link)
+
 **Scores:** tension=7 originality=6 personal=9 contrarian=5 substance=8 punch=4 trend=3
 **Scored:** 2026-07-27 rubric=v1 model=claude-opus-5
 

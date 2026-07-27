@@ -64,11 +64,17 @@ function hero_figure(array $h, string $alt): string
 }
 
 /** "Also published on Medium" badge under the hero. */
-function syndication_badge(?string $mediumUrl): string
+function syndication_badge(array $links): string
 {
-    if (!$mediumUrl) return '';
-    return '<div class="syndication"><a href="' . e($mediumUrl) . '" target="_blank" rel="noopener">'
-         . '<span class="m-badge" aria-hidden="true">M</span>Also published on Medium<span class="s-ext">↗</span></a></div>';
+    if (!$links) return '';
+    $out = '<div class="syndication">';
+    foreach ($links as $platform => $url) {
+        $spec = SYNDICATION[$platform] ?? ['label' => $platform, 'badge' => strtoupper($platform[0])];
+        $out .= '<a href="' . e($url) . '" target="_blank" rel="noopener">'
+              . '<span class="m-badge" aria-hidden="true">' . e($spec['badge']) . '</span>'
+              . 'Also published on ' . e($spec['label']) . '<span class="s-ext">↗</span></a>';
+    }
+    return $out . '</div>';
 }
 
 /** Earlier/later navigation card on article pages. */

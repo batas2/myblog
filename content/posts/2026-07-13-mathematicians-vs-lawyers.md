@@ -70,6 +70,10 @@ And more importantly: who is holding the other half of the picture?
 
 ---
 
+**Medium:** https://medium.com/@bfrackowiak/mathematicians-vs-lawyers-11a470ee981d
+
+**DevTo:** https://dev.to/bfrackowiak/mathematicians-vs-lawyers-7ji
+
 **Scores:** tension=7 originality=7 personal=5 contrarian=7 substance=7 punch=8 trend=2
 **Scored:** 2026-07-27 rubric=v1 model=claude-opus-5
 

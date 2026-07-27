@@ -99,8 +99,10 @@ function schema_blog_posting(array $p, ?array $hero, string $url, string $publis
     }
     if ($images) $posting['image'] = count($images) === 1 ? $images[0] : $images;
 
-    if ($p['medium']) {
-        $posting['sameAs'] = $p['medium'];
+    // every republished copy, so search and answer engines can tie them back here
+    if ($p['syndication']) {
+        $syndUrls = array_values($p['syndication']);
+        $posting['sameAs'] = count($syndUrls) === 1 ? $syndUrls[0] : $syndUrls;
     }
     return $posting;
 }

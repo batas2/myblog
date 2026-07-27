@@ -121,7 +121,16 @@ $p = parse_post_file($mkpost('2020-01-05-fixture-badstatus.md', '**Status:** dra
 t_eq('published', $p['status'], 'a Status value that is not one word is not a status');
 t_contains('Status', $p['html'], 'and it stays visible in the body rather than vanishing');
 $p = parse_post_file($mkpost('2020-01-05-fixture-badmedium.md', '**Medium:** two words here'));
-t_eq(null, $p['medium'], 'a Medium value that is not a bare URL is not a link');
+t_eq([], $p['syndication'], 'a Medium value that is not a bare URL is not a link');
+
+// a syndication URL lands in an href and in sameAs, so it is validated, not trusted
+t_eq([], parse_post_file($mkpost('2020-01-05-fixture-jsurl.md', '**Medium:** javascript:alert(1)'))['syndication'], 'a javascript: URL is refused');
+t_eq([], parse_post_file($mkpost('2020-01-05-fixture-httpmed.md', '**Medium:** http://medium.com/@x/y'))['syndication'], 'plain http is refused');
+t_eq([], parse_post_file($mkpost('2020-01-05-fixture-wronghost.md', '**DevTo:** https://medium.com/@x/y'))['syndication'], 'a DevTo line pointing at Medium is refused');
+t_eq([], parse_post_file($mkpost('2020-01-05-fixture-lookalike.md', '**Medium:** https://notmedium.com/@x/y'))['syndication'], 'a look-alike host is refused');
+t_eq(['Medium' => 'https://blog.medium.com/x'], parse_post_file($mkpost('2020-01-05-fixture-subdomain.md', '**Medium:** https://blog.medium.com/x'))['syndication'], 'a subdomain of the real host is accepted');
+$bothSynd = parse_post_file($mkpost('2020-01-05-fixture-both.md', "**Medium:** https://medium.com/@x/y\n**DevTo:** https://dev.to/x/y"))['syndication'];
+t_eq(['Medium', 'DevTo'], array_keys($bothSynd), 'both platforms parse, in table order');
 $p = parse_post_file($mkpost('2020-01-05-fixture-statusok.md', '**Status:** published'));
 t_eq('published', $p['status'], 'a non-draft Status word leaves the post published');
 $p = parse_post_file($mkpost('2020-01-05-fixture-twice.md', "**Publish:** 2021-01-01 08:00\n**Publish:** 2099-01-01 08:00"));
@@ -326,8 +335,8 @@ foreach ($all as $p) {
 }
 t_assert($allOk, 'every post has title, subtitle, exactly 5 tags, minutes, html');
 $bySlug = array_column($all, null, 'slug');
-t_assert(!empty($bySlug['stop-calling-it-legacy-code']['medium']), 'medium link parsed for stop-calling-it-legacy-code');
-t_eq(null, $bySlug['mathematicians-vs-lawyers']['medium'], 'no medium link where none declared');
+t_assert(!empty($bySlug['stop-calling-it-legacy-code']['syndication']['Medium']), 'medium link parsed for stop-calling-it-legacy-code');
+t_eq([], $bySlug['nobody-owns-the-sum']['syndication'], 'no syndication where none declared');
 t_not_contains('**Tags:**', $bySlug['data-driven-theater']['html'], 'tags line stripped from body');
 t_not_contains('**Medium:**', $bySlug['stop-calling-it-legacy-code']['html'], 'medium line stripped from body');
 t_not_contains($bySlug['data-driven-theater']['subtitle'], $bySlug['data-driven-theater']['html'], 'subtitle not duplicated into body');
@@ -478,8 +487,11 @@ $md = render_md($bySlug['stop-calling-it-legacy-code']);
 t_contains('# Stop Calling It Legacy Code', $md, 'md mirror has title');
 t_contains('Canonical: https://bfrackowiak.pl/blog/stop-calling-it-legacy-code/', $md, 'md mirror has canonical');
 t_contains('Also on Medium: https://medium.com', $md, 'md mirror lists medium link');
-$md2 = render_md($bySlug['mathematicians-vs-lawyers']);
-t_not_contains('Also on Medium', $md2, 'no medium line when absent');
+$md2 = render_md($bySlug['nobody-owns-the-sum']);
+t_not_contains('Also on', $md2, 'no syndication lines when there are none');
+$md3 = render_md($bySlug['mathematicians-vs-lawyers']);
+t_contains('Also on Medium: https://medium.com', $md3, 'mirror lists the Medium copy');
+t_contains('Also on DEV: https://dev.to', $md3, 'mirror lists the DEV copy');
 
 /* ---------------- feeds ---------------- */
 section('feeds');
@@ -723,8 +735,12 @@ t_contains('fetchpriority="high"', img_eager('/a.jpg', 'x', 10, 5), 'eager img p
 t_eq('<span class="eyebrow"><span class="blip"></span>Tag</span>', eyebrow('Tag'), 'eyebrow static');
 t_contains('blip-live', eyebrow('Live', true), 'eyebrow live variant');
 t_eq('', thumb_span(null, 'thumb'), 'thumb span empty without hero');
-t_eq('', syndication_badge(null), 'no badge without medium url');
-t_contains('Also published on Medium', syndication_badge('https://medium.com/x'), 'badge with medium url');
+t_eq('', syndication_badge([]), 'no badge without any syndication');
+t_contains('Also published on Medium', syndication_badge(['Medium' => 'https://medium.com/x']), 'badge for Medium');
+$twoBadges = syndication_badge(['Medium' => 'https://medium.com/x', 'DevTo' => 'https://dev.to/y']);
+t_contains('Also published on DEV', $twoBadges, 'badge for DEV');
+t_eq(2, substr_count($twoBadges, '<a href='), 'both platforms get their own link');
+t_eq(1, substr_count($twoBadges, '<div class="syndication">'), 'both sit in one row');
 $fc = featured_card($posts[0]);
 t_contains('class="featured2', $fc, 'featured card class');
 t_contains('Latest signal', $fc, 'featured card eyebrow');

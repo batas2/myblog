@@ -40,8 +40,8 @@ function render_post(array $p, ?array $prev, ?array $next, array $all = []): str
     $extra .= '<meta property="article:author" content="' . e(cfg('author')) . '">' . "\n";
     foreach ($p['tags'] as $t) $extra .= '<meta property="article:tag" content="' . e($t) . '">' . "\n";
     $extra .= '<link rel="alternate" type="text/markdown" href="' . $url . 'index.md" title="Markdown source">' . "\n";
-    if ($p['medium']) {
-        $extra .= '<link rel="syndication" href="' . e($p['medium']) . '">' . "\n";
+    foreach ($p['syndication'] as $syndUrl) {
+        $extra .= '<link rel="syndication" href="' . e($syndUrl) . '">' . "\n";
     }
     if ($hero) {
         $extra .= '<meta property="og:image:width" content="' . $hero['w'] . '">' . "\n";
@@ -63,7 +63,7 @@ function render_post(array $p, ?array $prev, ?array $next, array $all = []): str
     $html .= '<div class="rule"></div></div>';
 
     if ($hero) $html .= hero_figure($hero, $p['title']);
-    $html .= syndication_badge($p['medium']);
+    $html .= syndication_badge($p['syndication']);
 
     $html .= '<article class="prose rise-2">' . $p['html'] . '</article>';
 

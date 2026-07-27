@@ -9,6 +9,30 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/scores.php';
 
+/**
+ * Where an essay is republished. One row per platform: the meta line that
+ * declares it, the label readers see, the letter in the badge, and the host the
+ * URL has to live on. Adding a platform is a row here, not another branch in
+ * the parser, the badge, the schema and the markdown mirror.
+ */
+const SYNDICATION = [
+    'Medium' => ['label' => 'Medium', 'badge' => 'M', 'host' => 'medium.com'],
+    'DevTo'  => ['label' => 'DEV',    'badge' => 'D', 'host' => 'dev.to'],
+];
+
+/**
+ * A syndication URL is only accepted when it is https and on that platform's
+ * own host. It ends up in an href and in sameAs, so "whatever the author
+ * typed" is not good enough: this refuses javascript: URLs outright and
+ * catches the likelier mistake of a DevTo line pointing at Medium.
+ */
+function syndication_url_ok(string $url, string $host): bool
+{
+    $parts = parse_url($url);
+    if (($parts['scheme'] ?? '') !== 'https' || !isset($parts['host'])) return false;
+    return $parts['host'] === $host || str_ends_with($parts['host'], '.' . $host);
+}
+
 /** Posts that belong to a named series: slug => [series name, part]. */
 const SERIES = [
     'from-signals-to-blips'      => ['Tools That Scale', 1],
@@ -118,12 +142,11 @@ function parse_post_file(string $file): ?array
     /* Every `**Key:** value` line the format understands: the capture pattern
        for the value, and where the raw value lands. Adding a meta key is one
        row here rather than another near-identical branch in the loop below. */
-    $meta = ['Medium' => null, 'Status' => null, 'Publish' => null, 'Updated' => null,
+    $meta = ['Status' => null, 'Publish' => null, 'Updated' => null,
              'Scores' => null, 'Scored' => null, 'Tags' => null];
-    $metaPattern = [
-        'Medium' => '\S+',           // a bare URL
-        'Status' => '[a-zA-Z]+',
-    ];
+    foreach (array_keys(SYNDICATION) as $platform) $meta[$platform] = null;
+    $metaPattern = ['Status' => '[a-zA-Z]+'];
+    foreach (array_keys(SYNDICATION) as $platform) $metaPattern[$platform] = 'https?:\/\/\S+';
 
     // meta lines are stripped from the body together with any hr that only separated them
     $dropTrailingRule = function () use (&$body): void {
@@ -163,7 +186,17 @@ function parse_post_file(string $file): ?array
         if ($title !== '') $body[] = $line;
     }
 
-    $medium     = $meta['Medium'];
+    $syndication = [];
+    foreach (SYNDICATION as $platform => $spec) {
+        $url = $meta[$platform];
+        if ($url === null) continue;
+        if (!syndication_url_ok($url, $spec['host'])) {
+            blog_warn("{$name}.md: **{$platform}:** must be an https URL on {$spec['host']} — ignored");
+            continue;
+        }
+        $syndication[$platform] = $url;
+    }
+
     $publishRaw = $meta['Publish'];
     $updatedRaw = $meta['Updated'];
     $scoresRaw  = $meta['Scores'] ?? '';
@@ -209,7 +242,7 @@ function parse_post_file(string $file): ?array
         'title'       => $title,
         'subtitle'    => $subtitle,
         'tags'        => $tags,
-        'medium'      => $medium,
+        'syndication' => $syndication,
         'status'      => $status,
         'publish_ts'  => $publishTs,
         'publish_iso' => (new DateTimeImmutable('@' . $publishTs))->setTimezone(site_tz())->format('c'),
@@ -498,13 +531,16 @@ function post_body_images(array $p): array
 function render_md(array $p): string
 {
     $tags = implode(', ', array_map('tag_slug', $p['tags']));
-    $medium = $p['medium'] ? "- Also on Medium: {$p['medium']}\n" : '';
+    $also = '';
+    foreach ($p['syndication'] as $platform => $url) {
+        $also .= '- Also on ' . SYNDICATION[$platform]['label'] . ": {$url}\n";
+    }
     return "# {$p['title']}\n\n"
         . "*{$p['subtitle']}*\n\n"
         . '- Author: ' . cfg('author') . "\n"
         . '- Published: ' . date('Y-m-d', $p['publish_ts']) . "\n"
         . '- Canonical: ' . post_url($p['slug']) . "\n"
-        . $medium
+        . $also
         . "- Tags: {$tags}\n\n---\n\n"
         . $p['md'] . "\n";
 }
