@@ -46,13 +46,13 @@ Far left, in genesis, push does not work at all. The thing is too unformed to ad
 
 Far right, at commodity, push is unnecessary. Nobody mandates that you use the company's relational database. Pull settled that years ago, because the alternative became absurd.
 
-Between them sits a window where a mandate is both necessary and affordable. The thing is good enough to adopt and not yet obviously worth adopting. Most internal platform work lives in that window, and it is the only place a mandate earns what it costs.
+Between them sits what I have come to call the mandate window: the stretch of evolution where a mandate is both necessary and affordable. The thing is good enough to adopt and not yet obviously worth adopting. Most internal platform work lives in that window, and it is the only place a mandate earns what it costs.
 
 The window has a ceiling, and this is the part I genuinely have not solved. Somewhere the surface area of a change outgrows the coordination capacity available. Past that point, each additional team costs more to move than the last.
 
 I have watched initiatives sail straight through it, then spend a year of programme management on the final four teams, which were never going to want the thing anyway. The honest move at the ceiling is to stop pushing and go make it more attractive instead.
 
-One complication I want to be fair to. The platform-engineering community is close to unanimous that you should not mandate. There is also reporting that mandated platforms hold their funding rather better than voluntary ones. Both can be true at once. Pull builds the better product; push keeps the lights on while pull gets going. What nobody has measured, as far as I can find, is the exchange rate between them.
+One complication I want to be fair to, because it is the live argument in platform engineering right now. The community consensus is close to unanimous: build the platform as a product, win teams over with golden paths, never mandate. I think the consensus is right about the product and wrong about the window. The standard objection is that a mandate buys compliance rather than adoption, and in genesis that is exactly what it buys. Inside the window the objection loses its force, because the thing is good enough that a quarter of mandated use turns into a dependence nobody wants to unwind. There is also reporting that mandated platforms hold their funding rather better than voluntary ones. Both can be true at once. Pull builds the better product; push keeps the lights on while pull gets going. What nobody has measured, as far as I can find, is the exchange rate between them.
 
 ## What I do with it now
 
@@ -60,12 +60,12 @@ A design review is no longer where my involvement ends. The last question I ask 
 
 The lump taught me that, and it took longer than I would like to admit. Four teams had already voted with their integrations while I was still explaining why the other service deserved them.
 
-The ceiling is the part I am still watching for. I cannot compute where it sits. What I can do now is recognise the feeling of being past it: another quarter of programme management, four teams left, none of them moving. That is not a measurement. It is a warning I never used to have.
+The mandate window's ceiling is the part I am still watching for. I cannot compute where it sits. What I can do now is recognise the feeling of being past it: another quarter of programme management, four teams left, none of them moving. That is not a measurement. It is a warning I never used to have.
 
 ---
 
-**Scores:** tension=7 originality=6 personal=8 contrarian=7 substance=7 punch=8 trend=6
-**Scored:** 2026-07-27 rubric=v1 model=claude-opus-5
+**Scores:** tension=7 originality=8 personal=8 contrarian=8 substance=7 punch=8 trend=7
+**Scored:** 2026-07-27 rubric=v1 model=claude-fable-5
 
 **Publish:** 2026-08-24 09:00
 

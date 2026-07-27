@@ -1,6 +1,5 @@
 {
   "_readme": "Per-axis evidence and rationale for the scores in content/posts/*.md. Rubric v1 (docs/SCORING-RUBRIC.md) requires one verbatim quote per score. Shown on hover in /admin.php under Scores. Optional: the numbers work without this file.",
-
   "technical-leader-identity-disorder": {
     "tension": "2 — nothing at risk anywhere. 'I have ups and downs' is the strongest friction in the whole piece.",
     "originality": "3 — knowledge-sharing hours, pair programming, growth 1:1s. Standard tech-lead advice in the author's own words.",
@@ -226,10 +225,9 @@
     "punch": "8 — 'The safest user id is the one the client never gets to type.'",
     "trend": "3 — service decomposition, off the current trend list."
   },
-
   "the-bottleneck-moved": {
-    "tension": "7 — 'Nobody is blocked on writing anymore. Everybody is blocked on believing.' Names a constraint the reader is currently living inside.",
-    "originality": "6 — that the bottleneck moved to review is becoming a common 2026 claim. The extension is 'A diff with nobody behind it': review was always a conversation with a counterparty, and agent-authored code removes the counterparty.",
+    "tension": "8 — 'The seat they queue for is not on your headcount plan.' The ending no longer resolves into quiet; it indicts the reader's own organization and leaves the cost sitting there.",
+    "originality": "7 — the moved-bottleneck claim is common in 2026; the named extension is the authorless diff: 'The code is here, the counterparty is not.' Review recast as a conversation that lost its counterparty, with a term someone else could cite.",
     "personal": "7 — real instrument and real scale, 'I read squad reports for a living now. Fifteen of them, every month', plus the admission that 'it took me months to name it'. No scar, which is what keeps it off 8.",
     "contrarian": "7 — 'A senior engineer whose main output is judgment about other people's diffs is not doing less engineering.' Argued directly against what dashboards and promotion criteria actually reward.",
     "substance": "8 — reviewability recast as a designable system property with five concrete levers, plus the case for rewriting the definition of done around verification.",
@@ -238,29 +236,29 @@
   },
   "design-the-stopping-point": {
     "tension": "7 — 'I have watched initiatives with genuinely good designs leave systems worse than they found them.' A cost the reader recognises, named early and paid off.",
-    "originality": "6 — 'A design cannot owe anything. Only a half-built system can.' Fresh framing, but the adjacent ground (sacrificial architecture, strangler fig, migration essays) is well covered, so the lower band.",
+    "originality": "7 — the concept is now named and reused: 'a resting position: a place the system can stop and live for two years without apology.' Incremental-delivery writing in the reference list covers steps, not the named property of a survivable stop.",
     "personal": "7 — 'for years I had quietly filed it under delivery's problem.' An owned mistake in a specific scene, though the scene is a whiteboard rather than a system.",
-    "contrarian": "6 — 'Neither is the job. The job is to make the shortcut legible.' Refuses both positions the audience expects and defends the refusal.",
+    "contrarian": "7 — the make-the-shortcut-legible position now answers its obvious objection in the text: 'The shortcut does not wait for a blessing. It happens either way.'",
     "substance": "8 — three named properties of a stoppable step, plus a one-page artifact with an expiry trigger attached.",
     "punch": "8 — 'Optionality feels like prudence long after it has quietly become an unpaid invoice.'",
-    "trend": "4 — the generated current state touches the AI-for-comprehension conversation, but only in one clause."
+    "trend": "6 — current-state-from-code is now explicitly tied to agent comprehension (trend #4): 'reading an existing system is the one job the current crop of agents does better than writing into it.' One explicit touch, not the post's home conversation."
   },
   "count-your-rejections": {
     "tension": "7 — 'He did not get the job.' One line standing alone after five rounds of yes.",
-    "originality": "5 — rejection-as-timing is common career writing and a search of the reference blogs found no equivalent, but the thesis is widespread elsewhere. Only the KPI turn is genuinely fresh.",
+    "originality": "6 — the practice is now named ('Keep a rejection ledger') and extended with the two-pile reading; underneath it is still a known genre of career essay.",
     "personal": "9 — 'Moving a fully formed idea into another person's head is genuinely hard for me.' An unflattering admission that the argument depends on.",
     "contrarian": "7 — 'maximizing it alone has become a genuinely risky career position' argues against the T-shape orthodoxy and answers the obvious objection.",
-    "substance": "6 — two habits and a sorting exercise. Less that transfers to a system than the other essays in the corpus.",
+    "substance": "7 — model (a rejection as a reading with two operands), its failure mode ('One time in ten it is a real gap'), and a concrete artifact: 'Four columns are enough for the ledger.'",
     "punch": "8 — 'A year without rejections is not a good year. It is a small one.'",
-    "trend": "3 — hiring and careers sit outside every item on the current trend list."
+    "trend": "5 — depth-vs-breadth is now hooked to the live skills argument (trend #7): 'the industry is still mid-argument about what developer skill even means.' Adjacent and explicit, but not the essay's subject."
   },
   "adoption-is-the-deliverable": {
     "tension": "7 — 'Four teams integrated with the lump.' One sentence, and the reader knows which of their own systems it is.",
-    "originality": "6 — the pull/push split is standard platform-engineering material; laying it on Simon Wardley's evolution axis to locate a mandate window is the extension.",
+    "originality": "8 — 'the mandate window: the stretch of evolution where a mandate is both necessary and affordable.' A named, citable concept laid over Wardley's evolution axis; the reference list has the axis but not this overlay.",
     "personal": "8 — two owned misreadings, not one: 'I spent a while explaining to myself why that was the organization's failure. It was not.' and, at the close, 'Four teams had already voted with their integrations while I was still explaining why the other service deserved them.'",
-    "contrarian": "7 — 'Pull builds the better product; push keeps the lights on while pull gets going', argued against a community position that is close to unanimous.",
+    "contrarian": "8 — states the professed norm ('build the platform as a product, win teams over with golden paths, never mandate'), contradicts it ('right about the product and wrong about the window'), and answers the compliance-not-adoption objection inside the text.",
     "substance": "7 — the open host service is still the concrete mechanism and the ceiling is still named, but the closing note replaced the count-your-consumers exercise, so less of it lands on Monday.",
     "punch": "8 — 'An architecture is worth precisely what other teams are willing to depend on.'",
-    "trend": "6 — platform engineering is on the trend list and the essay sits inside that conversation without being about AI."
+    "trend": "7 — explicitly inside the platform-engineering conversation (trend #5): 'it is the live argument in platform engineering right now.'"
   }
 }

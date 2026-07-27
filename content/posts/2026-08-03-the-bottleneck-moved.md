@@ -32,6 +32,8 @@ Reviewing a colleague's change was never a purely technical act. It was a conver
 
 An agent's diff has no such person. The intent behind it lived in a prompt, in a context window, in a session that has since closed. You cannot ask the author what they were thinking. There was no thinking of the kind you mean, and the human who ran the prompt is often meeting the result at the same moment you are.
 
+I have started calling these authorless diffs. The code is here, the counterparty is not, and every question you would have walked over to ask now needs somewhere else to go.
+
 **So the question has to be answerable by the system itself, or it does not get answered.**
 
 ![The reviewer's question used to have somewhere to go. Now it has to be answered by the artifacts, or not at all.](/assets/img/posts/the-bottleneck-moved/who-do-you-ask.png)
@@ -64,12 +66,12 @@ It used to be the delivery numbers. Now it is a sentence buried in the middle of
 
 The dashboards above those reports are still counting output, because output is what dashboards were built to count, and I do not expect that to change quickly. But the reports underneath them stopped talking about production some time this spring, and they have not gone back.
 
-The queue did not shrink. It moved one seat to the right, and it is quieter over there, which is why it took a season to notice.
+The queue did not shrink. It moved one seat to the right, and it is quieter over there, which is why it took a season to notice. If your dashboards are green while your pull requests age, it has moved in your organization too. The authorless diffs are already arriving. The seat they queue for is not on your headcount plan.
 
 ---
 
-**Scores:** tension=7 originality=6 personal=7 contrarian=7 substance=8 punch=8 trend=9
-**Scored:** 2026-07-27 rubric=v1 model=claude-opus-5
+**Scores:** tension=8 originality=7 personal=7 contrarian=7 substance=8 punch=8 trend=9
+**Scored:** 2026-07-27 rubric=v1 model=claude-fable-5
 
 **Publish:** 2026-08-03 09:00
 

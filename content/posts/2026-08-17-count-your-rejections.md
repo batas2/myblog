@@ -34,7 +34,7 @@ I have made a kind of peace with still not being good at the first one. Moving a
 
 It also explains why I have gone cold on the model everyone quotes. The T shape: broad awareness across many areas, deep expertise in one.
 
-The vertical stroke still pays. But maximizing it alone has become a genuinely risky career position, and not for the reason usually given. It is not mainly that agents write code now, although that matters. It is that the scarce thing in any organization is someone who can hold a system-level view *and* be worked with. Depth without the horizontal stroke produces a person who is right often and expensive to be around, and organizations quietly route around expensive-to-be-around. They do it without malice and usually without noticing.
+The vertical stroke still pays. But maximizing it alone has become a genuinely risky career position, and not for the reason usually given. It is not mainly that agents write code now, although that matters: generation is exactly the part of the vertical stroke that got cheap this decade, and the industry is still mid-argument about what developer skill even means once it did. It is that the scarce thing in any organization is someone who can hold a system-level view *and* be worked with. Depth without the horizontal stroke produces a person who is right often and expensive to be around, and organizations quietly route around expensive-to-be-around. They do it without malice and usually without noticing.
 
 A colleague I still respect enormously put it better than I have managed since. If you are right and you were unpleasant about it, you are still unpleasant. If you are wrong and you were decent about it, you were merely wrong.
 
@@ -44,7 +44,7 @@ The second position is recoverable in an afternoon. The first one compounds. It 
 
 The practice itself is small, and it is the part I would defend in any review.
 
-Track your rejections. Not to punish yourself. To check that you are still asking for things.
+Keep a rejection ledger. Not to punish yourself. To check that you are still asking for things.
 
 A year with zero rejections is not a year in which you were universally correct. It is a year in which you applied for nothing, proposed nothing that could fail, and asked for no budget you had not already been promised. **A year without rejections is not a good year. It is a small one.**
 
@@ -57,7 +57,7 @@ My friend, the one who called: he took a very good job about a year after the fi
 
 ## Try this
 
-Count the times you were told no in the last twelve months. Sort them into two piles: the ones that were about you, and the ones that were about the state of the system on that particular Tuesday.
+Count the times you were told no in the last twelve months. Four columns are enough for the ledger: the date, what exactly was declined, your best guess at why, and which pile it belongs to. Two piles: the ones that were about you, and the ones that were about the state of the system on that particular Tuesday.
 
 If the second pile is bigger, you have spent a year collecting evidence about other people's constraints and filing it under your own competence. Move it to the right folder and go ask for something.
 
@@ -65,8 +65,8 @@ And if both piles are nearly empty: what did you decide not to ask for this year
 
 ---
 
-**Scores:** tension=7 originality=5 personal=9 contrarian=7 substance=6 punch=8 trend=3
-**Scored:** 2026-07-27 rubric=v1 model=claude-opus-5
+**Scores:** tension=7 originality=6 personal=9 contrarian=7 substance=7 punch=8 trend=5
+**Scored:** 2026-07-27 rubric=v1 model=claude-fable-5
 
 **Publish:** 2026-08-17 09:00
 

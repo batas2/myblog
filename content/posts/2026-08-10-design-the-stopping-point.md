@@ -12,7 +12,7 @@ I had a target state. I always have a target state. What I did not have was a go
 
 A solution design describes two worlds.
 
-The first is the system as it stands today. A person should barely write that description at all. It should be read out of the code, the pipelines, the infrastructure definitions, whatever a tool or an agent can see for itself.
+The first is the system as it stands today. A person should barely write that description at all. It should be read out of the code, the pipelines, the infrastructure definitions, whatever a tool or an agent can see for itself. This has stopped being an aspiration: reading an existing system is the one job the current crop of agents does better than writing into it, and comprehension is exactly where they are cheapest to trust.
 
 The moment a current-state diagram becomes an opinion, it becomes a flattering one. Nobody draws their own system messier than it is. I have argued the harder version of this before: [a model that no compiler checks will drift](/blog/the-diagram-that-cannot-lie/).
 
@@ -40,7 +40,7 @@ Which moves the interesting work. Not to the destination. To the shape of the tr
 
 So the question I now ask before a first step is not whether it moves us toward the target. Almost anything does. It is: **if this turns out to be the last step we ever fund, what have we left behind?**
 
-Three properties, in the order I check them:
+A step that passes is what I have started calling a resting position: a place the system can stop and live for two years without apology. Three properties, in the order I check them:
 
 - **It stands alone.** After the step, the system is internally consistent. One model at a smaller scope, not two half-models with a translation layer nobody owns.
 - **It is reversible, or it is finished.** Either the step walks back with a configuration change, or it completed something. What I avoid is the middle: irreversible and unfinished. Decomposing until [every step is a two-way door](/blog/the-migration-that-never-starts/) is the same instinct pointed at a different problem.
@@ -58,6 +58,8 @@ That last part I stole from my own hobby repository, where one decision record e
 
 It also answers the question every engineering director eventually asks. Should the architect be hard on quality, or should the architect plan the shortcut? Neither is the job. **The job is to make the shortcut legible.** Say exactly what is being traded, for how long, and by whom. Then the organization is choosing rather than drifting.
 
+The objection I hear is that writing the shortcut down blesses it, that planning the resting position means giving up on quality. But the shortcut does not wait for a blessing. It happens either way. The only choice on offer is whether it is chosen or discovered.
+
 An accepted risk with a name on it is engineering. The same risk unnamed is just something that happened to you.
 
 ## What it changed
@@ -72,8 +74,8 @@ The design never owed anything. The trail did.
 
 ---
 
-**Scores:** tension=7 originality=6 personal=7 contrarian=6 substance=8 punch=8 trend=4
-**Scored:** 2026-07-27 rubric=v1 model=claude-opus-5
+**Scores:** tension=7 originality=7 personal=7 contrarian=7 substance=8 punch=8 trend=6
+**Scored:** 2026-07-27 rubric=v1 model=claude-fable-5
 
 **Publish:** 2026-08-10 09:00
 
