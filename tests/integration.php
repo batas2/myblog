@@ -520,6 +520,24 @@ preg_match('/name="key" value="([0-9a-f]{12})"/', $body, $m);
 $commentKey = $m[1] ?? '';
 t_assert($commentKey !== '', 'comment delete form carries content fingerprint');
 
+// a renamed post whose old filename survived a deploy must be visible as a
+// problem in admin, not silently listed twice
+// the title legitimately appears more than once per page (pipeline and scores),
+// so calibrate against the clean page rather than assuming a number
+[, $bodyClean] = $asAdmin('GET', "$BASE/admin.php");
+$rowsClean = substr_count($bodyClean, '>ITest Past Post<');
+t_assert($rowsClean > 0, 'baseline: the post is listed on a clean page');
+
+$dupFile = $SANDBOX . '/content/posts/2099-06-06-itest-past-post.md';
+copy($SANDBOX . '/content/posts/2020-01-01-itest-past-post.md', $dupFile);
+[, $body] = $asAdmin('GET', "$BASE/admin.php");
+t_contains('Duplicate source files', $body, 'admin warns about a duplicate source file');
+t_contains('2099-06-06-itest-past-post.md', $body, 'the warning names the stale filename');
+t_eq($rowsClean, substr_count($body, '>ITest Past Post<'), 'the leftover adds a warning, not an extra row');
+unlink($dupFile);
+[, $body] = $asAdmin('GET', "$BASE/admin.php");
+t_not_contains('Duplicate source files', $body, 'warning clears once the leftover is gone');
+
 /* ---------------- draft preview ---------------- */
 // unpublished posts have no page on disk; preview.php renders one on demand,
 // for the admin only, and must not confirm anything to anyone else

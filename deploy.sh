@@ -41,7 +41,7 @@ RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; BO
 
 # --- output helpers ---
 STEP_NUM=0
-STEP_TOTAL=5
+STEP_TOTAL=6
 STEP_START=0
 step() {
   STEP_NUM=$((STEP_NUM + 1))
@@ -66,7 +66,7 @@ for arg in "$@"; do
     *) die "Unknown option: ${arg}" ;;
   esac
 done
-[ ${#RSYNC_MODE[@]} -eq 0 ] || STEP_TOTAL=4   # --dry-run skips the backup step
+[ ${#RSYNC_MODE[@]} -eq 0 ] || STEP_TOTAL=5   # --dry-run skips the backup step
 
 echo -e "${BOLD}Deploying bfrackowiak.pl${NC}"
 echo -e "  target: ${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}"
@@ -197,6 +197,22 @@ rsync -az --progress --stats "${RSYNC_MODE[@]}" "${DELETE_FLAG[@]}" "${GEOIP_PRO
 XFERRED="$(grep -m1 'Number of regular files transferred' "${RSYNC_LOG}" | grep -oE '[0-9,]+$' || echo '?')"
 rm -f "${RSYNC_LOG}"
 step_done "Synced (${XFERRED} files transferred)"
+
+# --- 6. mirror content/posts ---
+# The sync above is additive on purpose: it must never delete runtime data it
+# does not own. content/posts/ is the one directory this repo owns outright,
+# and rescheduling a post renames its file. Additive + rename = the old
+# filename lives on forever on the server, the post parses twice, and the
+# pipeline lists it twice. Mirror that directory exactly, every deploy.
+step "Mirroring content/posts (clearing renamed leftovers)"
+POSTS_LOG="$(mktemp)"
+rsync -az --delete --itemize-changes "${RSYNC_MODE[@]}" \
+  -e "ssh -p ${SSH_PORT}" \
+  "${LOCAL_DIR}content/posts/" \
+  "${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}/content/posts/" | tee "${POSTS_LOG}"
+GONE="$(grep -c '^\*deleting' "${POSTS_LOG}" || true)"
+rm -f "${POSTS_LOG}"
+step_done "content/posts mirrored (${GONE} stale file(s) removed)"
 
 echo
 if [ ${#RSYNC_MODE[@]} -eq 0 ]; then

@@ -507,6 +507,14 @@ tr.r-floor td:first-child { box-shadow: inset 3px 0 0 #b91c1c80; }
       · status changes below rebuild automatically · the server cron publishes scheduled posts on time</span>
   </div>
   <?php if ($flash !== ''): ?><pre class="buildout"><?= e($flash) ?></pre><?php endif; ?>
+  <?php $dupes = post_duplicate_sources(); ?>
+  <?php if ($dupes): ?>
+    <p class="warn"><b>Duplicate source files.</b> Rescheduling renames a post, and the deploy is additive, so an old filename can survive on the server. Each of these slugs is listed twice below; the newest file is the one in use, the others are stale and safe to delete.<br>
+    <?php foreach ($dupes as $slug => $files): ?>
+      <code><?= e($slug) ?></code>: <?= e(implode(' + ', $files)) ?><br>
+    <?php endforeach; ?>
+    </p>
+  <?php endif; ?>
 
   <table>
     <tr><th>Status</th><th>Goes live</th><th>Post</th><th class="r">Reach</th><th class="r">Read</th><th class="r">Comments</th><th>Change status</th></tr>

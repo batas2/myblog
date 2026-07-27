@@ -137,6 +137,13 @@ try {
 $unscored = array_column(array_filter($posts, fn(array $p): bool => !sc_complete($p['scores'])), 'slug');
 if ($unscored) echo 'UNSCORED published posts: ' . implode(', ', $unscored) . "\n";
 
+// a rename that left its old filename behind (an additive deploy will do this):
+// the post is fine, but it is listed twice and only one of the two is current
+foreach (post_duplicate_sources() as $slug => $files) {
+    fwrite(STDERR, "DUPLICATE SOURCE for '{$slug}': " . implode(' + ', $files)
+        . " — the newest file wins, delete the rest\n");
+}
+
 // mixed rubric versions make the numbers incomparable — see the rubric's calibration rules
 $rubrics = array_unique(array_filter(array_column(array_column($all, 'scored'), 'rubric')));
 if (count($rubrics) > 1) {

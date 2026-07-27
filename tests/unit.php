@@ -318,6 +318,40 @@ t_not_contains('**Tags:**', $bySlug['data-driven-theater']['html'], 'tags line s
 t_not_contains('**Medium:**', $bySlug['stop-calling-it-legacy-code']['html'], 'medium line stripped from body');
 t_not_contains($bySlug['data-driven-theater']['subtitle'], $bySlug['data-driven-theater']['html'], 'subtitle not duplicated into body');
 
+/* ---------------- one slug, two source files ---------------- */
+// Rescheduling renames a post file. The deploy is additive, so the old name can
+// survive on the server: the post then parses twice, builds twice and is listed
+// twice in the pipeline. This is that exact situation, reproduced on disk.
+section('duplicate post sources');
+t_eq([], post_duplicate_sources(), 'the real corpus has no duplicate slugs');
+
+$canon = post_source_file('mathematicians-vs-lawyers');
+$stale = CONTENT_DIR . '/posts/2099-01-01-mathematicians-vs-lawyers.md';
+copy($canon, $stale);
+// the leftover must be older than the live file, relative to that file's own
+// mtime: "an hour ago" is not necessarily older than a post edited this morning
+touch($stale, filemtime($canon) - 3600);
+try {
+    $dupes = post_duplicate_sources();
+    t_assert(isset($dupes['mathematicians-vs-lawyers']), 'duplicate slug detected');
+    t_eq(2, count($dupes['mathematicians-vs-lawyers'] ?? []), 'both filenames reported for the operator');
+    t_eq($canon, post_source_file('mathematicians-vs-lawyers'), 'writers target the newest file, never the leftover');
+
+    $dupAll = load_posts(true);
+    t_eq(1, count(array_filter($dupAll, fn($p) => $p['slug'] === 'mathematicians-vs-lawyers')), 'the post loads once, not twice');
+    t_eq(count(array_unique(array_column($dupAll, 'slug'))), count($dupAll), 'every loaded slug is unique');
+
+    $dupPub = load_posts();
+    t_eq(1, count(array_filter($dupPub, fn($p) => $p['slug'] === 'mathematicians-vs-lawyers')), 'published-only load dedupes too');
+
+    // and the other way round: the newer file wins even when its name sorts last
+    touch($stale, filemtime($canon) + 3600);
+    t_eq($stale, post_source_file('mathematicians-vs-lawyers'), 'tie-break follows mtime, not filename order');
+} finally {
+    unlink($stale);
+}
+t_eq([], post_duplicate_sources(), 'fixture removed, corpus clean again');
+
 /* ---------------- llms.txt selected-posts refresh ---------------- */
 section('llms_selected');
 $tmp = tempnam(sys_get_temp_dir(), 'llms');

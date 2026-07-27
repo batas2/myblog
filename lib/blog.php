@@ -247,18 +247,54 @@ function blog_warn(string $msg): void
  */
 function load_posts(bool $withUnpublished = false): array
 {
-    $posts = [];
+    $bySlug = [];
     foreach (glob(CONTENT_DIR . '/posts/*.md') as $file) {
         $post = parse_post_file($file);
         if ($post === null) {
             blog_warn('skip (bad name): ' . basename($file, '.md'));
             continue;
         }
+        $slug = $post['slug'];
+        if (isset($bySlug[$slug])) {
+            // One slug, two source files. Rescheduling renames a post, and the
+            // deploy is additive, so the old filename can survive on the server.
+            // Both files parse to the same slug: without this the post builds
+            // twice and appears twice in the pipeline. Keep whichever was
+            // written last, which is the freshly synced one, and say out loud
+            // that the other has to go.
+            [$keptFile, $keptPost] = $bySlug[$slug];
+            $newer = filemtime($file) >= filemtime($keptFile);
+            $bySlug[$slug] = $newer ? [$file, $post] : [$keptFile, $keptPost];
+            blog_warn("duplicate slug '{$slug}': " . basename($keptFile) . ' and ' . basename($file)
+                . ' — using ' . basename($newer ? $file : $keptFile) . ', delete the other');
+            continue;
+        }
+        $bySlug[$slug] = [$file, $post];
+    }
+
+    $posts = [];
+    foreach ($bySlug as [, $post]) {
         if (!$withUnpublished && $post['status'] !== 'published') continue;
         $posts[] = $post;
     }
     usort($posts, fn($a, $b) => $b['publish_ts'] <=> $a['publish_ts']);
     return $posts;
+}
+
+/**
+ * slug => [filenames] for every slug backed by more than one source file.
+ * Filename-only, so it stays cheap enough for the build and the admin page to
+ * call on every run. A non-empty result always means manual cleanup is due.
+ */
+function post_duplicate_sources(): array
+{
+    $bySlug = [];
+    foreach (glob(CONTENT_DIR . '/posts/*.md') as $file) {
+        if (preg_match('/^\d{4}-\d{2}-\d{2}-([a-z0-9-]{3,80})$/', basename($file, '.md'), $m)) {
+            $bySlug[$m[1]][] = basename($file);
+        }
+    }
+    return array_filter($bySlug, static fn(array $files): bool => count($files) > 1);
 }
 
 /** Source .md path for a slug, or null. */
@@ -268,11 +304,15 @@ function post_source_file(string $slug): ?string
     if (!preg_match('/^[a-z0-9-]{3,80}$/', $slug)) return null;
     // the glob is a suffix match ("service" also hits "…-not-a-service.md"),
     // so verify the parsed slug before trusting a file
+    $found = null;
     foreach (glob(CONTENT_DIR . '/posts/*-' . $slug . '.md') as $file) {
         $post = parse_post_file($file);
-        if ($post !== null && $post['slug'] === $slug) return $file;
+        if ($post === null || $post['slug'] !== $slug) continue;
+        // same tie-break as load_posts: when a rename left two files behind,
+        // every writer must land on the file the reader is actually using
+        if ($found === null || filemtime($file) > filemtime($found)) $found = $file;
     }
-    return null;
+    return $found;
 }
 
 /** True when the slug belongs to a currently published post (comments gate). */
