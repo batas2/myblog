@@ -2,17 +2,15 @@
 
 *My favorite pattern from Domain-Driven Design protects codebases from foreign models. I keep prescribing it to departments.*
 
-Ask an architect for their favorite pattern and you'll usually hear something impressive: event sourcing, CQRS, cells. Mine is humbler: **the anti-corruption layer**. A boring translation shim from the Domain-Driven Design toolbox. I love it because it's the only pattern I know that works equally well on an integration diagram and on an org chart.
-
-Usual disclaimer: what follows comes from years of private observations at integration boundaries, not from scientific literature. The boundaries were real, though.
+Ask an architect for their favorite pattern and you'll usually hear something impressive: event sourcing, CQRS, cells. Mine is humbler: **the anti-corruption layer**. A boring translation shim from the [Domain-Driven Design](https://en.wikipedia.org/wiki/Domain-driven_design) toolbox. I love it because it's the only pattern I know that works equally well on an integration diagram and on an org chart.
 
 ## What the layer actually protects
 
-A quick refresher for the non-DDD crowd. An anti-corruption layer sits between your system and an upstream system whose model you do not control: a legacy platform, a vendor API, another team's service. Its job is translation: their concepts arrive, get mapped into *your* language at the border, and only then touch your domain.
+A quick refresher for the non-DDD crowd. An [anti-corruption layer](https://learn.microsoft.com/en-us/azure/architecture/patterns/anti-corruption-layer) sits between your system and an upstream system whose model you do not control: a legacy platform, a vendor API, another team's service. Its job is translation: their concepts arrive, get mapped into *your* language at the border, and only then touch your domain.
 
 The name is the important part. Evans didn't call it "adapter" or "facade". He called it *anti-corruption*, because that is what it prevents. And here is what most teams get wrong: **the layer protects your model's integrity, not your API.** The danger was never that a remote call fails; you have retries for that. The danger is that their `status = 7`, their nullable-everything contract, their subtly different definition of "customer" starts living inside your entities. You import one convenient enum today, and six months later your code speaks two languages, neither of them fluently. Every feature after that pays the tax.
 
-Is the extra hop always worth it? Honestly, no. Translation costs: another mapping class, more tests, and a guaranteed "why this indirection?" comment in code review. If the upstream model is stable, close to yours, and read-only, map it directly and move on. The layer earns its keep when the upstream model is volatile, when its language contradicts yours, or when you catch yourself sprinkling `if (theirType == LEGACY_B)` across your domain logic. That `if` is not a smell of future corruption. It *is* the corruption, already inside.
+Is the extra hop always worth it? Honestly, no. Translation costs: another mapping class, more tests, and a guaranteed "why this indirection?" comment in code review. If the upstream model is stable, close to yours, and read-only, map it directly and move on. The layer earns its keep when the upstream model is volatile, when its language contradicts yours, or when you catch yourself sprinkling `if (theirType == LEGACY_B)` across your domain logic. That `if` *is* the corruption, already inside. Not a warning of it. The thing.
 
 ## Semantic corruption, human edition
 
@@ -28,11 +26,11 @@ Nobody decides any of this. That is the point. **Corruption rarely announces its
 
 So what do you do at a boundary, human or technical? You have exactly two honest options.
 
-**Adopt a genuinely shared model** when the concept is core to both sides and you are prepared to co-own its evolution. This is the ubiquitous-language dream, and it is expensive: shared definitions need governance, a change process, and someone empowered to say no. Reserve it for the handful of concepts that truly deserve it. This is model work (relations, constraints, evolution), the level I argued architects should stay at in [Mathematicians vs. Lawyers](/blog/mathematicians-vs-lawyers/).
+Adopt a genuinely shared model when the concept is core to both sides and you are prepared to co-own its evolution. This is the ubiquitous-language dream, and it is expensive: shared definitions need governance, a change process, and someone empowered to say no. Reserve it for the handful of concepts that deserve it. This is model work (relations, constraints, evolution), the level I argued architects should stay at in [Mathematicians vs. Lawyers](/blog/mathematicians-vs-lawyers/).
 
-**Translate at the boundary** when the other side's model is legitimately *theirs*: owned by them, stable, optimized for their world. Keep a glossary. Better yet, keep a translator: a person who consciously maintains the mapping. "Their 'client' is our 'buyer', except during trials." A named, human anti-corruption layer. It feels like bureaucracy and costs one page of documentation. It saves quarters of confusion.
+Translate at the boundary when the other side's model is legitimately *theirs*: owned by them, stable, optimized for their world. Keep a glossary. Better yet, keep a translator, a person who consciously maintains the mapping and can say out loud that "their 'client' is our 'buyer', except during trials". A named, human anti-corruption layer. It feels like bureaucracy. It costs one page and saves quarters.
 
-The trap is the third option, the one everyone reaches for first: **"let's just align the teams."** It sounds like the cheap solution. It is the most expensive item on the menu, because alignment is not a meeting. It is permanent joint ownership of a language. Every future change to the concept now requires both parties, forever, including the parties who will inherit it after the next reorg. Most teams that "aligned" in a two-hour workshop actually just adopted whichever vocabulary was spoken loudest, imported its bugs along with it, and called the result consensus.
+The trap is the third option, the one everyone reaches for first: **"let's just align the teams."** It sounds cheap. It is the most expensive item on the menu. Alignment means permanent joint ownership of a language, so every future change to the concept now requires both parties, forever, including the parties who will inherit it after the next reorg and were never asked. Most teams that "aligned" in a two-hour workshop actually just adopted whichever vocabulary was spoken loudest, imported its bugs along with it, and called the result consensus.
 
 Choose deliberately: unify what is core, translate what is foreign, and never leave a boundary unmanaged just because the two teams happen to like each other. Friendship is not a data contract.
 
@@ -42,9 +40,11 @@ A small exercise for your next quiet Friday. Pick the three most central words o
 
 If the answer to the last question is "nobody", congratulations. You have just located the exact spot where your model is importing someone else's bugs, free of charge, on a daily schedule.
 
-Which word in your domain has a foreign accent? And do you remember deciding to let it in?
+I stopped asking teams to align. Now I ask who translates, which is a smaller question and a much easier one to answer honestly, because it has a name in it and alignment never does; the person who says "that's our word, not theirs" is doing architecture whether or not the title says so. Every domain word has an accent. The useful part is knowing whose.
 
 ---
+
+**Updated:** 2026-08-01 16:10
 
 **Scores:** tension=6 originality=7 personal=4 contrarian=7 substance=8 punch=7 trend=3
 **Scored:** 2026-07-27 rubric=v1 model=claude-opus-5

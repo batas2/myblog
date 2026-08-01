@@ -2,15 +2,22 @@
 
 *Part three of the "tools that scale" series: what happens when the daily practice of a Solution Architect starts running on AI.*
 
-Open any active architecture workstream on my disk (a risk aggregation design, a multi-agent assistant, a gnarly integration decision) and you will find the same file at the root: `prompt.md`. It sits next to the diagrams and the decision records, and it outranks both. That file is not a note. It is the workstream's engine.
+Every active architecture workstream I run (a risk aggregation design, a multi-agent assistant, a gnarly integration decision) has the same file at its root: `prompt.md`. It sits next to the diagrams and the decision records, and it outranks both. That file is not a note. It is the workstream's engine.
 
-In [From Signals to Blips](/blog/from-signals-to-blips/) I described how an AI sweep of squad reports feeds our tech radar, and in [Probabilistic Metrics](/blog/probabilistic-metrics/) what that does to measurement. This one is more personal: how my everyday deliverables became prompt-driven, from solution designs through decision documents to diagrams. Field notes as usual, no science, a few scars.
+In [From Signals to Blips](/blog/from-signals-to-blips/) I described how an AI sweep of squad reports feeds our tech radar, and in [Probabilistic Metrics](/blog/probabilistic-metrics/) what that does to measurement. This one is more personal: how my everyday deliverables became prompt-driven, from solution designs through decision documents to diagrams.
 
 ## Every workstream carries its prompt
 
-Here is the practice, concretely. A solution design no longer starts in a document editor. It starts in `prompt.md`: the role, the task, the constraints, and pointers to context such as relevant decision records, discovery notes, and the previous design it supersedes. Diagrams have their own prompt file that describes what the drawing must answer and for whom. The weekly signal sweep is a prompt applied to fifteen squad reports. Even decision documents start from a prompt that knows which decision framework we use and who holds which role in it.
+Here is the practice, concretely. A solution design no longer starts in a document editor. It starts in `prompt.md`: the role, the task, the constraints, and pointers to context such as relevant decision records, discovery notes, and the previous design it supersedes. In skeleton form:
 
-These prompts are **versioned like code, diffed like code, and re-run like builds**. When the output is wrong, I usually don't edit the output. I fix the prompt or the context and regenerate. It took me embarrassingly long to internalize the consequence: the conversation with the model is scaffolding, the generated document is a build artifact, and the thing worth reviewing, improving, and keeping is the prompt plus its context.
+```
+role:        …
+task:        …
+constraints: …
+context:     decision records · discovery notes · the design this supersedes
+``` Diagrams have their own prompt file that describes what the drawing must answer and for whom. The weekly signal sweep is a prompt applied to 15 squad reports. Even decision documents start from a prompt that knows which decision framework we use and who holds which role in it.
+
+These prompts are **versioned like code, diffed like code, and re-run like builds**. When the output is wrong, I usually don't edit the output. I fix the prompt or the context and regenerate. The consequence took a while to sink in: the conversation with the model is scaffolding, the generated document is a build artifact, and the thing worth reviewing, improving, and keeping is the prompt plus its context.
 
 The chat is ephemeral. **The prompt is the asset.**
 
@@ -38,13 +45,15 @@ The countermeasures are unglamorous: every generated claim must cite the source 
 
 ## The operator
 
-In the Legacy Code article I predicted engineers would become Operators: people who express intent, leverage knowledge containers, and judge results instead of typing every line. I just didn't expect the prediction to catch *me* first.
+In the Legacy Code article I predicted engineers would become Operators: people who express intent, mine their knowledge containers, and judge results instead of typing every line. I just didn't expect the prediction to catch *me* first.
 
-I author less than I used to. I operate a small system of prompts and context that produces first versions of nearly everything, and I spend the recovered hours where the leverage actually is: decisions, conversations, and asking better questions of both humans and machines.
+I author less than I used to. I operate a small system of prompts and context that produces first versions of nearly everything, and I spend the recovered hours where they count for more: decisions, conversations, and asking better questions of both humans and machines.
 
 So here is my closing challenge. Imagine writing your practice's `prompt.md` tomorrow, the file that would let a machine draft your typical week's work. Could you? Whatever you cannot yet put into that file is the part of your own job you haven't fully understood. That gap is worth more attention than any tool.
 
 ---
+
+**Updated:** 2026-08-01 16:10
 
 **Scores:** tension=7 originality=6 personal=8 contrarian=6 substance=8 punch=8 trend=9
 **Scored:** 2026-07-27 rubric=v1 model=claude-opus-5

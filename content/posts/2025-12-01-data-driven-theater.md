@@ -10,7 +10,7 @@ I have lost count of how many meetings I've attended that were officially *data-
 
 Mark Twain popularized that line and attributed it to Benjamin Disraeli. Historians still can't confirm Disraeli ever said it. I love that detail: the most famous quote about misleading statistics ships with a broken attribution. Even the quote about data lying is a matter of interpretation.
 
-## Same Words, Different Worlds
+## Same words, different worlds
 
 Here is my core observation: **making decisions based on data makes sense only when the organization speaks the same language, built on the same concepts.**
 
@@ -18,13 +18,13 @@ Take something as innocent as "active user." For the product team it's anyone wh
 
 As a solution architect, I spend a large part of my life on contracts between systems. We version APIs, we validate schemas, we break builds when a field changes its meaning. And then we walk into a meeting where two departments compare numbers built on definitions that were never aligned. These are **semantic contracts between people that nobody ever wrote down**. Being data-driven is empty if those contracts were never seriously considered. The dashboard is just the visible tip of an agreement that doesn't exist.
 
-## The Preprocessing Trap
+## The preprocessing trap
 
 > "If you torture the data long enough, it will confess to anything."
 
 That one is usually pinned on economist Ronald Coase, also in a paraphrased form, because apparently we can't even quote people about data accurately.
 
-Here's the uncomfortable part: data is surprisingly easy to manipulate, and you rarely need to lie in the data itself. The comfortable place to cheat is earlier, in the preprocessing phase. Which rows were dropped as "invalid"? Which period was chosen as "representative"? Which outliers were "obviously" errors? Every one of those choices is invisible in the final chart.
+Here's the uncomfortable part: data is surprisingly easy to manipulate, and you rarely need to lie in the data itself. The comfortable place to cheat is earlier, in the preprocessing phase. Which rows were dropped as "invalid"? Which period was chosen as "representative"? Which outliers were "obviously" errors? Every one of those choices is invisible in the final chart. Nobody signs them.
 
 That's why I believe **explaining how a dataset was cleaned and prepared is often exactly as important as the conclusions drawn from it**. The conclusions are the last five percent of the journey. Everything that shaped the answer happened before.
 
@@ -35,7 +35,7 @@ And there are two symmetric ways to fail here:
 
 Between those two extremes lives an honest analysis. You'll recognize it by one feature: it comes with a changelog.
 
-## It's Rarely the Conclusions
+## It's rarely the conclusions
 
 In organizations (I'm deliberately not saying *corporations*, because this has nothing to do with company size) the problem I keep seeing is almost never the inference step. People are genuinely good at drawing conclusions. Give a smart group a dataset and they will reason about it just fine.
 
@@ -49,7 +49,7 @@ If your actual goal is not a decision but an appearance, walking into the meetin
 
 But it works under exactly one condition: your audience must not be competent enough to ask about definitions and preprocessing. And trust me, that condition is satisfied more often than we'd like to admit ;) If you're wondering how those audiences end up in those rooms, [The Peter Principle](https://en.wikipedia.org/wiki/Peter_principle) has been explaining it since 1969.
 
-## A Small Experiment
+## A small experiment
 
 So here's my suggestion for your next data-driven meeting. Don't challenge the conclusions. That's playing the game on the presenter's terms. Ask two questions instead:
 
@@ -58,11 +58,13 @@ So here's my suggestion for your next data-driven meeting. Don't challenge the c
 
 Then watch the room.
 
-If the answers come easily, congratulations: you're in one of those rare places where data-driven actually means something. If what you get is a pause, a nervous smile, and "let's take it offline"…
+If the answers come easily, congratulations: you're in one of those rare places where data-driven means something. If what you get is a pause, a nervous smile, and "let's take it offline", then you have learned more in ten seconds than the whole deck was going to teach you, because you now know exactly which layer of this is broken, and it happens to be the cheap one to fix.
 
-Well. Enjoy the theater. You're the audience.
+Definitions are cheaper than dashboards. Write down what "active user" means here, get two departments to put their names on it, and half the charts in the building start meaning the same thing without anyone rebuilding a single query. That's an afternoon. I have never seen an organization finish it in one sitting, and I have never seen one regret starting.
 
 ---
+
+**Updated:** 2026-07-31 14:53
 
 **Scores:** tension=8 originality=6 personal=4 contrarian=8 substance=6 punch=8 trend=4
 **Scored:** 2026-07-27 rubric=v1 model=claude-opus-5

@@ -6,19 +6,19 @@ In the vision document of my latest side project (a self-hostable scheduling too
 
 It sounds negative. It's the most constructive thing in the repository.
 
-## The Feature That Is Absence
+## The feature that is absence
 
-The tool itself is deliberately small: a single binary, SQLite by default, no Docker required, a hard budget of about five thousand lines of Go, and eleven ADRs explaining the boring choices. It is not trying to compete with Calendly or Cal.com. They have funding, teams, and ecosystems. It competes with their *narrow case*: one professional, one website, one booking flow they want to own end-to-end.
+The tool itself is deliberately small: a single binary, SQLite by default, no Docker required, a hard budget of about 5,000 lines of Go, and eleven ADRs explaining the boring choices. It is not trying to compete with [Calendly](https://calendly.com/) or [Cal.com](https://cal.com/). They have funding, teams, and ecosystems. It competes with their *narrow case*: one professional, one website, one booking flow they want to own end-to-end.
 
 Every absence in that description is a decision, not a gap. No team features means no roles-and-permissions tree, no admin screens, no invitation flows. No billing integration means no webhook forest and no PCI anxiety. No video conferencing means no vendor SDK whose breaking changes become my weekend.
 
-The absences even select the audience. The secondary persona in the vision doc is the senior engineer who self-hosts everything and will only adopt a tool that stays small. For them, "no Docker required" is not a limitation. It's the pitch.
+The absences even select the audience. The secondary persona in the vision doc is the senior engineer who self-hosts everything and will only adopt a tool that stays small. For them, "no Docker required" is the pitch.
 
-People read a feature list to learn what a product does. But **a feature list tells you what a product does; the anti-feature list tells you what it *is*.** Constraints are the taste. Anyone can add; the identity lives in what you refuse.
+A feature list tells you what a product does. **The anti-feature list tells you what it *is*.** Constraints are the taste. Anyone can add; the identity lives in what you refuse.
 
-## Rejection, Written Down
+## Rejection, written down
 
-The anti-personas are specific, and that specificity is the whole trick. A fifty-person sales team needing round-robin assignment: not our user. A recruiting org wanting in-app video interviews: not our user. Anyone hoping for a free tier with an upgrade path: there is no business model, this is a tool, so also not our user.
+The anti-personas are specific, and that specificity is the whole trick. A 50-person sales team needing round-robin assignment: not our user. A recruiting org wanting in-app video interviews: not our user. Anyone hoping for a free tier with an upgrade path: there is no business model, this is a tool, so also not our user.
 
 These are real people with valid needs, and they will happily pay somebody. They are simply *someone else's* users. Writing that down feels almost rude, which tells you exactly how rarely we do it.
 
@@ -26,7 +26,7 @@ Watch what each rejection buys. Kill round-robin and you never implement availab
 
 And feature triage becomes almost mechanical. Every incoming idea (mine included, at 2 a.m., when everything seems like a good idea) answers one question: *which persona is this for?* If the answer is an anti-persona, it's a clean no. Painlessly. Nothing personal; it's in writing.
 
-## The Corporate Mirror
+## The corporate mirror
 
 This is where the side project starts explaining the day job.
 
@@ -38,15 +38,17 @@ Which is exactly why organizations shouldn't dismiss this as hobby-scale wisdom.
 
 I've watched million-euro complexity enter systems through the simple absence of a written "no". The document would have cost an afternoon.
 
-## Practicing "No" Where It's Free
+## Practicing "no" where it's free
 
 My private conclusion is this: the ability to say no is the scarcest architectural resource I know, scarcer than senior engineers, scarcer than budget. And like any scarce skill, it atrophies without reps.
 
-Side projects are my gym for refusal. Every anti-persona I write at home, every feature I decline with a one-line reference to the vision doc, is a rep. And those reps are what keep the diplomatic, watered-down, corporate-compatible version of my "no" from collapsing entirely when a stakeholder leans on it.
+Side projects are my gym for refusal. Every anti-persona I write at home, every feature I decline with a one-line reference to the vision doc, is a rep. Those reps are what keep the diplomatic, watered-down, corporate-compatible version of my "no" from collapsing when a stakeholder leans on it.
 
-So, two questions to leave you with. Does your product have anti-personas? And if you wrote them down tomorrow, who in your organization would dare to sign the document?
+The gym matters because of the transfer: the refusal I practice on a scheduling tool nobody uses yet is the same muscle I need in a room where somebody very senior is explaining why this one exception is different, and there is no way on earth to train it inside that room. So I train it in the repo. Write the anti-personas while refusing is still free. Get a signature on them before it isn't.
 
 ---
+
+**Updated:** 2026-08-01 16:10
 
 **Scores:** tension=6 originality=6 personal=8 contrarian=6 substance=7 punch=8 trend=2
 **Scored:** 2026-07-27 rubric=v1 model=claude-opus-5

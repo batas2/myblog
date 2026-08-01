@@ -8,9 +8,9 @@ I remembered his interview at the company I worked for back then. I had been cer
 
 Not because of anything he said, or did, or failed to know. The headcount moved.
 
-That call rearranged something I had believed for a decade. Private notes from one career, no study behind them.
+That call rearranged something I had believed for a decade.
 
-## What five out of five actually measured
+## What five out of five measured
 
 An interview loop is not measuring your worth, and it is not really trying to. It is managing somebody else's risk at scale, and it does that inside constraints that have nothing to do with you. An open seat. A budget cycle. The current shape of a team. A manager's memory of their last bad hire. I have written before about [the loop as a risk function rather than a verdict](/blog/grinding-dijkstra-at-senior-level/), and every year since has made me more confident that this is the right reading.
 
@@ -24,7 +24,7 @@ Which makes a rejection a reading with two operands. Your skills are one of them
 
 I spent the early part of my career as a consultant, which meant a new project every few months and a lot of first conversations. Two or three a year, sometimes more.
 
-I got good at feeling the outcome early. Ten minutes into a conversation you can usually tell whether anything will come of it. What I could not do was name what I was feeling, so I explained it to myself with the only vocabulary I had: they must have wanted somebody more technical.
+I got good at feeling the outcome early. Ten minutes into a conversation you can usually tell whether anything will come of it. What I couldn't do was name what I was feeling, so I explained it to myself with the only vocabulary I had: they must have wanted somebody more technical.
 
 They usually did not. What was actually being read was whether I could get a thought out of my head and into somebody else's without requiring them to already share my context. Whether I would be pleasant to disagree with at four in the afternoon in a bad week. Whether I asked them anything at all.
 
@@ -36,13 +36,13 @@ It also explains why I have gone cold on the model everyone quotes. The T shape:
 
 The vertical stroke still pays. But maximizing it alone has become a genuinely risky career position, and not for the reason usually given. It is not mainly that agents write code now, although that matters: generation is exactly the part of the vertical stroke that got cheap this decade, and the industry is still mid-argument about what developer skill even means once it did. It is that the scarce thing in any organization is someone who can hold a system-level view *and* be worked with. Depth without the horizontal stroke produces a person who is right often and expensive to be around, and organizations quietly route around expensive-to-be-around. They do it without malice and usually without noticing.
 
-A colleague I still respect enormously put it better than I have managed since. If you are right and you were unpleasant about it, you are still unpleasant. If you are wrong and you were decent about it, you were merely wrong.
+A colleague I still respect enormously put it better than I have managed since: "If you are right and you were unpleasant about it, you are still unpleasant. If you are wrong and you were decent about it, you were merely wrong."
 
 The second position is recoverable in an afternoon. The first one compounds. It is the individual version of the failure I described in [Mathematicians vs. Lawyers](/blog/mathematicians-vs-lawyers/): a room that can only think one way is not strong, it is brittle.
 
 ## Make it a KPI
 
-The practice itself is small, and it is the part I would defend in any review.
+The practice itself is small, and I would defend it in front of anyone.
 
 Keep a rejection ledger. Not to punish yourself. To check that you are still asking for things.
 
@@ -57,9 +57,9 @@ My friend, the one who called: he took a very good job about a year after the fi
 
 ## Try this
 
-Count the times you were told no in the last twelve months. Four columns are enough for the ledger: the date, what exactly was declined, your best guess at why, and which pile it belongs to. Two piles: the ones that were about you, and the ones that were about the state of the system on that particular Tuesday.
+Count the times you were told no in the last 12 months. Four columns are enough for the ledger: the date, what exactly was declined, your best guess at why, and which pile it belongs to. Two piles: the ones that were about you, and the ones that were about the state of the system on that particular Tuesday.
 
-If the second pile is bigger, you have spent a year collecting evidence about other people's constraints and filing it under your own competence. Move it to the right folder and go ask for something.
+If the second pile is bigger, you've spent a year collecting evidence about other people's constraints and filing it under your own competence. Move it to the right folder and go ask for something.
 
 And if both piles are nearly empty: what did you decide not to ask for this year, and who exactly told you no before you did?
 

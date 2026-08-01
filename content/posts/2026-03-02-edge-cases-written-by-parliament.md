@@ -4,9 +4,9 @@
 
 The strictest product owner I have ever worked with has never attended a standup, ignores my roadmap entirely, and publishes requirements as versioned PDFs. It's the state.
 
-Building Desta, my invoicing platform for the Polish market, means integrating with three government systems: KSeF (the mandatory national e-invoicing API), the public company registry with its SOAP interface, and the JPK unified tax files. A quick disclaimer before we start: this is an engineering story, not tax advice. Please keep paying your accountant ;)
+Building Desta, my invoicing platform for the Polish market, means integrating with three government systems: [KSeF](https://www.podatki.gov.pl/ksef/) (the mandatory national e-invoicing API), the public company registry with its SOAP interface, and the [JPK](https://www.podatki.gov.pl/jednolity-plik-kontrolny/) unified tax files. A quick disclaimer before we start: this is an engineering story, not tax advice. Please keep paying your accountant ;)
 
-## The Spec You Cannot Refactor
+## The spec you cannot refactor
 
 Tax law is an upstream dependency with no negotiation channel. You cannot file an issue against a statute. You cannot suggest a breaking change be batched into the next major version. You implement what the paragraph says, and the paragraph doesn't care about your domain model.
 
@@ -18,7 +18,11 @@ Second: invoice rows with certain VAT exemptions must render the VAT column *bla
 
 I wrote in [Mathematicians vs. Lawyers](/blog/mathematicians-vs-lawyers/) about two thinking archetypes: the modelers who dissolve edge cases by reshaping the model, and the rule-thinkers who enumerate them. Well, this is the domain where the Lawyer archetype simply wins. Every edge case here has a paragraph number attached. My instinct is to find the model that makes exceptions disappear; in compliance work, the exceptions *are* the model.
 
-## SOAP, Sessions, and the State
+> "Perfection is achieved, not when there is nothing more to add, but when there is nothing left to take away." ― Antoine de Saint-Exupéry
+
+The state has never read it.
+
+## SOAP, sessions, and the state
 
 Now the part everyone loves to mock: the technology.
 
@@ -30,17 +34,17 @@ KSeF authentication is a small choreography: fetch the public key, request a cha
 
 That word, "wrap", is the architectural lesson. This is where the anti-corruption layer stops being a conference slide and starts earning its keep. The government's model, its vocabulary, its SOAP envelopes and bureaucratic field names get translated at the boundary, once, in one place. My domain never learns what the ministry calls a building number. The state stays outside; the model stays clean.
 
-## Lessons for Architects Raised on REST
+## Lessons for architects raised on REST
 
 If your entire career has been JSON over HTTPS with a `v2` in the path, integrating with the state is a masterclass in things our industry forgot.
 
-**Stability is a feature, arguably the feature.** These APIs change less per decade than a typical startup API changes per quarter. Deprecations are announced by legislation, with timelines measured in years. Meanwhile I've integrated with modern SaaS APIs that shipped three breaking changes in a year, each announced in a changelog nobody reads.
+**Stability is the feature.** These APIs change less per decade than a typical startup API changes per quarter. Deprecations are announced by legislation, with timelines measured in years. Meanwhile I've integrated with modern SaaS APIs that shipped three breaking changes in a year, each announced in a changelog nobody reads.
 
 **Compliance is a bounded context.** It has its own language (the statute's, not yours), its own tests (named after tax scenarios, not user stories), and its own release rhythm: the calendar of the state, not your sprint. Treating it as "just another feature" is how compliance logic ends up smeared across a codebase.
 
 **The reference implementation is the real spec.** The ministry publishes reference client SDKs, and reading them is archaeology. You dig through layers to learn what the API *actually* expects, as opposed to what the PDF implies. Archaeology beats guessing. I made a similar argument in [Stop Calling It Legacy Code](https://medium.com/@bfrackowiak/stop-calling-it-legacy-code-02308db28cb2): old code is a knowledge container. Government reference code is the same idea at civilizational scale: decades of edge cases, fossilized and readable.
 
-## Ugly, Documented, Stable
+## Ugly, documented, stable
 
 Complaining about government APIs is the cheapest joke in engineering, and I've told it myself. But after a year of running production integrations against them, I have to report something embarrassing: I trust these contracts more than most microservices I've met in my career.
 
@@ -49,6 +53,8 @@ They are ugly. They are documented. They are stable. **Two of those three qualit
 So, a question for your next architecture review: which of your internal APIs would survive being frozen for five years? Because the ministry's would. And did.
 
 ---
+
+**Updated:** 2026-08-01 16:10
 
 **Scores:** tension=6 originality=8 personal=8 contrarian=7 substance=8 punch=8 trend=3
 **Scored:** 2026-07-27 rubric=v1 model=claude-opus-5

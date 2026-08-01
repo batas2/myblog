@@ -8,15 +8,15 @@ The engineering department responsible for all of this is me. After hours. I als
 
 A few years ago this portfolio would have required a small software house: a couple of backend developers, a mobile developer, a tester, and somebody to herd them. Today it's one architect and a fleet of AI agents. What follows is a field report, not a victory lap. As usual, the failure modes turned out to be the most interesting part of the experiment.
 
-## The Portfolio That Shouldn't Fit in One Head
+## The portfolio that shouldn't fit in one head
 
-The product is **Desta**, an invoicing platform for the Polish market: a multi-tenant Laravel web application, a native Android app in Kotlin and Jetpack Compose, and two marketing sites for two different audiences. Under the hood sit the integrations nobody builds for fun: KSeF, Poland's mandatory e-invoicing system, where the XML is the legal invoice and the PDF is legally demoted to a "visualization"; a SOAP-based government registry lookup for company data; and JPK tax file generation. Roughly 990 automated tests hold the whole thing together.
+The product is Desta, an invoicing platform for the Polish market: a multi-tenant Laravel web application, a native Android app in Kotlin and Jetpack Compose, and two marketing sites for two different audiences. Under the hood sit the integrations nobody builds for fun: [KSeF](https://www.podatki.gov.pl/ksef/), Poland's mandatory e-invoicing system, where the XML is the legal invoice and the PDF is legally demoted to a "visualization"; a SOAP-based government registry lookup for company data; and JPK tax file generation. Roughly 990 automated tests hold the whole thing together.
 
 One thing I had to learn the hard way: the constraint was never typing speed. **The real bottleneck of a company of one is the number of decisions a single head can hold per day.** Which schema change is safe. What happens to a finalized invoice when the law changes. Which release goes first. Code was never the scarce resource. Judgment is.
 
 So "operating" the company means almost no typing at all. It means writing specifications, reviewing diffs, and verifying behavior. In [Stop Calling It Legacy Code](https://medium.com/@bfrackowiak/stop-calling-it-legacy-code-02308db28cb2) I argued we're moving from engineers who write logic to *operators* who express intent and judge results. Desta is me testing that thesis with my own evenings and my own money.
 
-## The Operating Model
+## The operating model
 
 The setup that makes this survivable has three parts, and none of them is a clever prompt.
 
@@ -26,25 +26,27 @@ The setup that makes this survivable has three parts, and none of them is a clev
 
 **Tests as the trust boundary.** The ~990 tests are not there because I'm diligent. They are there because agents don't get faith; they get assertions. Every agent-generated change lands against a mechanical safety net that doesn't care how confident the model sounded.
 
-## What Breaks First
+## What breaks first
 
 Now the honest part.
 
-**Review capacity breaks before generation capacity.** Generating code is effectively free now; my evening attention is not. The bottleneck moved exactly where our transformation data at the day job said it would. I wrote about that in [From Signals to Blips](/blog/from-signals-to-blips/). A company of one doesn't run out of code. It runs out of reviewer.
+Review capacity breaks before generation capacity. Generating code is effectively free now; my evening attention is not. The bottleneck moved exactly where our transformation data at the day job said it would, and I wrote about that in [From Signals to Blips](/blog/from-signals-to-blips/). A company of one doesn't run out of code. It runs out of reviewer.
 
-**Trust calibration is a skill nobody teaches.** Which diffs deserve line-by-line reading and which deserve test-suite faith? I've settled on a simple rule: anything touching migrations or money gets my eyes on every line. Everything else gets the net. I still get it wrong in both directions, over-reading trivia and under-reading a "trivial" change that wasn't. My most instructive incident so far: an agent that made a red test green by weakening the assertion. The tests guard the code, but somebody still has to guard the tests.
+Trust calibration is the skill nobody teaches. Which diffs deserve line-by-line reading and which deserve test-suite faith? I've settled on a simple rule: anything touching migrations or money gets my eyes on every line. Everything else gets the net. I still get it wrong in both directions, over-reading trivia and under-reading a "trivial" change that wasn't. My most instructive incident so far was an agent that made a red test green by weakening the assertion. The tests guard the code, but somebody still has to guard the tests.
 
-**Domain decisions don't compress.** Tax rules, pricing boundaries, what a correction invoice may reference. These take exactly as long as they took in 2020, because the hard part is understanding consequences, not producing code. **AI compresses everything except responsibility.**
+And domain decisions don't compress at all. Tax rules, pricing boundaries, what a correction invoice may reference. These take exactly as long as they took in 2020, because the hard part is understanding consequences, not producing code. **AI compresses everything except responsibility.**
 
-## The Moat Is Not the Code
+## The moat is not the code
 
 My conclusion after this experiment is uncomfortable for people selling code and comforting for people who know things: one architect plus agents is now a viable software company, for a *narrow* domain.
 
 The code was never the moat; it's cheaper than ever. The moat is knowing which invoice field the law wants left blank, which government API header actually carries the session, which pricing edge case will generate a support email at 7 a.m. Domain knowledge, encoded into context files and tests, is the entire company. The agents are just very fast hands.
 
-So here's my question for you: the "I don't have a team" excuse for not building that product you keep describing at lunch? It just expired. What's the new excuse? ;)
+Which means the "I don't have a team" excuse for the product you keep describing at lunch has quietly expired, and I say that as somebody who used it for years and enjoyed it. What replaced it is smaller and much less comfortable: which domain do you know well enough that encoding it into context files and tests would be worth somebody's money? That is the whole company now. Finding my answer took longer than building any of this ;)
 
 ---
+
+**Updated:** 2026-08-01 16:10
 
 **Scores:** tension=8 originality=6 personal=9 contrarian=7 substance=8 punch=9 trend=9
 **Scored:** 2026-07-27 rubric=v1 model=claude-opus-5

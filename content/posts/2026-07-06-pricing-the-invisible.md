@@ -4,19 +4,17 @@
 
 The prioritization meeting is where architecture goes to lose. I've watched this match for years, and the script barely changes. A feature walks in with a number attached ("+2% conversion," "unlocks segment X") and takes its seat at the top of the backlog. Then the architecture item walks in: "we should consolidate the integration layer." No number. Just an architect, gesturing at the future.
 
-Final score, season after season: features 500, architecture 3. And architecture only scored after production incidents did the lobbying.
+Final score, season after season: features 500, architecture 3. And architecture only scored after production incidents did the lobbying. I suspect your scoreboard looks similar.
 
-Standard disclaimer: private observations, not science. But I suspect your scoreboard looks similar.
-
-## The Curse of Invisible Work
+## The curse of invisible work
 
 In [Mathematicians vs. Lawyers](/blog/mathematicians-vs-lawyers/) I wrote about the thinking archetype whose impact is chronically less visible: change the model, and whole families of problems silently stop existing. This is that curse, operationalized in a backlog.
 
-When architecture work succeeds, the visible result is *nothing*. The incident that never fired opens no ticket. The complexity that never arrived has no demo. The integration that didn't need a workaround generates no praise thread. Prevention, by definition, deletes its own evidence.
+When architecture work succeeds, the visible result is *nothing*. The incident that never fired opens no ticket. The complexity that never arrived has no demo. The integration that didn't need a workaround generates no praise thread. Prevention deletes its own evidence. That is the whole problem.
 
 And backlogs, the machinery we use to decide what matters, only rank observables. A backlog is a list of things that will visibly happen. It has no column for things that will invisibly *not* happen. **The counterfactual has no product owner.**
 
-## Why "The Architect Wants It" Always Loses
+## Why "the architect wants it" always loses
 
 So how does architecture work usually get argued for? With authority. "This is important." "Trust me, this will bite us." "It's best practice."
 
@@ -24,7 +22,7 @@ Now watch what happens in the room. The feature brings a number; the architectur
 
 "Trust me" is a real currency, but it doesn't scale. It spends your personal credibility, it expires when you leave the room, and it loses every time to a spreadsheet cell. If invisible work is going to survive prioritization, it needs a number of its own.
 
-## Give It an Honest Number
+## Give it an honest number
 
 My own fix is borrowed from my tech-radar practice (described in [From Signals to Blips](/blog/from-signals-to-blips/)): score architecture and debt items on shared, explicit anchors.
 
@@ -34,11 +32,11 @@ importance = multiplicity × severity × strategic_weight
 
 *Multiplicity*: how many teams or systems the item touches. You count them, which makes this the hardest factor to argue with. *Severity* (1–3): from inconvenience to actively blocked work, each level anchored in words everyone agreed on beforehand. *Strategic weight* (1–3): from local cleanup to a decision that sets an organization-wide precedent.
 
-The multiplication matters: an item has to score on several dimensions at once to rank high. But the real magic is elsewhere, in **comparability**. Two architecture items scored on the same public anchors can be ranked against each other, and against features, without a single euro of fictional ROI. The anchors are published, so any score can be challenged; "why severity 3?" becomes a productive argument instead of a status contest. And scoring takes minutes, not a discovery sprint.
+The multiplication matters: an item has to score on several dimensions at once to rank high. But the payoff is elsewhere, in **comparability**. Two architecture items scored on the same public anchors can be ranked against each other, and against features, without a single euro of fictional ROI. The anchors are published, so any score can be challenged; "why severity 3?" becomes a productive argument instead of a status contest. And scoring takes minutes, not a discovery sprint.
 
 The fight changes shape immediately. The architect stops begging and starts comparing. "This scores 24 because it blocks four teams at severity 2 and sets a precedent" is a sentence a product owner can *work with*: accept it, challenge it, trade against it. "We really should do this" never was.
 
-## The Trap: Fake Precision
+## The trap: fake precision
 
 Now the failure mode, because there is one, and it's seductive.
 
@@ -50,11 +48,13 @@ So don't fake ROI. Publish the anchors, score in the open, state the assumptions
 
 The invisible work will never fully market itself. Prevention deletes its own evidence, and no formula changes that. But there is a difference between invisible and unpriced. You can't make the counterfactual observable. You *can* make it comparable.
 
-One exercise before your next prioritization meeting: take the most valuable thing your team never shipped a ticket for (the outage that didn't happen, the rewrite that turned out unnecessary) and score it. Multiplicity, severity, strategic weight.
+One exercise before your next prioritization meeting: take the most valuable thing your team never shipped a ticket for, the outage that didn't happen or the rewrite that turned out unnecessary, and score it. Multiplicity, severity, strategic weight. Three inputs and a multiplication.
 
-Then the real question: what's the biggest number sitting invisible in your organization right now?
+These days I don't walk into that room to argue. I walk in with a column, which is a smaller ambition than it sounds, because a column does not need anybody to believe me; it needs somebody to disagree with a severity rating in public, and that argument, unlike the one about whether architecture is worth doing, is one I can win.
 
 ---
+
+**Updated:** 2026-08-01 16:10
 
 **Scores:** tension=8 originality=6 personal=4 contrarian=7 substance=8 punch=8 trend=3
 **Scored:** 2026-07-27 rubric=v1 model=claude-opus-5
