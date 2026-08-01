@@ -70,6 +70,7 @@ form, and first-party analytics.
 ├── lib/                 config, helpers, markdown, content model, templates,
 │                        analytics, geoip, admin core
 ├── tools/               build.php (generator), geoip_update.php (country db),
+│                        analytics_prune.php (what counts and what does not),
 │                        fetch_images.sh (CC image fetcher),
 │                        preview_admin.php (throwaway local copy of admin, never deployed)
 ├── docs/                strategy: improvement plan, action plan, topic engine,
@@ -179,6 +180,30 @@ prints the queue after every deploy so nothing waits unnoticed.
   memory on the beacon and is never stored, so nothing about the privacy model
   changes. **Admin → System** shows the address you are connecting from and
   whether it is currently excluded, so you can copy it straight into the config.
+- What does not count: crawlers naming themselves are dropped at the door, but
+  headless browsers ship a stock user agent and do run the beacon. Those are
+  written and marked instead — a browser reporting plain `UTC` is running on a
+  server, since every real device reports a region zone. Marked rows stay in the
+  table and out of every total, visible in **Recent visits** with the verdict, so
+  the rule can be tuned rather than trusted blindly.
+  `php tools/analytics_prune.php --list` shows the split; `--rescan` re-judges
+  history after a rule change; `--owner --from=… --to=… --tz=… --os=…` marks your
+  own past browsing from before the address exclusion existed; `--restore` undoes
+  any of it. Every mode counts first and writes only with `--apply`.
+- Attribution: Medium, DEV, LinkedIn and mail clients all strip or hide the
+  referrer, so an untagged cross-post link comes back indistinguishable from
+  somebody typing the address. The pipeline row for each post carries copy-ready
+  tagged links (`?utm_source=medium|devto|linkedin|newsletter`); `an_utm_group()`
+  maps the tag back to the platform's own acquisition group, so a naked DEV click
+  is still credited to DEV.
+- "Daily visitors, summed" means exactly that: the visitor hash is salted per UTC
+  day and unlinkable across days, so one reader on Monday and Thursday counts
+  twice. Counting returning readers would need a durable identifier, which is the
+  one thing this design refuses to store.
+- Optional cross-check: point `analytics_access_log_dir` at the web server's daily
+  logs (`YYYY-MM-DD.log`) and **Admin → System** compares rows written against
+  `POST /a.php` requests logged. Requests should always be the larger number; rows
+  exceeding them means one of the two sources is dropping events.
 - GeoIP: `php tools/geoip_update.php` downloads the free DB-IP country database
   (CC BY 4.0, ~15 MB compiled) into `content/geoip.dat`. Re-run monthly — locally
   before a deploy, or straight on the server. Lookups are offline `fseek` binary

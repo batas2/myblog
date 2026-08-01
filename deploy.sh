@@ -222,6 +222,7 @@ run "${RSYNC_LOG}" rsync -az "${RSYNC_PROGRESS[@]}" --stats --itemize-changes "$
   --exclude='deploy.sh' \
   --exclude='docs/' \
   --exclude='drafts/' \
+  --exclude='Refernce/' \
   --exclude='tests/' \
   --exclude='README.md' \
   --exclude='LICENSE' \

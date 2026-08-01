@@ -27,6 +27,7 @@ _remote-backup/
 # private notes and old files
 docs/
 _archive/
+Refernce/
 
 # local noise
 .DS_Store

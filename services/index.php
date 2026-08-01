@@ -69,14 +69,18 @@ $extra = <<<HTML
 </style>
 HTML;
 
+/* Unlisted on purpose. Nothing in the nav, the footer or the sitemap points
+   here; the only public mention is one paragraph on /about/. noindex keeps it
+   out of search results too, so a reader browsing the site never meets a
+   price list and the link stays useful to send by hand. */
 echo page_head(
     'Work with me · Bartosz Frąckowiak — architecture consulting, workshops & AI-native training',
     'Fixed-scope architecture engagements, team workshops (DDD, Claude Code), and ongoing advisory — from the architect who runs an AI transformation across several hundred developers.',
     'https://bfrackowiak.pl/services/',
-    $extra
+    '<meta name="robots" content="noindex, follow">' . "\n" . $extra
 );
 
-echo site_nav('services');
+echo site_nav();
 ?>
 
 <main>
@@ -85,7 +89,7 @@ echo site_nav('services');
     <?= eyebrow('Work with me') ?>
     <h1 class="display" style="font-size:clamp(2rem,4.5vw,3rem)">The essays are free.<br><em>This is how the work happens.</em></h1>
     <p class="lede">
-      Everything I learn ends up <a href="/blog/">on the blog</a> — in public, for free, most Mondays.
+      Everything I learn ends up <a href="/">on the blog</a> — in public, for free, most Mondays.
       When you want it applied to <em>your</em> system, with your constraints and your team in the room,
       these are the shapes I work in. Fixed scope, written deliverables, a price agreed up front. No hourly meters.
     </p>
@@ -207,9 +211,9 @@ echo site_nav('services');
       <p style="margin-top:2.2rem">
         <?php if ($calendly !== ''): ?>
           <a class="btn btn-primary" href="<?= e($calendly) ?>" target="_blank" rel="noopener">Book the free 30-min call <?= arrow_icon() ?></a>
-          <a class="btn btn-ghost" href="/#contact" style="margin-left:0.6rem">Or send a message</a>
+          <a class="btn btn-ghost" href="/about/#contact" style="margin-left:0.6rem">Or send a message</a>
         <?php else: ?>
-          <a class="btn btn-primary" href="/#contact">Get in touch — I reply within 2 business days <?= arrow_icon() ?></a>
+          <a class="btn btn-primary" href="/about/#contact">Get in touch — I reply within 2 business days <?= arrow_icon() ?></a>
         <?php endif; ?>
       </p>
 

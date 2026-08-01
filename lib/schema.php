@@ -107,7 +107,11 @@ function schema_blog_posting(array $p, ?array $hero, string $url, string $publis
     return $posting;
 }
 
-/** The Blog entity for the index page. */
+/**
+ * The Blog entity for the home page. The listing lives at the site root now,
+ * so the url is the root; the @id keeps its historical /blog/#blog fragment so
+ * anything that already resolved this entity still matches it.
+ */
 function schema_blog(): array
 {
     return [
@@ -115,8 +119,25 @@ function schema_blog(): array
         '@type' => 'Blog',
         '@id' => cfg('site_url') . '/blog/#blog',
         'name' => 'Field Notes',
-        'url' => cfg('site_url') . '/blog/',
+        'url' => cfg('site_url') . '/',
         'description' => 'Weekly essays on software architecture, the people around it, and the corporate machine they form together.',
+        'inLanguage' => 'en',
+        'author' => schema_person(),
+    ];
+}
+
+/**
+ * The WebSite entity. Lives on the home page, which is also the blog listing,
+ * so it is the one place that can honestly claim to be the site.
+ */
+function schema_website(): array
+{
+    return [
+        '@context' => 'https://schema.org',
+        '@type' => 'WebSite',
+        '@id' => cfg('site_url') . '/#website',
+        'name' => cfg('author'),
+        'url' => cfg('site_url') . '/',
         'inLanguage' => 'en',
         'author' => schema_person(),
     ];

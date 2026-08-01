@@ -38,9 +38,12 @@ const PREVIEW_PW = 'preview';
 if (!$keep) {
     echo "syncing sources into {$box}\n";
     // config.php and the router are sandbox-local: never overwritten from the
-    // repo (that would hand the sandbox the real secrets) and never deleted
+    // repo (that would hand the sandbox the real secrets) and never deleted.
+    // The leading slash matters: an unanchored --exclude=config.php matches at
+    // any depth and takes lib/config.php with it, which is the loader every
+    // entrypoint requires, so the sandbox build dies before it starts.
     exec('rsync -a --delete --exclude=_remote-backup/ --exclude=_archive/ --exclude=.git/ --exclude=.claude/ '
-       . '--exclude=config.php --exclude=preview-router.php '
+       . '--exclude=/config.php --exclude=/preview-router.php '
        . '--exclude=content/comments/ --exclude=content/analytics.db --exclude=content/analytics.db-* '
        . '--exclude=content/analytics.seed --exclude=content/newsletter.db --exclude=content/newsletter.db-* '
        . '--exclude=content/scores.db --exclude=content/scores.db-* '
@@ -113,12 +116,34 @@ if (!$keep && !$seeded) {
         if ($i === 1) $base = 8;              // a strong post nobody found — the distribution failure
         if ($i === 4) $base = 190;            // a mediocre post that took off — the model's blind spot
         $n = max(3, $base + mt_rand(-12, 12));
+
+        /* Where this post was hand-carried. A post that declares a Medium or DEV
+           URL gets clicks from there; every post gets the two destinations that
+           never have a URL of their own. Without this the whole tagged-link
+           story (share_urls, the Acquisition groups, the Published-on column)
+           renders as a column of dots and cannot be judged. */
+        $carried = ['linkedin', 'newsletter'];
+        foreach (array_keys($p['syndication']) as $platform) {
+            $key = strtolower($platform);
+            if (isset(SHARE_TARGETS[$key])) $carried[] = $key;
+        }
+
         for ($h = 0; $h < $n; $h++) {
             $ts = time() - mt_rand(0, 29 * 86400);
             [$ref, $grp] = $refs[mt_rand(0, 3)];
             [$br, $os, $dev] = $uas[mt_rand(0, 3)];
+            // one hit in five arrives on a tagged link, and those carry no
+            // referrer at all — which is exactly why the tag has to be there
+            $src = $mdm = $cmp = '';
+            if (mt_rand(1, 5) === 1) {
+                $src = $carried[mt_rand(0, count($carried) - 1)];
+                $mdm = SHARE_TARGETS[$src]['medium'];
+                $cmp = $p['slug'];
+                $ref = '';
+                $grp = an_utm_group($src);
+            }
             $st->execute([
-                gmdate('Y-m-d', $ts), $ts, post_path($p['slug']), $ref, $grp, '', '', '',
+                gmdate('Y-m-d', $ts), $ts, post_path($p['slug']), $ref, $grp, $src, $mdm, $cmp,
                 $countries[mt_rand(0, 5)], $br, $os, $dev, 'en', $dev === 'mobile' ? 'phone' : 'laptop',
                 'Europe/Warsaw', substr(md5((string) mt_rand()), 0, 16), mt_rand(0, 1) ? mt_rand(20, 400) : 0,
             ]);

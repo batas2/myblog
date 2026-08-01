@@ -475,17 +475,17 @@ foreach (['country', 'browser', 'os', 'device', 'lang', 'screen', 'tz', 'ref', '
     try { an_check_col($col); } catch (Throwable) { $ok = false; }
     t_assert($ok, "known dimension accepted: {$col}");
 }
-foreach (['duration', 'visitor; DROP TABLE hits', '1=1', '', 'DAY', 'ref--'] as $bad) {
+foreach (['duration', 'excl', 'visitor; DROP TABLE hits', '1=1', '', 'DAY', 'ref--'] as $bad) {
     $threw = false;
     try { an_check_col($bad); } catch (InvalidArgumentException) { $threw = true; }
     t_assert($threw, 'rejected: ' . ($bad === '' ? '(empty)' : $bad));
 }
 
 $whereArgs = [];
-t_eq('day >= ?', an_where('2026-01-01', '', $whereArgs), 'bare period clause');
+t_eq('excl = 0 AND day >= ?', an_where('2026-01-01', '', $whereArgs), 'bare period clause skips excluded rows');
 t_eq(['2026-01-01'], $whereArgs, 'period bound as an argument, never interpolated');
 $whereArgs = [];
-t_eq('day >= ? AND day < ? AND path = ?', an_where('2026-01-01', '/blog/x/', $whereArgs, '2026-02-01'), 'period plus until plus path');
+t_eq('excl = 0 AND day >= ? AND day < ? AND path = ?', an_where('2026-01-01', '/blog/x/', $whereArgs, '2026-02-01'), 'period plus until plus path');
 t_eq(['2026-01-01', '2026-02-01', '/blog/x/'], $whereArgs, 'all three bound in clause order');
 
 /* ---------------- one slug, two source files ---------------- */
@@ -633,6 +633,22 @@ t_eq('', an_screen_bucket(0), 'zero width = empty');
 t_eq('en', an_lang('en-US'), 'language primary subtag');
 t_eq('pl', an_lang('PL'), 'language lowercased');
 t_eq('', an_lang('!!'), 'garbage language rejected');
+// automation that wears a browser UA: the beacon runs, the clock gives it away
+t_assert(an_looks_automated(['tz' => 'UTC', 'screen' => 'laptop', 'lang' => 'en']), 'a browser on a UTC clock is a server');
+t_assert(an_looks_automated(['tz' => 'Etc/UTC', 'screen' => 'desktop', 'lang' => 'en']), 'Etc/UTC counts too');
+t_assert(an_looks_automated(['tz' => '', 'screen' => '', 'lang' => '']), 'no client context at all = hand-rolled POST or pre-v2 row');
+t_assert(!an_looks_automated(['tz' => 'Europe/Warsaw', 'screen' => 'phone', 'lang' => 'pl']), 'a region zone is a real device');
+t_assert(!an_looks_automated(['tz' => 'Europe/London', 'screen' => 'laptop', 'lang' => 'en']), 'London is not UTC, whatever the offset says');
+t_assert(!an_looks_automated(['tz' => '', 'screen' => 'phone', 'lang' => 'en']), 'a missing timezone alone is not enough');
+
+// campaign tags map back to the platform that hid its own referrer
+t_eq('blogs', an_utm_group('medium'), 'utm medium tag = blogs');
+t_eq('blogs', an_utm_group('devto'), 'utm devto tag = blogs');
+t_eq('social', an_utm_group('LinkedIn'), 'utm source matching is case-insensitive');
+t_eq('email', an_utm_group('newsletter'), 'newsletter = email');
+t_eq('campaign', an_utm_group('conference-flyer'), 'an unknown tag stays a campaign');
+t_eq('', an_utm_group(''), 'no tag, no group');
+
 $utm = an_utm('?utm_source=newsletter&utm_medium=email&utm_campaign=july<script>');
 t_eq('newsletter', $utm['source'], 'utm source parsed');
 t_eq('email', $utm['medium'], 'utm medium parsed');
@@ -661,10 +677,12 @@ $old->exec("INSERT INTO hits VALUES ('2020-01-01', 1577871000, '/old/', '', 'leg
 $old = null;
 $db = an_db($adb);
 $cols = array_column($db->query('PRAGMA table_info(hits)')->fetchAll(PDO::FETCH_ASSOC), 'name');
-foreach (['country', 'browser', 'duration', 'utm_campaign'] as $c) {
+foreach (['country', 'browser', 'duration', 'utm_campaign', 'excl'] as $c) {
     t_assert(in_array($c, $cols, true), "migration added column {$c}");
 }
 t_eq('1', (string) $db->query("SELECT COUNT(*) FROM hits WHERE visitor='legacyvis'")->fetchColumn(), 'v1 rows survive migration');
+// a v1 row carries no client context, so the migration's first pass judges it
+t_eq(AN_AUTOMATED, (int) $db->query("SELECT excl FROM hits WHERE visitor='legacyvis'")->fetchColumn(), 'migration classifies the history it inherits');
 
 $today = gmdate('Y-m-d');
 $rec = fn(array $o) => an_record($db, array_merge([
@@ -699,15 +717,61 @@ t_eq(1, $sumPath['pv'], 'path drilldown narrows summary');
 try { an_breakdown($db, $since, 'visitor; DROP TABLE hits'); t_assert(false, 'bad column rejected'); }
 catch (InvalidArgumentException) { t_assert(true, 'bad column rejected'); }
 
-// source groups classified at query time; campaign = utm without referrer
+// source groups classified at query time; a naked utm tag names its own platform
 $rec(['visitor' => 'g1', 'path' => '/sg/', 'ref' => 'www.google.com']);
 $rec(['visitor' => 'g1', 'path' => '/sg/', 'ref' => 'news.ycombinator.com']);
 $rec(['visitor' => 'g2', 'path' => '/sg/', 'ref' => '', 'utm_source' => 'newsletter']);
+$rec(['visitor' => 'g3', 'path' => '/sg/', 'ref' => '', 'utm_source' => 'devto']);
+$rec(['visitor' => 'g4', 'path' => '/sg/', 'ref' => '', 'utm_source' => 'flyer']);
 $sg = an_source_groups($db, $since, '/sg/');
 $byGroup = array_column($sg, null, 'v');
 t_eq(1, $byGroup['search']['pv'] ?? 0, 'google classified as search at read time');
-t_eq(1, $byGroup['campaign']['pv'] ?? 0, 'utm without referrer = campaign group');
+t_eq(1, $byGroup['email']['pv'] ?? 0, 'newsletter tag lands in email, not a blanket campaign bucket');
+t_eq(1, $byGroup['blogs']['pv'] ?? 0, 'a dev.to click with no referrer is still credited to dev.to');
+t_eq(1, $byGroup['campaign']['pv'] ?? 0, 'an unrecognized tag is still a campaign');
 t_eq(1, $byGroup['news']['uv'] ?? 0, 'per-group uniques exact');
+
+/* ---------------- exclusion verdicts ---------------- */
+section('analytics exclusions');
+$exDb = sys_get_temp_dir() . '/bf-unit-analytics-excl-' . getmypid() . '.db';
+@unlink($exDb);
+$xdb = an_db($exDb);
+$xrec = fn(array $o) => an_record($xdb, array_merge([
+    'day' => $today, 'ts' => time(), 'path' => '/blog/x/', 'ref' => '', 'visitor' => 'r1',
+    'ref_group' => 'direct', 'country' => 'PL', 'browser' => 'Chrome', 'os' => 'Linux',
+    'device' => 'desktop', 'lang' => 'pl', 'screen' => 'desktop', 'tz' => 'Europe/Warsaw',
+    'utm_source' => '', 'utm_medium' => '', 'utm_campaign' => '',
+], $o));
+$xrec([]);                                                        // a reader
+$xrec(['visitor' => 'h1', 'tz' => 'UTC', 'lang' => 'en']);        // headless, judged on the way in
+$xrec(['visitor' => 'h2', 'tz' => 'UTC', 'lang' => 'en']);
+t_eq(1, an_summary($xdb, $since)['pv'], 'automation is written but never counted');
+t_eq(3, (int) $xdb->query('SELECT COUNT(*) FROM hits')->fetchColumn(), 'and is still on disk to look at');
+t_eq(3, count(an_recent($xdb, 30)), 'recent activity shows the filtered rows');
+$xCounts = an_excl_counts($xdb, $since);
+t_eq([AN_COUNTED => 1, AN_AUTOMATED => 2, AN_OWNER => 0], $xCounts, 'verdict split reported for the System pane');
+
+// marking the author's own past browsing: dry by default, exact-match filtered
+$dims = ['tz' => 'Europe/Warsaw', 'os' => 'Linux'];
+t_eq(1, an_mark($xdb, $today, $today, $dims, AN_OWNER, false), 'dry run counts without writing');
+t_eq(1, an_summary($xdb, $since)['pv'], 'and really does not write');
+an_mark($xdb, $today, $today, $dims, AN_OWNER, true);
+t_eq(0, an_summary($xdb, $since)['pv'], 'owner rows drop out of the totals');
+t_eq(0, an_summary($xdb, $since)['live'], 'including live-now');
+t_eq(0, count(an_top_pages($xdb, $since)), 'and out of the page table');
+
+// a rescan re-decides automation but never overrules the human verdict
+t_eq(0, an_reclassify($xdb), 'a settled table has nothing to change');
+$xdb->exec('UPDATE hits SET excl = 0');
+t_eq(2, an_reclassify($xdb), 'rescan re-flags the automated rows');
+t_eq(AN_COUNTED, (int) $xdb->query("SELECT excl FROM hits WHERE visitor = 'r1'")->fetchColumn(), 'a cleared owner verdict is not re-invented');
+an_mark($xdb, $today, $today, $dims, AN_OWNER, true);
+$xdb->exec("UPDATE hits SET tz = 'Europe/Warsaw', lang = 'pl' WHERE visitor = 'h1'");
+an_reclassify($xdb);
+t_eq(AN_COUNTED, (int) $xdb->query("SELECT excl FROM hits WHERE visitor = 'h1'")->fetchColumn(), 'relaxing the rule gives traffic back');
+t_eq(AN_OWNER, (int) $xdb->query("SELECT excl FROM hits WHERE visitor = 'r1'")->fetchColumn(), 'and leaves the owner verdict alone');
+$xdb = null;
+@unlink($exDb);
 
 // hour-of-day buckets respect each day's own DST offset (Warsaw: +01 winter, +02 summer)
 $winter = (new DateTimeImmutable('2026-01-15 13:00', new DateTimeZone('UTC')))->getTimestamp();
@@ -900,7 +964,10 @@ foreach (['nobody-owns-the-sum', 'from-signals-to-blips', 'a-company-of-one-staf
 t_contains('Then pick your door', $sp, 'doors section present');
 t_contains('Tools That Scale', $sp, 'series map note present');
 t_contains('action="/n.php"', $sp, 'newsletter form on start page');
-t_contains('/#services', $sp, 'soft services link present');
+// the soft door leads to the person, not to a price list: nothing on a reading
+// page points at the commercial page any more
+t_contains('/about/', $sp, 'soft door to About present');
+t_not_contains('/services/', $sp, 'start page never links the commercial page');
 t_contains('llms.txt', $sp, 'AI-agent follow link present');
 t_contains(count($posts) . ' essays in', $sp, 'live essay count in headline');
 preg_match_all('#<script type="application/ld\+json">(.*?)</script>#s', $sp, $ldS);
@@ -919,7 +986,15 @@ t_eq('BlogPosting', $bp['@type'], 'blog posting type');
 $bpHero = $bp['image'][0] ?? $bp['image'];
 t_assert(isset($bpHero['width'], $bpHero['height']), 'posting image has dimensions');
 t_eq($posts[0]['publish_iso'], $bp['datePublished'], 'posting datePublished = publish moment');
-t_eq($posts[0]['publish_iso'], $bp['dateModified'], 'dateModified falls back to the publish moment');
+// the fallback needs a post that carries no **Updated:** line, which the newest
+// post is not guaranteed to be: a revision pass adds one to everything it edits
+$noUpd = null;
+foreach ($posts as $p) if ($p['updated_ts'] === null) { $noUpd = $p; break; }
+t_assert($noUpd !== null, 'corpus still has an unrevised post to test the fallback with');
+if ($noUpd !== null) {
+    $bpNo = schema_blog_posting($noUpd, null, post_url($noUpd['slug']), $noUpd['publish_iso']);
+    t_eq($noUpd['publish_iso'], $bpNo['dateModified'], 'dateModified falls back to the publish moment');
+}
 t_contains('linkedin.com', implode(',', $bp['author']['sameAs']), 'article author entity carries sameAs');
 t_eq('Solution Architect', $bp['author']['jobTitle'], 'article author entity carries jobTitle');
 $pu = $posts[0];
@@ -958,7 +1033,10 @@ t_eq(2, count($merged['AI']), 'post tagged with both spellings counted once');
 
 // empty archive: sitemap renders without notices
 $sm0 = render_sitemap([]);
-t_contains('/services/', $sm0, 'empty-archive sitemap still lists static pages');
+t_contains('/blog/start/', $sm0, 'empty-archive sitemap still lists static pages');
+t_contains('/about/', $sm0, 'about page is in the sitemap');
+t_not_contains('/services/', $sm0, 'the unlisted commercial page stays out of the sitemap');
+t_not_contains('<loc>https://bfrackowiak.pl/blog/</loc>', $sm0, 'no second entry for the old listing URL');
 t_assert(simplexml_load_string($sm0) !== false, 'empty-archive sitemap is valid XML');
 
 // RSS: ']]>' inside content cannot break the CDATA envelope

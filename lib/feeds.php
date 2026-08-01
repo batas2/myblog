@@ -47,10 +47,12 @@ function render_sitemap(array $posts): string
 {
     $site = (string) cfg('site_url');
     $latest = $posts ? date('Y-m-d', $posts[0]['publish_ts']) : date('Y-m-d');
+    // the root is the blog listing, so there is no separate /blog/ entry to
+    // submit; /services/ is deliberately absent, it carries noindex and is only
+    // ever reached from /about/ or from a link sent by hand
     $urls = "  <url><loc>{$site}/</loc><lastmod>{$latest}</lastmod><priority>1.0</priority></url>\n"
-          . "  <url><loc>{$site}/blog/</loc><lastmod>{$latest}</lastmod><priority>0.9</priority></url>\n"
           . "  <url><loc>{$site}/blog/start/</loc><lastmod>{$latest}</lastmod><priority>0.8</priority></url>\n"
-          . "  <url><loc>{$site}/services/</loc><lastmod>{$latest}</lastmod><priority>0.6</priority></url>\n";
+          . "  <url><loc>{$site}/about/</loc><lastmod>{$latest}</lastmod><priority>0.7</priority></url>\n";
     foreach ($posts as $p) {
         // a revised essay advertises its revision, not its birthday
         $lastmod = date('Y-m-d', $p['updated_ts'] ?? $p['publish_ts']);

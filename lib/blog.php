@@ -33,6 +33,21 @@ function syndication_url_ok(string $url, string $host): bool
     return $parts['host'] === $host || str_ends_with($parts['host'], '.' . $host);
 }
 
+/**
+ * Where a post gets hand-carried, and the utm_source that identifies the click
+ * on the way back. Every one of these hosts strips or hides the referrer —
+ * Medium's interstitial, dev.to's rel="noreferrer", LinkedIn's lnkd.in wrapper,
+ * a mail client sending none at all — so an untagged link is indistinguishable
+ * from somebody typing the address. The tag is the only way that traffic is
+ * ever attributable; an_utm_group() maps it back to a real acquisition group.
+ */
+const SHARE_TARGETS = [
+    'medium'     => ['label' => 'Medium',     'medium' => 'syndication'],
+    'devto'      => ['label' => 'DEV',        'medium' => 'syndication'],
+    'linkedin'   => ['label' => 'LinkedIn',   'medium' => 'social'],
+    'newsletter' => ['label' => 'Newsletter', 'medium' => 'email'],
+];
+
 /** Posts that belong to a named series: slug => [series name, part]. */
 const SERIES = [
     'from-signals-to-blips'      => ['Tools That Scale', 1],
@@ -52,6 +67,23 @@ function post_path(string $slug): string
 function post_url(string $slug): string
 {
     return cfg('site_url') . post_path($slug);
+}
+
+/** Copy-ready post URLs, one per SHARE_TARGETS destination, tagged for attribution. */
+function share_urls(string $slug): array
+{
+    $out = [];
+    foreach (SHARE_TARGETS as $source => $spec) {
+        $out[$source] = [
+            'label' => $spec['label'],
+            'url'   => post_url($slug) . '?' . http_build_query([
+                'utm_source'   => $source,
+                'utm_medium'   => $spec['medium'],
+                'utm_campaign' => $slug,
+            ]),
+        ];
+    }
+    return $out;
 }
 
 /** kebab-case tag slug used in URLs and hashtags */

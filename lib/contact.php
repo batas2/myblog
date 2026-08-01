@@ -4,7 +4,7 @@
  *
  * Defense parity with the other write endpoints: honeypot field, per-IP
  * throttle, optional Turnstile — and POST/redirect/GET so a refresh never
- * resubmits (index.php shows the success state from ?sent=1).
+ * resubmits (/about/ shows the success state from ?sent=1).
  */
 
 declare(strict_types=1);
@@ -17,6 +17,9 @@ require_once __DIR__ . '/captcha.php';
 require_once __DIR__ . '/mail.php';
 
 const CONTACT_MIN_GAP = 30;   // seconds between messages per IP
+
+/** Where the form lives, and so where POST/redirect/GET lands. */
+const CONTACT_PAGE = '/about/';
 
 /**
  * Process a contact-form POST if present.
@@ -37,7 +40,7 @@ function handle_contact_form(): array
 
     // honeypot: bots that fill the invisible field get a fake success
     if (trim((string) ($_POST['website'] ?? '')) !== '') {
-        header('Location: /?sent=1#contact');
+        header('Location: ' . CONTACT_PAGE . '?sent=1#contact');
         exit;
     }
 
@@ -77,6 +80,6 @@ function handle_contact_form(): array
     }
 
     touch($rl);
-    header('Location: /?sent=1#contact');
+    header('Location: ' . CONTACT_PAGE . '?sent=1#contact');
     exit;
 }

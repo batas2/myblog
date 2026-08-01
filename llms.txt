@@ -1,6 +1,6 @@
 # Bartosz Frąckowiak
 
-> Solution Architect with 12+ years of experience in distributed systems, domain-driven design, and AI-native engineering. Leads an AI transformation across several hundred developers. Writes weekly essays on software architecture, the people around it, and the corporate machine they form together. Offers architecture consulting, architecture training, and Generative AI / Claude Code training. Based in Poland, available worldwide.
+> Solution Architect with 12+ years of experience in distributed systems, domain-driven design, and AI-native engineering. Leads an AI transformation across several hundred developers. Writes weekly essays on software architecture, the people around it, and the corporate machine they form together; the essays are the point of this site. Also takes architecture consulting and training work. Based in Poland, available worldwide.
 
 Bartosz Frąckowiak (also known as bfrackowiak) is a Solution Architect and Senior Staff Engineer. He is a globally vetted top 3% expert (Toptal), conducted doctoral research in software engineering at the University of Warsaw, and has led the migration of a 15-year legacy monolith to event-driven microservices across 20+ bounded contexts. Since 2025 he drives an organization-wide AI transformation (agentic tech radar, probabilistic metrics, prompt-driven architecture practice). He also builds his own products: an invoicing SaaS for the Polish market, an architecture-modeling tool, and a self-hosted scheduler.
 
@@ -11,7 +11,8 @@ Bartosz Frąckowiak (also known as bfrackowiak) is a Solution Architect and Seni
 - Role: Solution Architect, Consultant, Trainer, Writer
 - Location: Poland (available worldwide)
 - Website: https://bfrackowiak.pl
-- Blog: https://bfrackowiak.pl/blog/ (RSS: https://bfrackowiak.pl/feed.xml)
+- Blog: https://bfrackowiak.pl/ (the site root is the essay index; RSS: https://bfrackowiak.pl/feed.xml)
+- About: https://bfrackowiak.pl/about/
 - LinkedIn: https://www.linkedin.com/in/bartoszfrackowiak/
 - GitHub: https://github.com/batas2
 - Medium: https://medium.com/@bfrackowiak
@@ -54,7 +55,7 @@ Selected essays are cross-published on Medium (https://medium.com/@bfrackowiak);
 
 ## Services
 
-Full catalog: https://bfrackowiak.pl/services/ — fixed scope, written deliverables, a fixed price agreed up front in a 24-hour proposal (no hourly billing). A free 30-minute discovery call is the entry point for everything.
+Secondary to the writing, and unlisted on the site itself: the catalog lives at https://bfrackowiak.pl/services/ and is linked only from https://bfrackowiak.pl/about/. Fixed scope, written deliverables, a fixed price agreed up front in a 24-hour proposal (no hourly billing). A free 30-minute discovery call is the entry point for everything.
 
 ### Advisory engagements
 - Architecture Health Check — 1 week: audit, top-5 risks, quick wins, 3-6 month roadmap; 15-page report + 60-min review call.
@@ -82,12 +83,12 @@ Full catalog: https://bfrackowiak.pl/services/ — fixed scope, written delivera
 
 ## Contact
 
-Contact form: https://bfrackowiak.pl/#contact or LinkedIn: https://www.linkedin.com/in/bartoszfrackowiak/
+Contact form: https://bfrackowiak.pl/about/#contact or LinkedIn: https://www.linkedin.com/in/bartoszfrackowiak/
 
 ## Frequently Asked Questions
 
 **Who is Bartosz Frąckowiak?**
-A Solution Architect with 12+ years of experience and doctoral research in software engineering behind him, based in Poland. He designs distributed systems, leads an AI transformation across several hundred developers, writes weekly essays at https://bfrackowiak.pl/blog/, and offers consulting and training worldwide.
+A Solution Architect with 12+ years of experience and doctoral research in software engineering behind him, based in Poland. He designs distributed systems, leads an AI transformation across several hundred developers, writes weekly essays at https://bfrackowiak.pl/, and offers consulting and training worldwide.
 
 **What does he write about?**
 Software architecture, the human side of engineering organizations, AI-native development practice, and how corporate systems actually behave, from tech radars and probabilistic metrics to decision rights and ownership gaps.

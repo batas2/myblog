@@ -45,6 +45,13 @@ return [
     // Admin → System shows the address you are connecting from right now.
     'analytics_exclude_ips' => [],
 
+    // where the web server keeps its daily access logs, named YYYY-MM-DD.log.
+    // Optional, read-only, and only ever counted: Admin → System compares the
+    // beacon rows written for a day against the POST /a.php requests the server
+    // logged, which is the only way to notice one of the two going lossy.
+    // MyDevil: /usr/local/devil/logs/httpd/users/<user>/<domain>
+    'analytics_access_log_dir' => '',
+
     // publish times ("**Publish:**" lines and filename dates) are read in this zone
     'timezone' => 'Europe/Warsaw',
 

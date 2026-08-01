@@ -9,7 +9,14 @@
  * browser/OS/device family, primary language, screen bucket, timezone,
  * referrer group, UTM tags, and engaged seconds per view.
  *
- * Writers: a.php (beacon). Reader: admin.php (stats.php is a redirect shim).
+ * Not every stored row counts. Crawlers that admit it are dropped at the door
+ * by an_is_bot(); the ones that do not — headless browsers running the beacon
+ * from a UTC-clocked server — are written and then marked (an_looks_automated),
+ * as is the author's own past browsing (an_mark). Marked rows stay in the table
+ * and out of every total, so the rule that marked them can be revised later.
+ *
+ * Writers: a.php (beacon), tools/analytics_prune.php (verdicts).
+ * Reader: admin.php (stats.php is a redirect shim).
  */
 
 declare(strict_types=1);
@@ -96,10 +103,10 @@ function an_is_excluded_ip(string $ip, ?array $blocks = null): bool
 }
 
 /** Bump when the schema below changes; an_db() fast-paths matching databases. */
-const AN_SCHEMA_VERSION = 2;
+const AN_SCHEMA_VERSION = 3;
 
-/** Columns added by v2 — an_db() migrates any older hits table in place. */
-const AN_V2_COLUMNS = [
+/** Everything the v1 table lacked — an_db() migrates any older hits table in place. */
+const AN_COLUMNS = [
     'ref_group'    => "TEXT NOT NULL DEFAULT ''",
     'country'      => "TEXT NOT NULL DEFAULT ''",
     'browser'      => "TEXT NOT NULL DEFAULT ''",
@@ -112,7 +119,27 @@ const AN_V2_COLUMNS = [
     'utm_medium'   => "TEXT NOT NULL DEFAULT ''",
     'utm_campaign' => "TEXT NOT NULL DEFAULT ''",
     'duration'     => 'INTEGER NOT NULL DEFAULT 0',
+    'excl'         => 'INTEGER NOT NULL DEFAULT 0',
 ];
+
+/** Bookkeeping columns: real, but not dimensions anyone can break down by. */
+const AN_NON_DIMENSIONS = ['duration', 'excl'];
+
+/**
+ * Why a row does not count. Nothing is ever deleted: an excluded hit stays in
+ * the table and simply sits outside every total, so the rule that excluded it
+ * can be widened, narrowed or reversed later (an_reclassify()) instead of the
+ * traffic being gone for good.
+ */
+const AN_COUNTED   = 0;
+const AN_AUTOMATED = 1;   // headless/scripted traffic the UA filter cannot see
+const AN_OWNER     = 2;   // the author's own browsing, marked after the fact
+
+/** Human label for a verdict, for the dashboard and the prune tool. */
+function an_excl_label(int $verdict): string
+{
+    return [AN_COUNTED => 'counted', AN_AUTOMATED => 'automated', AN_OWNER => 'owner'][$verdict] ?? 'excluded';
+}
 
 function an_db_path(): string
 {
@@ -131,12 +158,14 @@ function an_db(?string $path = null): PDO
         day TEXT NOT NULL, ts INTEGER NOT NULL, path TEXT NOT NULL,
         ref TEXT NOT NULL DEFAULT '', visitor TEXT NOT NULL)");
     $have = array_column($db->query('PRAGMA table_info(hits)')->fetchAll(PDO::FETCH_ASSOC), 'name');
-    foreach (AN_V2_COLUMNS as $col => $def) {
+    foreach (AN_COLUMNS as $col => $def) {
         if (!in_array($col, $have, true)) $db->exec("ALTER TABLE hits ADD COLUMN {$col} {$def}");
     }
     $db->exec('CREATE INDEX IF NOT EXISTS idx_hits_day ON hits(day)');
     $db->exec('CREATE INDEX IF NOT EXISTS idx_hits_day_visitor ON hits(day, visitor)');
     $db->exec('CREATE INDEX IF NOT EXISTS idx_hits_ts ON hits(ts)');
+    // history predates the exclusion rule, so judge it once on the way in
+    if (!in_array('excl', $have, true)) an_reclassify($db);
     $db->exec('PRAGMA user_version = ' . AN_SCHEMA_VERSION);
     return $db;
 }
@@ -150,6 +179,84 @@ function an_is_bot(string $ua): bool
         '/bot|crawl|spider|slurp|preview|headless|lighthouse|python|curl|wget|monitor|scan|fetch|http[s]?client|facebookexternalhit|feed|validator|archive|dataprovider|pingdom|uptime/i',
         $ua
     ) === 1;
+}
+
+/**
+ * Automation the user-agent string does not admit to. Headless Chrome, scraper
+ * farms and preview renderers ship a stock browser UA and do execute the
+ * beacon, so an_is_bot() never sees them — but they run on servers, and a
+ * server's clock is UTC. Every real consumer device reports a region zone
+ * (Europe/Warsaw, America/Los_Angeles); a browser claiming plain 'UTC' is the
+ * strongest signal available without fingerprinting anyone.
+ *
+ * A row with no client context at all — no timezone, no screen, no language —
+ * is either a hand-rolled POST to a.php or a pre-v2 row, and counts as neither
+ * a reader nor a mystery.
+ *
+ * The cost is Tor Browser, which normalizes to UTC on purpose. That is the
+ * trade, and it is reversible: excluded rows are kept, counted separately in
+ * admin → System, and an_reclassify() re-runs this rule over all history
+ * whenever it changes.
+ */
+function an_looks_automated(array $r): bool
+{
+    $tz = strtoupper(trim((string) ($r['tz'] ?? '')));
+    if ($tz !== '') return in_array($tz, ['UTC', 'ETC/UTC', 'GMT', 'ETC/GMT', 'UCT', 'ZULU'], true);
+    return ($r['screen'] ?? '') === '' && ($r['lang'] ?? '') === '';
+}
+
+/**
+ * Re-apply an_looks_automated() to every stored row. An AN_OWNER verdict is
+ * left alone — that one came from a human — but automated/counted is decided
+ * fresh, so relaxing the rule brings traffic back instead of losing it for
+ * good. Returns how many verdicts changed.
+ */
+function an_reclassify(PDO $db): int
+{
+    $rows = $db->query('SELECT rowid AS rid, tz, screen, lang, excl FROM hits')->fetchAll(PDO::FETCH_ASSOC);
+    $set = $db->prepare('UPDATE hits SET excl = ? WHERE rowid = ?');
+    $changed = 0;
+    // the migration calls this from inside the beacon's request; own the
+    // transaction only if nobody else already does
+    $own = !$db->inTransaction();
+    if ($own) $db->beginTransaction();
+    foreach ($rows as $r) {
+        if ((int) $r['excl'] === AN_OWNER) continue;
+        $want = an_looks_automated($r) ? AN_AUTOMATED : AN_COUNTED;
+        if ((int) $r['excl'] === $want) continue;
+        $set->execute([$want, $r['rid']]);
+        $changed++;
+    }
+    if ($own) $db->commit();
+    return $changed;
+}
+
+/**
+ * Set a verdict on every row in a UTC-day range matching an exact dimension
+ * filter, and report how many rows that is. This is how the author's own past
+ * browsing gets marked: the visitor hash rotates daily and carries no address,
+ * so there is no id to chase — when it happened and what the client looked
+ * like is the only handle on "that was me". Counts without writing unless
+ * $apply, because the filter is easy to get wrong and rows are not recoverable
+ * from anywhere else.
+ */
+function an_mark(PDO $db, string $from, string $to, array $dims, int $verdict, bool $apply = false): int
+{
+    $sql = 'day >= ? AND day <= ?';
+    $args = [$from, $to];
+    foreach ($dims as $col => $val) {
+        an_check_col((string) $col);
+        $sql .= " AND {$col} = ?";
+        $args[] = (string) $val;
+    }
+    if (!$apply) {
+        $st = $db->prepare("SELECT COUNT(*) FROM hits WHERE {$sql}");
+        $st->execute($args);
+        return (int) $st->fetchColumn();
+    }
+    $st = $db->prepare("UPDATE hits SET excl = ? WHERE {$sql}");
+    $st->execute(array_merge([$verdict], $args));
+    return $st->rowCount();
 }
 
 /** Coarse browser / OS / device family from a user-agent string. */
@@ -213,6 +320,31 @@ function an_ref_group(string $host): string
     return 'other';
 }
 
+/**
+ * Which acquisition group a campaign tag belongs to. Medium, DEV and LinkedIn
+ * all strip or hide the referrer — interstitials, rel="noreferrer", the lnkd.in
+ * wrapper — so a click from a cross-post arrives naked and the utm_source we
+ * put on the link ourselves is its only identification. Mapping the tag back to
+ * the platform's own group keeps that traffic next to the traffic that did
+ * carry a referrer, instead of in a 'campaign' bucket that hides which platform
+ * actually worked. Exact matches only: a substring rule would put 'x' in half
+ * the lists.
+ */
+function an_utm_group(string $source): string
+{
+    $s = strtolower(trim($source));
+    if ($s === '') return '';
+    foreach ([
+        'social' => ['linkedin', 'li', 'lnkd', 'ig', 'instagram', 'facebook', 'fb', 'twitter', 'x', 'threads', 'mastodon', 'bsky', 'reddit', 'telegram', 'tg', 'discord'],
+        'blogs'  => ['medium', 'devto', 'dev.to', 'substack', 'hashnode'],
+        'news'   => ['hn', 'hackernews', 'ycombinator', 'lobsters', 'dailydev', 'daily.dev'],
+        'email'  => ['newsletter', 'email', 'mail', 'rss', 'feed'],
+    ] as $group => $tokens) {
+        if (in_array($s, $tokens, true)) return $group;
+    }
+    return 'campaign';
+}
+
 /** Coarse viewport class from screen width. */
 function an_screen_bucket(int $w): string
 {
@@ -254,17 +386,21 @@ function an_tz(string $raw): string
 
 /* ---------------- writing ---------------- */
 
-/** Insert one enriched pageview row. */
+/**
+ * Insert one enriched pageview row, with the automation verdict decided here so
+ * the beacon cannot forget to ask for it.
+ */
 function an_record(PDO $db, array $r): void
 {
     $st = $db->prepare('INSERT INTO hits
-        (day, ts, path, ref, visitor, ref_group, country, browser, os, device, lang, screen, tz, utm_source, utm_medium, utm_campaign, duration)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)');
+        (day, ts, path, ref, visitor, ref_group, country, browser, os, device, lang, screen, tz, utm_source, utm_medium, utm_campaign, duration, excl)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)');
     $st->execute([
         $r['day'], $r['ts'], $r['path'], $r['ref'] ?? '', $r['visitor'],
         $r['ref_group'] ?? '', $r['country'] ?? '', $r['browser'] ?? '', $r['os'] ?? '',
         $r['device'] ?? '', $r['lang'] ?? '', $r['screen'] ?? '', $r['tz'] ?? '',
         $r['utm_source'] ?? '', $r['utm_medium'] ?? '', $r['utm_campaign'] ?? '',
+        $r['excl'] ?? (an_looks_automated($r) ? AN_AUTOMATED : AN_COUNTED),
     ]);
 }
 
@@ -296,17 +432,31 @@ function an_visitor(string $seed, string $utcDay, string $ip, string $ua): strin
 
 /* ---------------- reading (dashboard queries) ---------------- */
 
-/** Shared WHERE fragment: period (since ≤ day < until) + optional exact-path drilldown. */
+/**
+ * Shared WHERE fragment: counted rows only, period (since ≤ day < until), plus
+ * an optional exact-path drilldown. Excluded rows are filtered here rather than
+ * at each call site so a new query cannot quietly start counting the author and
+ * the scrapers again.
+ */
 function an_where(string $since, string $path, array &$args, string $until = ''): string
 {
-    $sql = 'day >= ?';
+    $sql = 'excl = 0 AND day >= ?';
     $args[] = $since;
     if ($until !== '') { $sql .= ' AND day < ?'; $args[] = $until; }
     if ($path !== '') { $sql .= ' AND path = ?'; $args[] = $path; }
     return $sql;
 }
 
-/** Totals for a period: pageviews, uniques, engaged-time stats, live-now. */
+/**
+ * Totals for a period: pageviews, daily visitors, engaged-time stats, live-now.
+ *
+ * 'uv' is not unique people. The visitor hash is salted with the UTC day and is
+ * unlinkable across days by design, so a distinct count over any period longer
+ * than one day is the sum of that period's daily uniques — somebody reading on
+ * Monday and Thursday is two. There is no way to do better without a durable
+ * identifier, which is the one thing this design refuses to store, so the
+ * number is labelled for what it is rather than quietly renamed.
+ */
 function an_summary(PDO $db, string $since, string $path = '', string $until = ''): array
 {
     $args = [];
@@ -319,13 +469,13 @@ function an_summary(PDO $db, string $since, string $path = '', string $until = '
     $st->execute($args);
     $row = $st->fetch(PDO::FETCH_ASSOC) ?: [];
 
-    $live = $db->prepare('SELECT COUNT(DISTINCT visitor) FROM hits WHERE ts >= ?' . ($path !== '' ? ' AND path = ?' : ''));
+    $live = $db->prepare('SELECT COUNT(DISTINCT visitor) FROM hits WHERE excl = 0 AND ts >= ?' . ($path !== '' ? ' AND path = ?' : ''));
     $live->execute($path !== '' ? [time() - 300, $path] : [time() - 300]);
     $row['live'] = (int) $live->fetchColumn();
 
     // readers who saw more than one page that day (whole-site metric)
     $mArgs = [$since];
-    $mSql = 'day >= ?';
+    $mSql = 'excl = 0 AND day >= ?';
     if ($until !== '') { $mSql .= ' AND day < ?'; $mArgs[] = $until; }
     $multi = $db->prepare("SELECT COUNT(*) FROM (SELECT day, visitor FROM hits WHERE {$mSql} GROUP BY day, visitor HAVING COUNT(*) > 1)");
     $multi->execute($mArgs);
@@ -380,7 +530,7 @@ function an_check_col(string $col): void
 {
     // derived from the schema so a new dimension is whitelisted automatically
     static $ok = null;
-    $ok ??= array_merge(['path', 'ref'], array_diff(array_keys(AN_V2_COLUMNS), ['duration']));
+    $ok ??= array_merge(['path', 'ref'], array_diff(array_keys(AN_COLUMNS), AN_NON_DIMENSIONS));
     if (!in_array($col, $ok, true)) throw new InvalidArgumentException("bad column: {$col}");
 }
 
@@ -399,7 +549,9 @@ function an_source_groups(PDO $db, string $since, string $path = ''): array
     $st->execute($args);
     $groups = [];
     foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
-        $g = $r['ref'] === '' && $r['utm_source'] !== '' ? 'campaign' : an_ref_group((string) $r['ref']);
+        $g = $r['ref'] === '' && $r['utm_source'] !== ''
+            ? an_utm_group((string) $r['utm_source'])
+            : an_ref_group((string) $r['ref']);
         $groups[$g]['pv'] = ($groups[$g]['pv'] ?? 0) + (int) $r['pv'];
         $groups[$g]['vis'][$r['visitor']] = true;
     }
@@ -423,25 +575,97 @@ function an_breakdown(PDO $db, string $since, string $col, int $limit = 12, stri
     return $st->fetchAll(PDO::FETCH_ASSOC);
 }
 
+/**
+ * campaign => source => ['pv' => n, 'uv' => n], for the tagged links only.
+ *
+ * The campaign tag share_urls() writes is the post slug and the source is the
+ * platform it was hand-carried to, so this is the one query that can answer
+ * "what did posting that on Medium actually bring back". Untagged traffic has
+ * no campaign and is skipped: every syndication host hides the referrer, so an
+ * untagged click is indistinguishable from someone typing the address.
+ */
+function an_campaign_sources(PDO $db, string $since): array
+{
+    $args = [];
+    $where = an_where($since, '', $args);
+    $st = $db->prepare("SELECT utm_campaign c, utm_source s, COUNT(*) pv, COUNT(DISTINCT visitor) uv
+        FROM hits WHERE {$where} AND utm_campaign != '' AND utm_source != ''
+        GROUP BY utm_campaign, utm_source");
+    $st->execute($args);
+
+    $out = [];
+    foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
+        $out[$r['c']][$r['s']] = ['pv' => (int) $r['pv'], 'uv' => (int) $r['uv']];
+    }
+    return $out;
+}
+
 /** Top pages with engagement. */
 function an_top_pages(PDO $db, string $since, int $limit = 25): array
 {
     $st = $db->prepare('SELECT path, COUNT(*) pv, COUNT(DISTINCT visitor) uv,
             COALESCE(AVG(CASE WHEN duration > 0 THEN duration END), 0) avg_time
-        FROM hits WHERE day >= ? GROUP BY path ORDER BY pv DESC LIMIT ' . max(1, $limit));
+        FROM hits WHERE excl = 0 AND day >= ? GROUP BY path ORDER BY pv DESC LIMIT ' . max(1, $limit));
     $st->execute([$since]);
     return $st->fetchAll(PDO::FETCH_ASSOC);
 }
 
-/** Latest pageviews, newest first. */
+/**
+ * Latest pageviews, newest first — excluded ones included and flagged. This is
+ * the one view that shows them: a filter you cannot watch working is a filter
+ * you cannot tune, and the rows it drops are exactly the ones worth eyeballing.
+ */
 function an_recent(PDO $db, int $limit = 30, string $path = ''): array
 {
-    $sql = 'SELECT ts, path, ref, ref_group, country, browser, os, device, lang, duration FROM hits';
+    $sql = 'SELECT ts, path, ref, ref_group, country, browser, os, device, lang, tz, duration, excl FROM hits';
     $args = [];
     if ($path !== '') { $sql .= ' WHERE path = ?'; $args[] = $path; }
     $st = $db->prepare($sql . ' ORDER BY ts DESC LIMIT ' . max(1, $limit));
     $st->execute($args);
     return $st->fetchAll(PDO::FETCH_ASSOC);
+}
+
+/** How a period's rows split across the verdicts, for admin → System. */
+function an_excl_counts(PDO $db, string $since): array
+{
+    $st = $db->prepare('SELECT excl, COUNT(*) n FROM hits WHERE day >= ? GROUP BY excl');
+    $st->execute([$since]);
+    $out = [AN_COUNTED => 0, AN_AUTOMATED => 0, AN_OWNER => 0];
+    foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) $out[(int) $r['excl']] = (int) $r['n'];
+    return $out;
+}
+
+/**
+ * Two independent counts of the same event for one local day: beacon rows
+ * written, and beacon requests the web server logged. The log should always be
+ * the larger number — it also counts engagement pings and the hits a.php drops
+ * on purpose — so rows > requests means one of the two is lossy and neither can
+ * be trusted alone. Null when no log directory is configured or that day's file
+ * is missing; the files are expected to be named YYYY-MM-DD.log.
+ */
+function an_log_recon(PDO $db, string $localDay, string $dir = ''): ?array
+{
+    $dir = $dir !== '' ? $dir : (string) cfg('analytics_access_log_dir', '');
+    if ($dir === '' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $localDay)) return null;
+    $file = rtrim($dir, '/') . '/' . $localDay . '.log';
+    $fh = @fopen($file, 'r');
+    if ($fh === false) return null;
+
+    $requests = 0;
+    while (($line = fgets($fh)) !== false) {
+        if (str_contains($line, '"POST /a.php')) $requests++;
+    }
+    fclose($fh);
+
+    // the log stamps local time, the rows store epochs: compare on the epoch
+    $tz = site_tz();
+    $from = (new DateTimeImmutable($localDay . ' 00:00:00', $tz))->getTimestamp();
+    $to   = (new DateTimeImmutable($localDay . ' 23:59:59', $tz))->getTimestamp();
+    $st = $db->prepare('SELECT COUNT(*) FROM hits WHERE ts BETWEEN ? AND ?');
+    $st->execute([$from, $to]);
+    $rows = (int) $st->fetchColumn();
+
+    return ['day' => $localDay, 'requests' => $requests, 'rows' => $rows, 'ok' => $rows <= $requests];
 }
 
 /* ---------------- presentation helpers ---------------- */

@@ -115,7 +115,7 @@ section('scheduling lifecycle');
 t_assert(is_dir($SANDBOX . '/blog/itest-past-post'), 'published fixture built');
 t_assert(!is_dir($SANDBOX . '/blog/itest-future-post'), 'scheduled fixture not built');
 t_assert(!is_dir($SANDBOX . '/blog/itest-draft-post'), 'draft fixture not built');
-$index = (string) file_get_contents($SANDBOX . '/blog/index.php');
+$index = (string) file_get_contents($SANDBOX . '/blog/_home.php');
 t_contains('ITest Past Post', $index, 'published fixture listed on index');
 t_not_contains('ITest Future Post', $index, 'scheduled fixture absent from index');
 t_not_contains('ITest Draft Post', $index, 'draft fixture absent from index');
@@ -146,9 +146,10 @@ section('generated page contracts');
 t_assert(simplexml_load_file($SANDBOX . '/feed.xml') !== false, 'generated feed.xml valid');
 $sm = simplexml_load_file($SANDBOX . '/sitemap.xml');
 t_assert($sm !== false, 'generated sitemap.xml valid');
-t_eq(4 + $pubN + $tagN, count($sm->url), 'sitemap url count = home + blog + start + services + posts + tags');
+t_eq(3 + $pubN + $tagN, count($sm->url), 'sitemap url count = home + start + about + posts + tags');
 t_contains('/blog/start/', $smRaw, 'start page in sitemap');
-t_contains('/services/', $smRaw, 'services page in sitemap');
+t_contains('/about/', $smRaw, 'about page in sitemap');
+t_not_contains('/services/', $smRaw, 'unlisted commercial page stays out of the sitemap');
 t_assert(is_file($SANDBOX . '/blog/start/index.php'), 'start page generated');
 t_assert(is_file($SANDBOX . '/404.php'), '404 page generated');
 t_contains('http_response_code(404)', (string) file_get_contents($SANDBOX . '/404.php'), 'generated 404 sets status');
@@ -220,8 +221,9 @@ t_eq(200, $code, 'homepage 200');
 t_contains('Get the next field note', $body, 'newsletter on homepage');
 t_contains('pagehide', $body, 'engagement beacon on homepage');
 t_contains('bfx=1', $body, 'beacon script honors the owner exclusion cookie');
-[$code, $body] = http_req('GET', "$BASE/blog/");
-t_eq(200, $code, 'blog index 200');
+[$code, , $blogLoc] = http_req('GET', "$BASE/blog/");
+t_eq(301, $code, 'old listing URL 301s to the root');
+t_contains('/', (string) $blogLoc, 'old listing URL points at the home page');
 [$code, $body] = http_req('GET', "$BASE/blog/tag/software-architecture/");
 t_eq(200, $code, 'tag page 200');
 [$code, $body] = http_req('GET', "$BASE/blog/start/");
@@ -232,9 +234,11 @@ t_contains('href="/blog/mathematicians-vs-lawyers/"', $body, 'start page hook se
 t_eq(200, $code, 'services page 200');
 t_contains('Architecture Health Check', $body, 'services page lists engagements');
 t_not_contains('PLN', $body, 'no prices on the public services page');
-t_contains('/#contact', $body, 'services page falls back to contact CTA when calendly unset');
+t_contains('/about/#contact', $body, 'services page falls back to contact CTA when calendly unset');
+t_contains('noindex', $body, 'unlisted commercial page carries noindex');
 [, $body] = http_req('GET', "$BASE/blog/nobody-owns-the-sum/");
-t_contains('href="/services/"', $body, 'post pages link to services (author box + footer)');
+t_not_contains('href="/services/"', $body, 'reading pages never link the commercial page');
+t_contains('href="/about/"', $body, 'reading pages link to About instead');
 [, $body] = http_req('GET', "$BASE/blog/nobody-owns-the-sum/");
 t_contains('/blog/start/', $body, 'post pages link to start (nav + author box)');
 preg_match('~<ul class="nav-links">(.*?)</ul>~s', $body, $navM);
@@ -243,9 +247,10 @@ t_contains('>Blog<', $nav, 'top nav labels the archive "Blog"');
 t_not_contains('>Writing<', $nav, 'top nav no longer says "Writing"');
 t_not_contains('nav-cta', $nav, 'top nav drops the "Work with me" CTA');
 t_not_contains('/services/', $nav, 'top nav no longer links services');
-t_eq(true, strpos($nav, '/blog/start/') < strpos($nav, 'href="/blog/"'), 'start here sits left of blog in the nav');
-[, $body] = http_req('GET', "$BASE/blog/");
-t_contains('start here', $body, 'blog index invites new readers to start page');
+t_contains('/about/', $nav, 'top nav offers About');
+t_eq(true, strpos($nav, 'href="/"') < strpos($nav, '/about/'), 'blog sits left of about in the nav');
+[, $body] = http_req('GET', "$BASE/");
+t_contains('start here', $body, 'home page invites new readers to the start page');
 [$code, $body] = http_req('GET', "$BASE/blog/data-driven-theater/index.md");
 t_eq(200, $code, 'markdown mirror served');
 [$code] = http_req('GET', "$BASE/feed.xml");
@@ -336,20 +341,30 @@ t_eq('', sbx_php('require "lib/config.php"; require "lib/newsletter.php";
 
 /* ---------------- contact form ---------------- */
 section('contact form');
-[$code, $body] = http_req('POST', "$BASE/", [
+// the form lives on /about/ now; the home page is the essay index and has no form
+[$code, $body] = http_req('POST', "$BASE/about/", [
     'headers' => "Content-Type: application/x-www-form-urlencoded\r\n",
     'body' => 'contact_submit=1&name=Jane&email=jane%40example.com&subject=Hi&message=Hello+there',
 ]);
 t_eq(200, $code, 'valid contact POST with mail disabled does not 500');
 t_contains('Something went wrong', $body, 'friendly error when SMTP is unconfigured');
-[$code, , $loc] = http_req('POST', "$BASE/", [
+[$code, , $loc] = http_req('POST', "$BASE/about/", [
     'headers' => "Content-Type: application/x-www-form-urlencoded\r\n",
     'body' => 'contact_submit=1&website=spam&name=B&email=b%40example.com&subject=s&message=m',
 ]);
 t_eq(302, $code, 'honeypot contact POST fake-succeeds');
-t_contains('/?sent=1', (string) $loc, 'honeypot redirected to the PRG landing');
-[$code, $body] = http_req('GET', "$BASE/?sent=1");
+t_contains('/about/?sent=1', (string) $loc, 'honeypot redirected to the PRG landing');
+[$code, $body] = http_req('GET', "$BASE/about/?sent=1");
 t_contains('Message sent.', $body, 'PRG landing renders the success card');
+
+// the home page is the blog: no contact form, no price list, no portrait pitch
+[, $home] = http_req('GET', "$BASE/");
+t_contains('Field Notes', $home, 'home page is the essay index');
+t_not_contains('contact_submit', $home, 'no contact form on the home page');
+t_not_contains('/services/', $home, 'home page never links the commercial page');
+[$code, , $loc] = http_req('GET', "$BASE/blog/");
+t_eq(301, $code, 'old listing URL is a permanent redirect');
+t_contains('/', (string) $loc, 'old listing URL redirects to the root');
 
 /* ---------------- analytics v2 ---------------- */
 section('analytics');
@@ -364,11 +379,15 @@ $chromeUa = 'Mozilla/5.0 (X11; Linux x86_64) TestChrome/126';
     'l' => 'pl-PL', 'w' => 1440, 'tz' => 'Europe/Warsaw',
 ]));
 t_eq(204, $code, 'valid beacon accepted');
-$beacon($chromeUa, '{"p":"/","r":""}');
-$beacon('Mozilla/5.0 (Macintosh) OtherBrowser/1.0', '{"p":"/","r":""}');
+$beacon($chromeUa, '{"p":"/","r":"","l":"pl-PL","w":1440,"tz":"Europe/Warsaw"}');
+$beacon('Mozilla/5.0 (Macintosh) OtherBrowser/1.0', '{"p":"/","r":"","l":"en-US","w":1280,"tz":"America/New_York"}');
 $beacon('Googlebot/2.1 (+http://www.google.com/bot.html)', '{"p":"/bot/","r":""}');
 $beacon($chromeUa, 'not-json-at-all');
 $beacon($chromeUa, '{"p":"javascript:alert(1)","r":""}');
+// a crawler that does not admit to being one: stock UA, runs the beacon, and
+// reports the clock of the server it is running on
+$beacon('Mozilla/5.0 (X11; Linux x86_64) TestChrome/126 Renderer',
+    '{"p":"/headless/","r":"","l":"en-US","w":800,"tz":"UTC"}');
 [$code] = $beacon($chromeUa, '{"e":1,"p":"/blog/data-driven-theater/","d":42}');
 t_eq(204, $code, 'engagement beacon accepted');
 t_assert(is_file($SANDBOX . '/content/analytics.db'), 'analytics db created in sandbox');
@@ -387,9 +406,13 @@ t_eq(204, $code, 'excluded beacon still answers 204');
 t_assert((bool) array_filter($meHdrs, fn($h) => stripos($h, 'Set-Cookie: bfx=;') === 0 || stripos($h, 'Set-Cookie: bfx=deleted') === 0), 'toggle clears the cookie');
 
 $adb = new PDO('sqlite:' . $SANDBOX . '/content/analytics.db');
-t_eq('3', (string) $adb->query('SELECT COUNT(*) FROM hits')->fetchColumn(), '3 rows stored (bot + junk + owner dropped)');
+t_eq('4', (string) $adb->query('SELECT COUNT(*) FROM hits')->fetchColumn(), '4 rows stored (bot + junk + owner dropped)');
 t_eq('0', (string) $adb->query("SELECT COUNT(*) FROM hits WHERE path = '/owner-visit/'")->fetchColumn(), 'opted-out browser never lands in the db');
+// the headless hit is kept and marked, not thrown away: the rule that marked it
+// can be revised later, and a filter nobody can inspect is a filter nobody trusts
+t_eq('1', (string) $adb->query("SELECT excl FROM hits WHERE path = '/headless/'")->fetchColumn(), 'a UTC-clocked browser is stored as automated');
 $row = $adb->query("SELECT * FROM hits WHERE path = '/blog/data-driven-theater/'")->fetch(PDO::FETCH_ASSOC);
+t_eq('0', (string) $row['excl'], 'a real reader is left counted');
 t_eq('news.ycombinator.com', $row['ref'], 'referrer host stored');
 t_eq('news', $row['ref_group'], 'referrer classified as news');
 t_eq('Chrome', $row['browser'], 'browser parsed');
@@ -448,13 +471,16 @@ t_eq(200, $code, 'unified dashboard opens on the stats session');
 t_not_contains('key=' . STATS_KEY, $body, 'dashboard links never carry the key');
 preg_match('#<b>([\d,]+)</b><span>Pageviews#', $body, $m);
 t_eq('3', $m[1] ?? '?', 'stats card: pageviews = 3');
-preg_match('#<b>([\d,]+)</b><span>Visitors#', $body, $m);
+preg_match('#<b>([\d,]+)</b><span>Daily visitors#', $body, $m);
 t_eq('2', $m[1] ?? '?', 'stats card: visitors = 2 (per-UA hashes)');
 t_contains('news.ycombinator.com', $body, 'referrer on dashboard');
 t_contains('Chrome', $body, 'browser table populated');
 t_contains('newsletter', $body, 'campaign table populated');
 t_contains('42s', $body, 'engaged time rendered');
 t_not_contains('/bot/', $body, 'bot path never stored');
+// excluded from the totals, still visible in the activity list with its verdict
+t_contains('/headless/', $body, 'a filtered hit stays visible in recent activity');
+t_contains('>automated<', $body, 'and is labelled with why it does not count');
 t_not_contains('Publishing pipeline', $body, 'stats session sees no admin tabs');
 t_not_contains('Field Notes', $body, 'stats session sees no subscriber data');
 t_not_contains('Rebuild site', $body, 'stats session sees no admin actions');
@@ -707,7 +733,7 @@ $draftFile = $SANDBOX . '/content/posts/2024-01-01-itest-draft-post.md';
 [$code] = $setStatus('itest-draft-post', 'publish');
 t_eq(302, $code, 'publish-now accepted');
 t_assert(is_dir($SANDBOX . '/blog/itest-draft-post'), 'publish-now built the page (auto rebuild)');
-t_contains('ITest Draft Post', (string) file_get_contents($SANDBOX . '/blog/index.php'), 'publish-now listed the post');
+t_contains('ITest Draft Post', (string) file_get_contents($SANDBOX . '/blog/_home.php'), 'publish-now listed the post');
 t_contains('**Publish:**', (string) file_get_contents($draftFile), 'publish moment written into the source');
 t_not_contains('**Status:** draft', (string) file_get_contents($draftFile), 'draft flag removed from the source');
 [, $body] = $asAdmin('GET', "$BASE/admin.php");

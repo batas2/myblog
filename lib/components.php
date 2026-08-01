@@ -97,7 +97,7 @@ function author_box(): string
     <p>Solution architect. I write weekly about software architecture, the humans around it, and the corporate machine they form together.</p>
     <div class="links">
       <a href="/blog/start/">Start here</a>
-      <a href="/services/">Work with me</a>
+      <a href="/about/">About me</a>
       <a href="https://www.linkedin.com/in/bartoszfrackowiak/">LinkedIn</a>
       <a href="#newsletter">Newsletter</a>
     </div>

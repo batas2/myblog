@@ -49,19 +49,25 @@ function page_head(string $title, string $desc, string $canonical, string $extra
 HTML;
 }
 
-/** Site navigation. $active: 'blog' | 'start' | 'services' | 'home' | '' — marks the current place. */
+/**
+ * Site navigation. $active: 'blog' | 'about' | 'start' | '' — marks the current place.
+ *
+ * Two destinations on purpose. The blog is the site, so it is the root; About
+ * is the one page about the person. Everything commercial is reachable from
+ * About and from nowhere else, because a reader who smells a funnel stops
+ * reading, and the reading is what this site is for.
+ */
 function site_nav(string $active = ''): string
 {
     $blog  = $active === 'blog' ? ' aria-current="page"' : '';
-    $start = $active === 'start' ? ' aria-current="page"' : '';
+    $about = $active === 'about' ? ' aria-current="page"' : '';
     return <<<HTML
 <header class="nav">
   <div class="nav-inner">
     <a class="wordmark" href="/">bfrackowiak<span class="tld">.pl</span></a>
     <ul class="nav-links">
-      <li><a href="/blog/start/"{$start}>Start here</a></li>
-      <li><a href="/blog/"{$blog}>Blog</a></li>
-      <li class="optional"><a href="/#journey">About</a></li>
+      <li><a href="/"{$blog}>Blog</a></li>
+      <li><a href="/about/"{$about}>About</a></li>
     </ul>
   </div>
 </header>
@@ -85,14 +91,14 @@ function site_footer(): string
     <div class="f-cols">
       <div class="f-col">
         <span class="f-label">Read</span>
-        <a href="/blog/">Writing</a>
+        <a href="/">All essays</a>
         <a href="/blog/start/">Start here</a>
         <a href="/feed.xml">{$rssIco}RSS</a>
       </div>
       <div class="f-col">
-        <span class="f-label">Work</span>
-        <a href="/services/">Services</a>
-        <a href="/#contact">Contact</a>
+        <span class="f-label">Me</span>
+        <a href="/about/">About</a>
+        <a href="/about/#contact">Contact</a>
       </div>
       <div class="f-col">
         <span class="f-label">Elsewhere</span>

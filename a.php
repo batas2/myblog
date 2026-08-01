@@ -14,6 +14,10 @@
  * daily-rotating salt + IP + UA (unlinkable across days; raw IP/UA never
  * written). Engagement updates the matching row's duration.
  *
+ * Bots that name themselves are dropped here. Headless browsers that do not
+ * are written with an exclusion verdict instead (an_looks_automated), so the
+ * dashboard ignores them without the evidence disappearing.
+ *
  * Storage: SQLite at content/analytics.db (web access to content/ is denied).
  * Dashboards: stats.php, admin.php.
  */
@@ -87,6 +91,7 @@ try {
     $utm = an_utm(is_string($in['q'] ?? null) ? substr($in['q'], 0, 500) : '');
     $client = an_ua_parse($ua);
 
+    // an_record() decides the automation verdict from these same fields
     an_record($db, [
         'day'          => $day,
         'ts'           => time(),

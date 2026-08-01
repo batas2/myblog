@@ -132,13 +132,24 @@ if ($isAdmin) {
 
 $pipeline = $comments = [];
 $sum7 = $nl = null;
+$exclCounts = null;
+$logRecon = [];
 $statusCounts = ['published' => 0, 'scheduled' => 0, 'draft' => 0];
 if ($isAdmin) {
     $comments = admin_all_comments();
     $pipeline = admin_pipeline(array_count_values(array_column($comments, 'slug')));
     foreach ($pipeline as $p) $statusCounts[$p['status']]++;
     if (is_file(an_db_path())) {
-        try { $sum7 = an_summary(an_db(), gmdate('Y-m-d', time() - 7 * 86400)); } catch (Throwable) { $sum7 = null; }
+        try {
+            $sdb = an_db();
+            $sum7 = an_summary($sdb, gmdate('Y-m-d', time() - 7 * 86400));
+            $exclCounts = an_excl_counts($sdb, gmdate('Y-m-d', time() - 30 * 86400));
+            // yesterday is a whole day, today says whether it still works right now
+            foreach ([date('Y-m-d', time() - 86400), date('Y-m-d')] as $d) {
+                $r = an_log_recon($sdb, $d);
+                if ($r !== null) $logRecon[] = $r;
+            }
+        } catch (Throwable) { $sum7 = null; }
     }
     try {
         $ndb = nl_db();
@@ -248,6 +259,41 @@ if ($isAdmin) {
 }
 $scored = array_values(array_filter($scoreAll, fn(array $r): bool => $r['reach'] !== null));
 $avgReach = $scored ? round(array_sum(array_column($scored, 'reach')) / count($scored), 1) : null;
+
+/* ---------------- syndication (admin only) ---------------- */
+/* One place to answer "where is this essay published, and did posting it there
+   bring anybody back". Columns are SHARE_TARGETS, so adding a destination is
+   one row in lib/blog.php rather than another column here. A destination that
+   also has a canonical URL (Medium, DEV) shows the link; one that is only ever
+   hand-carried (LinkedIn, the newsletter) shows the clicks it earned. */
+
+$syndClicks = [];
+if ($isAdmin && is_file(an_db_path())) {
+    try { $syndClicks = an_campaign_sources(an_db(), $since); } catch (Throwable) { $syndClicks = []; }
+}
+
+/* SHARE_TARGETS key => SYNDICATION key, for the destinations that have both.
+   Matched on the lowercased name rather than assumed, so a future platform
+   whose two spellings disagree is simply absent here instead of silently
+   showing every post as unpublished. */
+$syndPlatform = [];
+foreach (array_keys(SYNDICATION) as $platform) {
+    $key = strtolower($platform);
+    if (isset(SHARE_TARGETS[$key])) $syndPlatform[$key] = $platform;
+}
+
+$syndPosts = array_values(array_filter($pipeline, fn(array $p): bool => $p['status'] !== 'draft'));
+$syndMissing = [];
+foreach ($syndPlatform as $key => $platform) {
+    $syndMissing[$key] = count(array_filter(
+        $syndPosts,
+        fn(array $p): bool => $p['status'] === 'published' && !isset($p['syndication'][$platform])
+    ));
+}
+$syndNowhere = count(array_filter(
+    $syndPosts,
+    fn(array $p): bool => $p['status'] === 'published' && !$p['syndication']
+));
 
 /* ---------------- small view helpers ---------------- */
 
@@ -397,6 +443,21 @@ tr.r-draft td:first-child { box-shadow: inset 3px 0 0 var(--line); }
 .post-t { font-weight: 600; }
 .post-t a { text-decoration: none; }
 .post-sub { display: block; color: var(--muted); font-size: .8rem; margin-top: .15rem; max-width: 56ch; }
+/* one syndication cell: the link or the copy button, with its click count kept
+   on the same line so a column reads as "where, and did it work" */
+td.synd { white-space: nowrap; }
+td.synd .dim { margin-left: .45rem; font-variant-numeric: tabular-nums; font-size: .8rem; }
+/* the tagged-link drawer stays shut until the post is actually being shared.
+   The flex row is a child, not the <details> itself: giving <details> a display
+   other than block is the one way to break its own open/closed rendering. */
+.share { margin-top: .45rem; font-size: .74rem; }
+.share summary { color: var(--muted); cursor: pointer; width: max-content; }
+.share summary:hover { color: var(--ink); }
+.share-row { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; margin-top: .4rem; }
+.share-row .dim { font-size: .7rem; }
+button.mini.cp.done { color: #0a7a45; border-color: #0a7a4540; }
+/* rows the totals leave out: visible, legible, obviously not part of the count */
+tr.excluded td { opacity: .5; }
 .acts { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
 .acts form { display: inline-flex; gap: .4rem; align-items: center; margin: 0; }
 button.act { font: inherit; font-weight: 600; font-size: .85rem; padding: .55rem 1.2rem; border-radius: 10px; border: 1px solid var(--line); background: var(--ink); color: var(--bg, #fff); cursor: pointer; }
@@ -619,6 +680,7 @@ dialog.why::backdrop { background: rgba(10,10,15,.45); }
     <?php if ($isAdmin): ?>
     <a href="#pipeline" class="active">Pipeline</a>
     <a href="#scores">Scores</a>
+    <a href="#syndication">Published on</a>
     <a href="#newsletter">Newsletter</a>
     <a href="#comments">Comments</a>
     <span class="tsep"></span>
@@ -690,6 +752,17 @@ dialog.why::backdrop { background: rgba(10,10,15,.45); }
         <?php endif; ?>
         </span>
         <span class="post-sub"><?= e($p['subtitle']) ?></span>
+        <?php /* every cross-post host hides the referrer, so an untagged link comes back as 'direct' */ ?>
+        <details class="share">
+          <summary>tagged links</summary>
+          <div class="share-row">
+            <?php foreach (share_urls($p['slug']) as $sh): ?>
+              <?php /* the title is the no-clipboard fallback: the URL stays readable and selectable */ ?>
+              <button type="button" class="mini cp" data-url="<?= e($sh['url']) ?>" title="<?= e($sh['url']) ?>"><?= e($sh['label']) ?></button>
+            <?php endforeach; ?>
+            <span class="dim">copy · post these instead of the bare URL and Acquisition can tell them apart</span>
+          </div>
+        </details>
       </td>
       <?php $r = sc_reach($p['scores']); ?>
       <td class="r"><a class="plink badge b-<?= e(sc_band($r)) ?>" href="#scores" title="editorial reach score, rubric <?= e(SC_RUBRIC) ?>"><?= $r !== null ? number_format($r, 1) : 'unscored' ?></a></td>
@@ -934,6 +1007,64 @@ dialog.why::backdrop { background: rgba(10,10,15,.45); }
   </dialog>
   </div><!-- /scores -->
 
+  <div class="pane wide" id="syndication">
+  <h2>Published on <span class="cnt"><?= $statusCounts['published'] ?> published · <?= $statusCounts['scheduled'] ?> scheduled · tagged clicks for <?= e($rangeLabel) ?></span></h2>
+
+  <p class="lead">Every place an essay exists, in one table. A platform column shows the republished URL when the
+    post declares one, and the copy button when it does not, so the row you are looking at is also the row you act on.
+    <b>Clicks are tagged clicks only.</b> Medium, DEV and LinkedIn all strip the referrer, so an untagged link comes back
+    as "direct" and never appears here.</p>
+
+  <div class="cards">
+    <?php foreach ($syndPlatform as $key => $platform): ?>
+      <div class="scard"><b><?= $syndMissing[$key] ?></b><span>Not on <?= e(SYNDICATION[$platform]['label']) ?> yet</span></div>
+    <?php endforeach; ?>
+    <div class="scard"><b><?= $syndNowhere ?></b><span>Published here only</span></div>
+    <div class="scard"><b><?= count($syndClicks) ?></b><span>Posts with tagged clicks</span></div>
+  </div>
+
+  <table>
+    <tr>
+      <th>Post</th>
+      <th>Canonical</th>
+      <?php foreach (SHARE_TARGETS as $spec): ?><th><?= e($spec['label']) ?></th><?php endforeach; ?>
+    </tr>
+    <?php foreach ($syndPosts as $p): ?>
+      <?php $share = share_urls($p['slug']); $clicks = $syndClicks[$p['slug']] ?? []; ?>
+    <tr class="r-<?= e($p['status']) ?>">
+      <td>
+        <span class="post-t"><?= e($p['title']) ?></span>
+        <span class="post-sub"><?= $p['status'] === 'scheduled' ? 'goes live ' . date('Y-m-d', $p['publish_ts']) : date('Y-m-d', $p['publish_ts']) ?></span>
+      </td>
+      <td><a class="plink" href="<?= e(post_path($p['slug'])) ?>" target="_blank" rel="noopener">/blog/<?= e($p['slug']) ?>/ ↗</a></td>
+      <?php foreach (SHARE_TARGETS as $key => $spec): ?>
+        <?php
+          $platform = $syndPlatform[$key] ?? null;
+          $url = $platform !== null ? ($p['syndication'][$platform] ?? null) : null;
+          $pv = $clicks[$key]['pv'] ?? 0;
+        ?>
+      <td class="synd">
+        <?php if ($url !== null): ?>
+          <a class="plink" href="<?= e($url) ?>" target="_blank" rel="noopener noreferrer">live ↗</a>
+        <?php else: ?>
+          <?php /* nothing to link to yet, so hand over the tagged URL instead of a dash */ ?>
+          <button type="button" class="mini cp" data-url="<?= e($share[$key]['url']) ?>" title="<?= e($share[$key]['url']) ?>">copy</button>
+        <?php endif; ?>
+        <span class="dim n"><?= $pv ?: '·' ?></span>
+      </td>
+      <?php endforeach; ?>
+    </tr>
+    <?php endforeach; ?>
+  </table>
+
+  <p class="note">The links live in the markdown, one line per platform (<code>**Medium:** &lt;url&gt;</code>,
+    <code>**DevTo:** &lt;url&gt;</code>), and each one renders an "Also published on …" badge under the hero,
+    adds <code>rel="syndication"</code> and a <code>sameAs</code> entry, and leaves this page canonical.
+    A URL that is not https on that platform's own host is ignored with a warning at build time.
+    Adding a destination is one row in <code>SYNDICATION</code> / <code>SHARE_TARGETS</code> (<code>lib/blog.php</code>);
+    this table grows a column by itself.</p>
+  </div><!-- /syndication -->
+
   <div class="pane" id="newsletter">
   <?php $ns = $nl['stats'] ?? null; ?>
   <h2>Newsletter — Field Notes <span class="cnt"><?= $ns ? ($ns['confirmed'] + $ns['pending']) . ' addresses' : '' ?></span></h2>
@@ -1093,7 +1224,7 @@ dialog.why::backdrop { background: rgba(10,10,15,.45); }
   <div class="pane <?= $isAdmin ? '' : 'on' ?>" id="overview">
   <div class="cards">
     <div class="scard"><b><?= number_format($sum['pv']) ?><?= s_delta($an['prev'], 'pv', $sum['pv']) ?></b><span>Pageviews</span></div>
-    <div class="scard"><b><?= number_format($sum['uv']) ?><?= s_delta($an['prev'], 'uv', $sum['uv']) ?></b><span>Visitors (daily-unlinkable)</span></div>
+    <div class="scard" title="Hashes are salted per day and unlinkable across days, so this is the sum of each day's uniques — one person reading on Monday and Thursday counts twice. Returning readers are deliberately uncountable."><b><?= number_format($sum['uv']) ?><?= s_delta($an['prev'], 'uv', $sum['uv']) ?></b><span>Daily visitors, summed</span></div>
     <div class="scard"><b><?= an_fmt_secs($sum['avg_time']) ?><?= s_delta($an['prev'], 'avg_time', $sum['avg_time']) ?></b><span>Avg engaged time</span></div>
     <div class="scard"><b><?= number_format($sum['multi']) ?><?= s_delta($an['prev'], 'multi', $sum['multi']) ?></b><span>Multi-page readers</span></div>
     <div class="scard"><b><?= $sum['countries'] ?></b><span>Countries</span></div>
@@ -1176,19 +1307,22 @@ dialog.why::backdrop { background: rgba(10,10,15,.45); }
   </div><!-- /audience -->
 
   <div class="pane wide recent" id="activity">
-    <h2>Recent visits <span class="dim">— last <?= count($an['recent']) ?></span></h2>
-    <table><tr><th>When</th><th></th><th>Path</th><th>From</th><th>Client</th><th class="r">Read</th></tr>
-    <?php foreach ($an['recent'] as $r): ?>
-      <tr>
+    <h2>Recent visits <span class="dim">— last <?= count($an['recent']) ?>, filtered ones included</span></h2>
+    <p class="note">The only view that shows hits the totals leave out: a filter you cannot watch working is a filter you cannot tune. Timezone is the tell — a browser reporting plain UTC is running on a server.</p>
+    <table><tr><th>When</th><th></th><th>Path</th><th>From</th><th>Client</th><th>Timezone</th><th class="r">Read</th></tr>
+    <?php foreach ($an['recent'] as $r): $ex = (int) $r['excl']; ?>
+      <tr<?= $ex ? ' class="excluded"' : '' ?>>
         <td class="n"><?= date('m-d H:i', (int) $r['ts']) ?></td>
         <td title="<?= e(an_country_name((string) $r['country'])) ?>"><?= an_flag((string) $r['country']) ?: '·' ?></td>
         <td class="pathcell"><?= e((string) $r['path']) ?></td>
         <td><?= $r['ref'] !== '' ? e((string) $r['ref']) : '<span class="dim">' . e((string) $r['ref_group']) . '</span>' ?></td>
         <td class="dim"><?= e(trim($r['browser'] . ' · ' . $r['os'] . ' · ' . $r['device'], ' ·')) ?></td>
+        <td class="dim"><?= e((string) $r['tz']) ?: '·' ?>
+          <?= $ex ? '<span class="badge b-draft">' . e(an_excl_label($ex)) . '</span>' : '' ?></td>
         <td class="r n"><?= an_fmt_secs((int) $r['duration']) ?></td>
       </tr>
     <?php endforeach; ?>
-    <?php if (!$an['recent']): ?><tr><td colspan="6" class="dim">nothing yet</td></tr><?php endif; ?>
+    <?php if (!$an['recent']): ?><tr><td colspan="7" class="dim">nothing yet</td></tr><?php endif; ?>
     </table>
   </div><!-- /activity -->
   <?php endif; ?>
@@ -1207,6 +1341,23 @@ dialog.why::backdrop { background: rgba(10,10,15,.45); }
             <span class="badge b-<?= $ipExcluded ? 'published' : 'draft' ?>"><?= $ipExcluded ? 'excluded by IP' : 'counted' ?></span></td></tr>
         <tr><td>Excluded networks</td><td class="n r"><?php $exIps = (array) cfg('analytics_exclude_ips', []); ?>
           <?= $exIps ? e(implode(', ', array_map('strval', $exIps))) : '<span class="dim">none</span>' ?></td></tr>
+        <?php if ($exclCounts !== null): $exTotal = $exclCounts[AN_AUTOMATED] + $exclCounts[AN_OWNER]; ?>
+        <tr><td>Hits not counted · 30d<br><span class="dim" style="font-size:.78rem">headless browsers run the beacon and wear a normal user agent; these are kept, not deleted — <code>php tools/analytics_prune.php --list</code></span></td>
+          <td class="n r"><?= $exTotal ?> of <?= $exTotal + $exclCounts[AN_COUNTED] ?><br>
+            <span class="dim"><?= $exclCounts[AN_AUTOMATED] ?> automated · <?= $exclCounts[AN_OWNER] ?> owner</span></td></tr>
+        <?php endif; ?>
+        <?php $logDir = (string) cfg('analytics_access_log_dir', ''); ?>
+        <tr><td>Beacon vs web server log<br><span class="dim" style="font-size:.78rem">two counts of the same event — requests should always exceed rows, which also count engagement pings and deliberate drops</span></td>
+          <td class="n r">
+            <?php if ($logRecon): foreach ($logRecon as $lr): ?>
+              <?= e($lr['day']) ?>: <?= $lr['rows'] ?> rows / <?= $lr['requests'] ?> requests
+              <span class="badge b-<?= $lr['ok'] ? 'published' : 'draft' ?>"><?= $lr['ok'] ? 'consistent' : 'rows exceed requests' ?></span><br>
+            <?php endforeach; elseif ($logDir === ''): ?>
+              <span class="dim">set <code>analytics_access_log_dir</code> in config.php to cross-check</span>
+            <?php else: ?>
+              <span class="dim">no readable <code>YYYY-MM-DD.log</code> in <?= e($logDir) ?></span>
+            <?php endif; ?>
+          </td></tr>
         <tr><td>Timezone</td><td class="n r"><?= e((string) cfg('timezone', 'Europe/Warsaw')) ?></td></tr>
         <tr><td>PHP</td><td class="n r"><?= PHP_VERSION ?></td></tr>
         <tr><td>Last build</td><td class="n r"><?= admin_last_build_ts() ? date('Y-m-d H:i', admin_last_build_ts()) : 'never' ?></td></tr>
@@ -1214,7 +1365,7 @@ dialog.why::backdrop { background: rgba(10,10,15,.45); }
   </div><!-- /system -->
   <?php endif; ?>
 
-  <p class="foot" id="anfoot">No cookies for visitors, no external services. Visitor hashes rotate daily. IP geolocation by <a href="https://db-ip.com">DB-IP</a> (CC BY 4.0)<?= geoip_db_age_days() === null ? ' — <strong>geoip.dat missing: run php tools/geoip_update.php</strong>' : ', database ' . geoip_db_age_days() . ' days old' ?>.<br>
+  <p class="foot" id="anfoot">No cookies for visitors, no external services. Visitor hashes rotate daily, so “daily visitors, summed” is exactly that — the same reader on two days is two, and there is no way to tell otherwise without storing an identifier this site refuses to keep. IP geolocation by <a href="https://db-ip.com">DB-IP</a> (CC BY 4.0)<?= geoip_db_age_days() === null ? ' — <strong>geoip.dat missing: run php tools/geoip_update.php</strong>' : ', database ' . geoip_db_age_days() . ' days old' ?>.<br>
   <strong>This browser is excluded from the stats</strong> (owner cookie, refreshed on every visit here) — re-enable via <a href="/a.php?me=on">/a.php?me=on</a>, exclude another device by opening <a href="/a.php?me=off">/a.php?me=off</a> on it or just logging into admin.</p>
 <?php endif; ?>
 
@@ -1230,7 +1381,7 @@ document.documentElement.classList.add('js');
   var ids = tabs.map(function (a) { return a.hash.slice(1); });
   // the range selector also drives the Scores tab (scores sit next to traffic there);
   // the privacy footnote belongs to the analytics tabs only
-  var barIds = { overview: 1, content: 1, acquisition: 1, audience: 1, activity: 1, scores: 1 };
+  var barIds = { overview: 1, content: 1, acquisition: 1, audience: 1, activity: 1, scores: 1, syndication: 1 };
   var anIds = { overview: 1, content: 1, acquisition: 1, audience: 1, activity: 1 };
   var bar = document.getElementById('anbar'), foot = document.getElementById('anfoot');
   function show(id) {
@@ -1251,6 +1402,19 @@ document.documentElement.classList.add('js');
     a.addEventListener('click', function () { if (location.hash) this.href += location.hash; });
   });
 })();
+
+// tagged share links: one click to the clipboard, because a link that has to be
+// hand-assembled is a link that gets posted bare
+document.addEventListener('click', function (ev) {
+  var b = ev.target.closest && ev.target.closest('button.cp');
+  if (!b || !navigator.clipboard) return;
+  navigator.clipboard.writeText(b.dataset.url).then(function () {
+    var was = b.textContent;
+    b.textContent = 'copied';
+    b.classList.add('done');
+    setTimeout(function () { b.textContent = was; b.classList.remove('done'); }, 1200);
+  });
+});
 
 // "why is this number what it is": every score in the table opens the rubric
 // text, the stored rationale for this post, and its arithmetic share of the
