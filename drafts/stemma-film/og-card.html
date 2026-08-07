@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Stemma — OG card</title>
+<link rel="stylesheet" href="/assets/fonts.css">
+<style>
+  /* 1200×630, but designed to survive being shown at ~500px in a feed: the wordmark and the
+     claim have to read at 40% scale, so nothing here is smaller than 26px at full size.
+     ?theme=light swaps the palette; the served card is the dark one. */
+  :root {
+    --bg:#08090c; --panel:#0f1116; --ink:#f5f5f7; --muted:#9a9aa6; --dim:#63646e;
+    --accent:#8b8ef7; --line:#22232c; --add:#3ecf9a; --del:#d1435b;
+  }
+  html[data-theme="light"] {
+    --bg:#fbfbfd; --panel:#ffffff; --ink:#14141b; --muted:#6b6b78; --dim:#9a9aa4;
+    --accent:#4f52e5; --line:#e4e4ee; --add:#0f9d6e; --del:#c82d48;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { width:1200px; height:630px; overflow:hidden; }
+  body {
+    background:var(--bg); color:var(--ink);
+    font-family:'Inter', system-ui, sans-serif; -webkit-font-smoothing:antialiased;
+    display:grid; grid-template-columns:1fr 452px;
+  }
+
+  /* the accent hairline along the top — the site's one motif, at card scale */
+  .rule { position:absolute; inset:0 0 auto 0; height:5px; background:var(--accent); }
+
+  .left { padding:62px 0 58px 68px; display:flex; flex-direction:column; }
+  .brand { display:flex; align-items:center; gap:16px; }
+  .brand svg { width:56px; height:56px; display:block; }
+  .name { font-size:40px; font-weight:700; letter-spacing:-0.035em; }
+  .kicker {
+    margin-top:6px; font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:15px; letter-spacing:0.17em; text-transform:uppercase; color:var(--muted);
+  }
+
+  h1 {
+    margin-top:auto; font-size:76px; font-weight:700; letter-spacing:-0.045em;
+    line-height:1.02; max-width:11.2em;
+  }
+  h1 em { font-style:normal; color:var(--accent); }
+  .sub {
+    margin-top:26px; font-size:26px; line-height:1.42; color:var(--muted);
+    max-width:20.5em; letter-spacing:-0.008em;
+  }
+  .foot {
+    margin-top:auto; padding-top:34px; display:flex; align-items:center; gap:14px;
+    font-family:'JetBrains Mono', ui-monospace, monospace; font-size:17px; color:var(--dim);
+    letter-spacing:0.05em;
+  }
+  .foot b { color:var(--muted); font-weight:400; }
+  .dot { width:4px; height:4px; border-radius:50%; background:var(--dim); }
+
+  /* The evidence panel: the diff, because that is the claim. Not a screenshot of the whole
+     app — at feed size that is grey soup. Two lines, big enough to actually read. */
+  .right { position:relative; border-left:1px solid var(--line); background:var(--panel); overflow:hidden; }
+  .code { position:absolute; inset:0; padding:60px 0 60px 44px; display:flex; flex-direction:column; justify-content:center; }
+  .bar {
+    font-family:'JetBrains Mono', ui-monospace, monospace; font-size:15px; color:var(--dim);
+    letter-spacing:0.06em; padding-bottom:18px; margin-bottom:22px; border-bottom:1px solid var(--line);
+    display:flex; gap:14px; align-items:baseline; padding-right:44px;
+  }
+  .bar b { color:var(--ink); font-weight:600; }
+  .bar span { margin-left:auto; white-space:nowrap; }
+  .bar i { font-style:normal; }
+  .bar .p { color:var(--add); }
+  .bar .m { color:var(--del); }
+  pre {
+    font-family:'JetBrains Mono', ui-monospace, monospace; font-size:16.5px; line-height:2.0;
+    color:var(--muted); white-space:pre;
+  }
+  .l { display:block; padding:2px 10px; border-radius:4px; margin-left:-10px; }
+  .a { color:var(--ink); background:color-mix(in srgb, var(--add) 15%, transparent); }
+  .d { color:var(--ink); background:color-mix(in srgb, var(--del) 14%, transparent); }
+  .k { color:var(--accent); }
+  .s { color:var(--add); }
+  html[data-theme="light"] .s { color:#0b7a56; }
+  .cap {
+    margin-top:26px; font-family:'JetBrains Mono', ui-monospace, monospace; font-size:14px;
+    letter-spacing:0.13em; text-transform:uppercase; color:var(--dim);
+  }
+</style>
+</head>
+<body>
+<div class="rule"></div>
+
+<div class="left">
+  <div class="brand">
+    <!-- the product's own mark, lifted from the app's Logo component so the card,
+         the app chrome and the film all show the same thing -->
+    <svg viewBox="0 0 32 32" aria-hidden="true">
+      <defs><linearGradient id="vg" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#818cf8"/><stop offset="100%" stop-color="#4f46e5"/>
+      </linearGradient></defs>
+      <path d="M8 4 H19 L26 11 V26 A2 2 0 0 1 24 28 H8 A2 2 0 0 1 6 26 V6 A2 2 0 0 1 8 4 Z" fill="url(#vg)"/>
+      <path d="M19 4 V10 A1 1 0 0 0 20 11 H26 L19 4 Z" fill="#a5b4fc"/>
+      <path d="M11.5 14 L16 22 L20.5 14" fill="none" stroke="#fff" stroke-width="2.2"
+            stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.92"/>
+    </svg>
+    <div>
+      <div class="name">Stemma</div>
+      <div class="kicker">The living architecture model</div>
+    </div>
+  </div>
+
+  <h1>The diagram <em>is</em> the code.</h1>
+  <p class="sub">An architecture model that lives in your repository as C#. Edit the canvas — Roslyn rewrites the file.</p>
+
+  <div class="foot">
+    <span>bfrackowiak.pl/stemma</span><span class="dot"></span><b>for solution architects</b>
+  </div>
+</div>
+
+<div class="right">
+  <div class="code">
+    <div class="bar"><b>git diff</b> Architecture.cs <span><i class="p">+2</i> <i class="m">−2</i></span></div>
+<pre><span class="l d">- var modLedger = <span class="k">new</span> Module(</span><span class="l d">      <span class="s">"mod_004"</span>, <span class="s">"Ledger"</span>);</span><span class="l a">+ var modLedgerReconciliation =</span><span class="l a">      <span class="k">new</span> Module(<span class="s">"mod_004"</span>,</span><span class="l a">      <span class="s">"Ledger &amp; Reconciliation"</span>);</span></pre>
+    <div class="cap">One rename on the canvas</div>
+  </div>
+</div>
+
+<script>
+if (new URLSearchParams(location.search).get('theme') === 'light') {
+  document.documentElement.dataset.theme = 'light';
+}
+</script>
+</body>
+</html>

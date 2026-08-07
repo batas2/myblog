@@ -611,6 +611,50 @@ function an_top_pages(PDO $db, string $since, int $limit = 25): array
 }
 
 /**
+ * The standing destinations: the pages that are not essays and do not come and go.
+ *
+ * Kept as a list rather than derived, because "which pages are permanent" is an editorial
+ * fact about the site, not something the database can know. Label first, path second.
+ */
+const AN_DESTINATIONS = [
+    '/'                 => 'Home · essay index',
+    '/blog/start/'      => 'Start here',
+    '/stemma/'          => 'Stemma · project page',
+    '/stemma/index.md'  => 'Stemma · plain text (agents)',
+    '/about/'           => 'About',
+    '/services/'        => 'Services (unlisted)',
+];
+
+/**
+ * Stats for an explicit list of paths, in the order given, including the ones with no
+ * traffic in the range.
+ *
+ * an_top_pages() answers "what is being read" and ranks everything together, so a standing
+ * page competes with thirty essays for twenty-five rows and vanishes on a good writing month.
+ * This answers the other question — how is each permanent destination doing — which is the
+ * one you cannot ask from a leaderboard. A zero row is a real answer here, not a missing one.
+ */
+function an_paths(PDO $db, string $since, array $paths, string $until = ''): array
+{
+    if (!$paths) return [];
+    $out = [];
+    foreach ($paths as $p) $out[$p] = ['path' => $p, 'pv' => 0, 'uv' => 0, 'avg_time' => 0.0];
+
+    $args = [$since];
+    $sql = 'excl = 0 AND day >= ?';
+    if ($until !== '') { $sql .= ' AND day < ?'; $args[] = $until; }
+    $sql .= ' AND path IN (' . implode(',', array_fill(0, count($paths), '?')) . ')';
+    foreach ($paths as $p) $args[] = $p;
+
+    $st = $db->prepare("SELECT path, COUNT(*) pv, COUNT(DISTINCT visitor) uv,
+            COALESCE(AVG(CASE WHEN duration > 0 THEN duration END), 0) avg_time
+        FROM hits WHERE {$sql} GROUP BY path");
+    $st->execute($args);
+    foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) $out[$r['path']] = $r;
+    return array_values($out);
+}
+
+/**
  * Latest pageviews, newest first — excluded ones included and flagged. This is
  * the one view that shows them: a filter you cannot watch working is a filter
  * you cannot tune, and the rows it drops are exactly the ones worth eyeballing.

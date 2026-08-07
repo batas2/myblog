@@ -38,6 +38,9 @@ RedirectMatch 404 ^/(lib|tools|tests|docs|drafts|content|vendor|_archive|_remote
   Header always set Referrer-Policy "strict-origin-when-cross-origin"
   Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
   Header always set Strict-Transport-Security "max-age=31536000"
+  # The Stemma film is served from here, not embedded from a video platform, so
+  # nothing had to be opened up: default-src 'self' already covers media-src, and
+  # the footer's "no cookies, no trackers" stays literally true.
   Header always set Content-Security-Policy "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; connect-src 'self'; frame-src 'self' https://challenges.cloudflare.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self'"
 </IfModule>
 
@@ -55,7 +58,19 @@ RedirectMatch 404 ^/(lib|tools|tests|docs|drafts|content|vendor|_archive|_remote
   ExpiresByType text/css "access plus 7 days"
   ExpiresByType application/javascript "access plus 7 days"
   ExpiresByType application/rss+xml "access plus 1 hour"
+  ExpiresByType video/mp4 "access plus 30 days"
+  ExpiresByType video/webm "access plus 30 days"
 </IfModule>
 
 # correct MIME for markdown mirrors (AI agents fetch these)
 AddType text/markdown .md
+
+# the film. Byte-range requests are what let a browser start playing before the
+# whole file has arrived, so keep them enabled explicitly.
+AddType video/mp4 .mp4
+AddType video/webm .webm
+<IfModule mod_headers.c>
+  <FilesMatch "\.(mp4|webm)$">
+    Header set Accept-Ranges bytes
+  </FilesMatch>
+</IfModule>

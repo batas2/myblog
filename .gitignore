@@ -23,6 +23,8 @@ content/comments/*.json
 
 # remote backups pulled by deploy.sh
 _remote-backup/
+# runtime data pulled by deploy.sh --pull-logs (analytics, subscribers, comments)
+_remote-logs/
 
 # private notes and old files
 docs/
@@ -38,11 +40,18 @@ content/.sessions/
 content/.buildlock
 
 # never publish: unpublished essays and working drafts.
-# Exception: drafts/diagrams/ holds the .drawio sources behind the PNGs in
-# assets/img/posts/ — an export you cannot edit is a dead end, so the sources
-# are versioned. deploy.sh still excludes drafts/ entirely, so nothing is served.
+# Exceptions, all on the same reasoning — an artifact you cannot remake is a
+# dead end, so whatever produced it is versioned. deploy.sh still excludes
+# drafts/ entirely, so none of it is served.
+#   diagrams/    the .drawio sources behind the PNGs in assets/img/posts/
+#   stemma-film/ the capture → render → encode pipeline behind assets/video/;
+#                the encoded films are the only other copy that exists
+#   social/      the copy actually posted to LinkedIn et al, with the URL it
+#                went out on — the record the weekly impressions check needs
 drafts/*
 !drafts/diagrams/
+!drafts/stemma-film/
+!drafts/social/
 
 # deployment target (per-machine, holds the SSH coordinates)
 deploy.env

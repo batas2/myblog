@@ -219,6 +219,17 @@ scores mirror) is excluded in both directions and can never be overwritten.
 `--dry-run` previews, `--clean` also removes remotely deleted files,
 `--no-geoip` skips the refresh.
 
+`./deploy.sh --pull-logs` goes the other way and deploys nothing: it downloads
+the live site's runtime data into `_remote-logs/<timestamp>/`, mirroring the
+server's layout — `analytics.db` (every visit ever recorded; nothing is pruned
+or rotated), `newsletter.db`, `scores.db`, `content/comments/*.json` and the
+cron's `content/*.log`. The databases are copied with `VACUUM INTO` **on the
+server**, so a WAL-mode database being written to by live traffic still arrives
+as a consistent single file — plain rsync of a `.db` would leave recent hits
+behind in the `-wal` sidecar. Nothing on the server is modified, and the run
+prints the row count and date span of what it pulled. Set `REMOTE_LOG_DIR` in
+`deploy.env` to pull the host's own access/error logs alongside it.
+
 `content/geoip.dat` is the one data file that ships *from* your machine, so a
 stale local copy would overwrite a fresher one on the server. The deploy
 re-runs `tools/geoip_update.php` whenever the local database is older than

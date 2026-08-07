@@ -49,10 +49,17 @@ function render_sitemap(array $posts): string
     $latest = $posts ? date('Y-m-d', $posts[0]['publish_ts']) : date('Y-m-d');
     // the root is the blog listing, so there is no separate /blog/ entry to
     // submit; /services/ is deliberately absent, it carries noindex and is only
-    // ever reached from /about/ or from a link sent by hand
+    // ever reached from /about/ or from a link sent by hand. /stemma/ is the
+    // opposite case — a project page meant to be found, and one day to move to
+    // its own domain, so it is submitted like any other page.
+    // …and it changes on its own schedule rather than the publishing one, so it dates itself
+    // from its own source instead of borrowing the newest essay's date.
+    $stemmaSrc = APP_ROOT . '/stemma/index.php';
+    $stemmaMod = is_file($stemmaSrc) ? date('Y-m-d', (int) filemtime($stemmaSrc)) : $latest;
     $urls = "  <url><loc>{$site}/</loc><lastmod>{$latest}</lastmod><priority>1.0</priority></url>\n"
           . "  <url><loc>{$site}/blog/start/</loc><lastmod>{$latest}</lastmod><priority>0.8</priority></url>\n"
-          . "  <url><loc>{$site}/about/</loc><lastmod>{$latest}</lastmod><priority>0.7</priority></url>\n";
+          . "  <url><loc>{$site}/about/</loc><lastmod>{$latest}</lastmod><priority>0.7</priority></url>\n"
+          . "  <url><loc>{$site}/stemma/</loc><lastmod>{$stemmaMod}</lastmod><priority>0.8</priority></url>\n";
     foreach ($posts as $p) {
         // a revised essay advertises its revision, not its birthday
         $lastmod = date('Y-m-d', $p['updated_ts'] ?? $p['publish_ts']);

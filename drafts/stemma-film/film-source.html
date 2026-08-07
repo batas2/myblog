@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Stemma — film</title>
+<link rel="stylesheet" href="/assets/fonts.css">
+<style>
+  /* One source, two cuts. Everything the theme touches is a variable; ?theme=light swaps the
+     block below and the plates point at the light recording. Both cuts are the same film —
+     same timings, same words, same moves — so they can be encoded from one render loop. */
+  :root {
+    --bg:      #08090c;
+    --ink:     #f5f5f7;
+    --muted:   #9a9aa6;
+    --dim:     #6e6e7a;
+    --accent:  #8b8ef7;
+    --rule:    #23242c;
+    --add-fg:  #e8fff4;  --add-bg: rgba(62,207,154,.14);
+    --del-fg:  #ffe9ee;  --del-bg: rgba(209,67,91,.14);
+    --plate-fg: 8, 9, 12;          /* the scrim over the footage, as an rgb triple */
+    --code-fg: #7e7f8c;
+  }
+  html[data-theme="light"] {
+    --bg:      #fbfbfd;
+    --ink:     #14141b;
+    --muted:   #6b6b78;
+    --dim:     #9a9aa4;
+    --accent:  #4f52e5;
+    --rule:    #e4e4ee;
+    --add-fg:  #06553a;  --add-bg: rgba(16,163,110,.13);
+    --del-fg:  #6d0f22;  --del-bg: rgba(200,45,72,.11);
+    --plate-fg: 251, 251, 253;
+    --code-fg: #6f7080;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { width:1920px; height:1080px; overflow:hidden; background:var(--bg); }
+  body {
+    font-family:'Inter', system-ui, sans-serif;
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+  }
+  .scene { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; opacity:0; }
+  .type { text-align:center; max-width:1500px; padding:0 80px; }
+  .type h1 {
+    font-weight:700; letter-spacing:-0.045em; line-height:1.0;
+    font-size:112px; text-wrap:balance;
+  }
+  .type h1.sm { font-size:76px; }
+  .type .line { display:block; opacity:0; }
+  .type em { font-style:normal; color:var(--accent); }
+  .sub {
+    margin-top:34px; font-size:34px; font-weight:400; color:var(--muted);
+    letter-spacing:-0.01em; opacity:0;
+  }
+
+  /* Product plates. The scrim is weighted towards whichever edge carries the caption, and stays
+     thin at the other one — the app's own chrome is the subject here, so hiding it to make room
+     for a label would defeat the shot. */
+  .plate { position:absolute; inset:0; overflow:hidden; }
+  .plate::after {
+    content:''; position:absolute; inset:0; pointer-events:none;
+    background:
+      linear-gradient(to top,    rgba(var(--plate-fg),.94) 0, rgba(var(--plate-fg),.58) 104px, rgba(var(--plate-fg),0) 248px),
+      linear-gradient(to bottom, rgba(var(--plate-fg),.42) 0, rgba(var(--plate-fg),0) 124px);
+  }
+  .plate.topcap::after {
+    background:
+      linear-gradient(to bottom, rgba(var(--plate-fg),.94) 0, rgba(var(--plate-fg),.60) 108px, rgba(var(--plate-fg),0) 252px),
+      linear-gradient(to top,    rgba(var(--plate-fg),.30) 0, rgba(var(--plate-fg),0) 88px);
+  }
+  .plate img { position:absolute; top:50%; left:50%; width:1920px; transform-origin:center; }
+  .cap {
+    position:absolute; left:96px; bottom:74px;
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:22px; letter-spacing:0.16em; text-transform:uppercase; color:var(--accent); opacity:0;
+    text-shadow:0 1px 14px rgba(var(--plate-fg),.95), 0 0 4px rgba(var(--plate-fg),.9);
+  }
+  .cap i { font-style:normal; color:var(--muted); margin-left:18px; letter-spacing:0.1em; }
+  .cap.top { top:78px; bottom:auto; }
+  .cap.right { left:auto; right:96px; }
+
+  /* the diff beat */
+  .diff { width:1660px; }
+  .diff .bar {
+    font-family:'JetBrains Mono', ui-monospace, monospace; font-size:20px; color:var(--dim);
+    letter-spacing:0.08em; padding-bottom:22px; border-bottom:1px solid var(--rule); margin-bottom:26px;
+    display:flex; justify-content:space-between;
+  }
+  .diff .bar b { color:var(--ink); font-weight:600; }
+  .diff pre {
+    font-family:'JetBrains Mono', ui-monospace, monospace; font-size:23px; line-height:1.95;
+    white-space:pre; color:var(--code-fg);
+  }
+  .diff .l { display:block; opacity:0; padding:0 14px; border-radius:4px; }
+  .diff .add { color:var(--add-fg); background:var(--add-bg); }
+  .diff .del { color:var(--del-fg); background:var(--del-bg); }
+
+  /* wordmark */
+  .mark { text-align:center; }
+  .mark .w { font-size:150px; font-weight:700; letter-spacing:-0.05em; opacity:0; }
+  .mark .u {
+    margin-top:40px; font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:30px; letter-spacing:0.1em; color:var(--muted); opacity:0;
+  }
+  .rule { width:0; height:1px; background:var(--accent); margin:52px auto 0; }
+</style>
+</head>
+<body>
+
+<!-- 1 · the problem -->
+<div class="scene" id="s1"><div class="type"><h1>
+  <span class="line" id="s1a">The architecture diagram</span>
+  <span class="line" id="s1b">on your wiki</span>
+  <span class="line" id="s1c"><em>was wrong by the next deploy.</em></span>
+</h1></div></div>
+
+<!-- 2 · beat -->
+<div class="scene" id="s2"><div class="type"><h1 class="sm">
+  <span class="line" id="s2a">It always is.</span>
+</h1></div></div>
+
+<!-- 3 · the claim, stated early -->
+<div class="scene" id="s3"><div class="type"><h1>
+  <span class="line" id="s3a">So the diagram</span>
+  <span class="line" id="s3b"><em>is the code.</em></span>
+</h1></div></div>
+
+<!-- 4 · setup for the long beat -->
+<div class="scene" id="s4"><div class="type"><h1 class="sm">
+  <span class="line" id="s4a">Start with an empty model.</span>
+</h1><p class="sub" id="s4s">One C# file. Nothing drawn yet.</p></div></div>
+
+<!-- 5 · product: the model being built, in full -->
+<div class="scene" id="s5">
+  <div class="plate"><img id="imgArch" alt=""></div>
+  <div class="cap" id="cap5a">Bounded contexts<i>declared, not drawn</i></div>
+  <div class="cap" id="cap5b">Modules<i>each one names the context it belongs to</i></div>
+  <div class="cap" id="cap5c">Relationships<i>what moves — not just that something moves</i></div>
+</div>
+
+<!-- 6 · the turn to source -->
+<div class="scene" id="s6"><div class="type"><h1 class="sm">
+  <span class="line" id="s6a">Every box you just drew</span>
+  <span class="line" id="s6b"><em>is a line someone can review.</em></span>
+</h1></div></div>
+
+<!-- 7 · product: the diff -->
+<div class="scene" id="s7"><div class="diff">
+  <div class="bar"><span><b>git diff</b>&nbsp;&nbsp;Architecture/Architecture.cs</span><span id="diffstat">+3 &minus;3</span></div>
+  <pre id="difflines"></pre>
+</div></div>
+
+<!-- 8 · the proof -->
+<div class="scene" id="s8"><div class="type"><h1>
+  <span class="line" id="s8a">Two lines.</span>
+  <span class="line" id="s8b"><em>Nothing else moved.</em></span>
+</h1></div></div>
+
+<!-- 9 · the other half -->
+<div class="scene" id="s9"><div class="type"><h1 class="sm">
+  <span class="line" id="s9a">Then there is the other half —</span>
+  <span class="line" id="s9b">getting a room to agree.</span>
+</h1></div></div>
+
+<!-- 10 · product: story books -->
+<div class="scene" id="s10">
+  <div class="plate topcap"><img id="imgBook" alt=""></div>
+  <div class="cap top" id="cap10a">Story books<i>an ordered walk through the model</i></div>
+  <div class="cap top" id="cap10b">Turn the page<i>the canvas follows — same model, next argument</i></div>
+  <div class="cap top" id="cap10c">Written here<i>the narrative is committed beside the model</i></div>
+</div>
+
+<!-- 11 · the point of books -->
+<div class="scene" id="s11"><div class="type"><h1>
+  <span class="line" id="s11a">One model.</span>
+  <span class="line" id="s11b"><em>Three audiences.</em></span>
+</h1></div></div>
+
+<!-- 12 · product: the export -->
+<div class="scene" id="s12">
+  <div class="plate"><img id="imgExpo" alt=""></div>
+  <div class="cap" id="cap12">Export<i>one self-contained HTML file</i></div>
+</div>
+
+<!-- 13 · product: the exported file, opened -->
+<div class="scene" id="s13">
+  <div class="plate"><img id="imgRept" alt=""></div>
+  <div class="cap right" id="cap13">The report<i>opens anywhere · no server, no login, no seat</i></div>
+</div>
+
+<!-- 14 · the close -->
+<div class="scene" id="s14"><div class="type"><h1>
+  <span class="line" id="s14a">Model the system.</span>
+  <span class="line" id="s14b"><em>Then tell its story.</em></span>
+</h1></div></div>
+
+<!-- 15 · wordmark -->
+<div class="scene" id="s15"><div class="mark">
+  <div class="w" id="mw">Stemma</div>
+  <div class="rule" id="mr"></div>
+  <div class="u" id="mu">github.com/batas2/Stemma</div>
+</div></div>
+
+<script>
+/* ------------------------------------------------------------------
+   Deterministic film. Nothing animates on its own — render(t) sets the
+   whole frame from a time in seconds, so the encoder can walk it frame
+   by frame and every run produces identical output.
+   ------------------------------------------------------------------ */
+
+const THEME = new URLSearchParams(location.search).get('theme') === 'light' ? 'light' : 'dark';
+document.documentElement.dataset.theme = THEME;
+
+/* Recorded sequences. Each is a real session with the real app, captured at 1440×810 and drawn
+   at 1920 — the upscale is deliberate, it is what makes the app's own 12px chrome legible. */
+const SEQ = {
+  arch: { el: 'imgArch', dir: `seq-${THEME}/arch`, frames: 990 },
+  book: { el: 'imgBook', dir: `seq-${THEME}/book`, frames: 615 },
+  expo: { el: 'imgExpo', dir: `seq-${THEME}/expo`, frames: 150 },
+  rept: { el: 'imgRept', dir: `seq-${THEME}/rept`, frames: 225 },
+};
+
+/* Not a mock-up. This is `git diff` against the model the previous beat built on camera, after
+   renaming Ledger on the canvas — same ids, same shape, +2 −2. The argument list of Model.Of is
+   elided at the … because the real line runs 130 characters; nothing else is touched. */
+const DIFF = [
+  { t: '         var ctxPayments = new BoundedContext("ctx_002", "Payments");', k: '' },
+  { t: '         var modCart = new Module("mod_001", "Cart", "ctx_001");', k: '' },
+  { t: '         var modCheckout = new Module("mod_002", "Checkout", "ctx_001");', k: '' },
+  { t: '         var modAuthorisation = new Module("mod_003", "Authorisation", "ctx_002");', k: '' },
+  { t: '-        var modLedger = new Module("mod_004", "Ledger", "ctx_002");', k: 'del' },
+  { t: '+        var modLedgerReconciliation = new Module("mod_004", "Ledger & Reconciliation", "ctx_002");', k: 'add' },
+  { t: '         var modDispatch = new Module("mod_005", "Dispatch", "ctx_003");', k: '' },
+  { t: '         var flow002 = new DataFlow("flow_002", "mod_004", "mod_003", "Event");', k: '' },
+  { t: '-        return Model.Of(…, modAuthorisation, modLedger, modDispatch, …);', k: 'del' },
+  { t: '+        return Model.Of(…, modAuthorisation, modLedgerReconciliation, modDispatch, …);', k: 'add' },
+];
+const pre = document.getElementById('difflines');
+DIFF.forEach((d, i) => {
+  const s = document.createElement('span');
+  s.className = 'l ' + d.k;
+  s.id = 'dl' + i;
+  s.textContent = d.t;
+  pre.appendChild(s);
+});
+document.getElementById('diffstat').innerHTML =
+  '+' + DIFF.filter(d => d.k === 'add').length + ' −' + DIFF.filter(d => d.k === 'del').length;
+
+const clamp = (v, a, b) => Math.min(Math.max(v, a), b);
+// ease-out cubic — decelerating, never bouncy
+const ease = p => 1 - Math.pow(1 - clamp(p, 0, 1), 3);
+
+/** fade + rise for a text line */
+function line(id, start, t, dur = 0.85, rise = 26) {
+  const el = document.getElementById(id);
+  const p = ease((t - start) / dur);
+  el.style.opacity = p;
+  el.style.transform = `translateY(${(1 - p) * rise}px)`;
+}
+
+/** scene visibility with symmetric cross-fade at the seams */
+function scene(id, from, to, t, fade = 0.42) {
+  const el = document.getElementById(id);
+  let o = 0;
+  if (t >= from - fade && t <= to + fade) {
+    o = Math.min(clamp((t - (from - fade)) / fade, 0, 1), clamp((to + fade - t) / fade, 0, 1));
+  }
+  el.style.opacity = o;
+  el.style.visibility = o > 0.001 ? 'visible' : 'hidden';
+}
+
+/** a caption that fades in, holds, and clears before the next one takes the slot */
+function cap(id, from, to, t, rise = 0.85) {
+  const el = document.getElementById(id);
+  el.style.opacity = ease((t - from) / rise) * clamp((to - t) / 0.5, 0, 1);
+}
+
+const pending = [];
+/** Drive a recorded sequence: one file per frame, plus a barely-there push-in. */
+function seq(key, from, to, t, z0, z1) {
+  const s = SEQ[key];
+  const el = document.getElementById(s.el);
+  const p = clamp((t - from) / (to - from), 0, 1);
+  const n = Math.min(s.frames, Math.max(1, Math.round(p * (s.frames - 1)) + 1));
+  const src = s.dir + '/f' + String(n).padStart(4, '0') + '.jpg';
+  if (!el.src.endsWith(src)) {
+    el.src = src;
+    pending.push(el.decode().catch(() => {}));
+  }
+  const z = z0 + (z1 - z0) * p;
+  el.style.transform = 'translate(-50%,-50%) scale(' + z + ')';
+}
+
+const T = {
+  s1: [0.0, 5.2],      s2: [5.6, 7.6],      s3: [8.2, 11.8],     s4: [12.4, 15.6],
+  s5: [16.2, 49.2],    s6: [49.8, 53.4],    s7: [54.0, 62.4],    s8: [63.0, 66.6],
+  s9: [67.2, 70.8],    s10: [71.4, 92.0],   s11: [92.6, 96.0],   s12: [96.6, 101.4],
+  s13: [101.4, 108.9], s14: [109.5, 113.1], s15: [113.7, 118.2],
+};
+
+function render(t) {
+  pending.length = 0;
+  for (const k in T) scene(k, T[k][0], T[k][1], t);
+
+  line('s1a', 0.15, t); line('s1b', 0.55, t); line('s1c', 1.35, t);
+  line('s2a', 5.75, t);
+  line('s3a', 8.35, t); line('s3b', 9.05, t);
+  line('s4a', 12.55, t);
+  document.getElementById('s4s').style.opacity = ease((t - 13.7) / 0.8);
+
+  // The long beat. The push-in is barely there: 33 seconds is long enough that any real
+  // movement would read as drift, and the work on screen is the thing to watch.
+  seq('arch', 16.2, 49.2, t, 1.00, 1.05);
+  cap('cap5a', 17.2, 23.6, t);
+  cap('cap5b', 24.8, 39.8, t);
+  cap('cap5c', 41.0, 48.6, t);
+
+  line('s6a', 49.95, t); line('s6b', 50.75, t);
+
+  // the diff writes itself, one line at a time
+  DIFF.forEach((d, i) => {
+    const el = document.getElementById('dl' + i);
+    const p = ease((t - (54.7 + i * 0.44)) / 0.4);
+    el.style.opacity = p;
+    el.style.transform = `translateX(${(1 - p) * -14}px)`;
+  });
+
+  line('s8a', 63.15, t); line('s8b', 63.95, t);
+  line('s9a', 67.35, t); line('s9b', 68.05, t);
+
+  // ease down the frame so the narrative strip is where the eye finishes
+  seq('book', 71.4, 92.0, t, 1.04, 1.00);
+  cap('cap10a', 72.4, 77.4, t);
+  cap('cap10b', 78.4, 83.6, t);
+  cap('cap10c', 84.6, 91.2, t);
+
+  line('s11a', 92.75, t); line('s11b', 93.45, t);
+
+  seq('expo', 96.6, 101.4, t, 1.00, 1.04);
+  cap('cap12', 97.6, 100.8, t);
+
+  seq('rept', 101.4, 108.9, t, 1.03, 1.00);
+  cap('cap13', 102.8, 108.1, t);
+
+  line('s14a', 109.65, t); line('s14b', 110.35, t);
+
+  const mw = document.getElementById('mw');
+  const pw = ease((t - 113.85) / 1.0);
+  mw.style.opacity = pw; mw.style.transform = `translateY(${(1 - pw) * 20}px) scale(${0.985 + 0.015 * pw})`;
+  document.getElementById('mr').style.width = (ease((t - 114.7) / 1.1) * 260) + 'px';
+  document.getElementById('mu').style.opacity = ease((t - 115.2) / 0.9);
+  return Promise.all(pending);
+}
+
+window.render = render;
+window.DURATION = 118.2;
+render(0);
+</script>
+</body>
+</html>

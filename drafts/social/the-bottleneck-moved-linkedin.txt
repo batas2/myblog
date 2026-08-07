@@ -1,0 +1,23 @@
+--- posted 2026-08-04 · https://www.linkedin.com/feed/update/urn:li:activity:7490475390000545792/
+--- clicks come back as utm_source=linkedin in the Acquisition tab; without the
+--- tag below LinkedIn's lnkd.in wrapper would report them as direct traffic.
+
+I read 15 squad reports a month. Sometime this spring, the complaint changed.
+
+For years the blocker was production. Not enough hands, not enough hours, the backlog only grows. Now the sentence is inverted: we are not blocked on writing the code, the reports say, we are blocked on getting it absorbed. Reviewed, understood, trusted, merged.
+
+The queue did not shrink. It moved one seat to the right.
+
+Here is the part that took me months to name. Reviewing a colleague's change was never a purely technical act. You read the diff, a question formed, and you walked over and asked it. Why this design? What did you try first? The answer came back in one sentence, because the person who made the decision was still holding it in their head.
+
+An agent's diff has no such person. The intent lived in a prompt, in a context window, in a session that has since closed. In my notes I call these authorless diffs. The code is here. The counterparty is not.
+
+Peter Naur described programming as theory building: the output of a team is not the program but the understanding that lives in the people who built it, which means an authorless diff arrives with its theory already gone. So the question has to be answerable by the system itself, or it does not get answered. That makes reviewability an architectural property, not a reviewer's personal problem.
+
+Then there is the part no definition of done has caught up with. A senior engineer whose main output is judgment about other people's diffs is not doing less engineering. They are doing the engineering that is left, while the staffing plans and the promotion criteria are still written as though the typing were the expensive part.
+
+If your dashboards are green while your pull requests age, it has moved in your organization too. Two patterns keep coming back in the reports: pull requests ageing in a queue, or one reviewer becoming the only honest gate. I have not seen a third. If your numbers say otherwise, I would rather hear that than be agreed with.
+
+https://bfrackowiak.pl/blog/the-bottleneck-moved/?utm_source=linkedin&utm_medium=social&utm_campaign=the-bottleneck-moved
+
+#SoftwareArchitecture #EngineeringLeadership #CodeReview #AITransformation

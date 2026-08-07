@@ -146,9 +146,10 @@ section('generated page contracts');
 t_assert(simplexml_load_file($SANDBOX . '/feed.xml') !== false, 'generated feed.xml valid');
 $sm = simplexml_load_file($SANDBOX . '/sitemap.xml');
 t_assert($sm !== false, 'generated sitemap.xml valid');
-t_eq(3 + $pubN + $tagN, count($sm->url), 'sitemap url count = home + start + about + posts + tags');
+t_eq(4 + $pubN + $tagN, count($sm->url), 'sitemap url count = home + start + about + stemma + posts + tags');
 t_contains('/blog/start/', $smRaw, 'start page in sitemap');
 t_contains('/about/', $smRaw, 'about page in sitemap');
+t_contains('/stemma/', $smRaw, 'project page in sitemap');
 t_not_contains('/services/', $smRaw, 'unlisted commercial page stays out of the sitemap');
 t_assert(is_file($SANDBOX . '/blog/start/index.php'), 'start page generated');
 t_assert(is_file($SANDBOX . '/404.php'), '404 page generated');
@@ -263,6 +264,95 @@ t_eq(200, $code, 'woff2 files served');
 [$code, $body] = http_req('GET', "$BASE/404.php");
 t_eq(404, $code, 'branded 404 answers with 404 status');
 t_contains('No signal on this frequency', $body, 'branded 404 body served');
+
+/* ---------------- the project page and its film ----------------
+   The hero film ships as two cuts, one lit for each theme, and the script picks
+   between them at runtime. The failure this guards is the quiet one: markup that
+   names a cut the site does not actually carry. */
+[$code, $body] = http_req('GET', "$BASE/stemma/");
+t_eq(200, $code, 'stemma project page 200');
+foreach (['dark', 'light'] as $cut) {
+    foreach (['webm', 'mp4'] as $kind) {
+        t_contains("data-{$cut}-{$kind}=\"/assets/video/stemma-film-{$cut}.{$kind}\"", $body,
+            "hero offers the {$cut} {$kind} cut");
+        t_assert(is_file($SANDBOX . "/assets/video/stemma-film-{$cut}.{$kind}"),
+            "the {$cut} {$kind} cut ships with the site");
+    }
+}
+t_not_contains('/assets/video/stemma-film.mp4', $body, 'nothing still points at the retired single cut');
+preg_match('~"contentUrl":"([^"]+\.mp4)"~', $body, $filmM);
+t_assert(is_file($SANDBOX . '/assets/video/' . basename($filmM[1] ?? 'missing')),
+    'the VideoObject contentUrl names a file a crawler can actually fetch');
+
+/* ---------------- the project page: findability ----------------
+   Search engines and answer engines read three different things here — the meta
+   block, the JSON-LD graph, and the plain-text mirror. Each has its own way of
+   going quietly wrong, so each gets checked. */
+
+// A pasted link has to unfurl. og:video is what makes Slack and X play the film inline;
+// the card image is what everything else shows, and both must be real files.
+foreach (['og:video', 'og:video:secure_url'] as $prop) {
+    preg_match('~<meta property="' . preg_quote($prop, '~') . '" content="([^"]+)"~', $body, $m);
+    t_assert(is_file($SANDBOX . '/assets/video/' . basename($m[1] ?? 'missing')),
+        "{$prop} points at a file that ships");
+}
+t_contains('<meta property="og:video:type" content="video/mp4">', $body, 'og:video declares its type');
+preg_match('~<meta property="og:image" content="([^"]+)"~', $body, $ogM);
+$ogFile = $SANDBOX . '/assets/img/stemma/' . basename($ogM[1] ?? 'missing');
+t_assert(is_file($ogFile), 'og:image points at a file that ships');
+[$ogW, $ogH] = getimagesize($ogFile) ?: [0, 0];
+t_eq('1200x630', "{$ogW}x{$ogH}", 'the link-preview card is the size the meta tags claim');
+t_contains('<meta property="og:image:width" content="1200">', $body, 'og:image:width matches the file');
+t_contains('name="twitter:image:alt"', $body, 'the preview image carries alt text');
+
+// Descriptions get truncated, so the differentiator has to survive the cut.
+preg_match('~<meta name="description" content="([^"]+)"~', $body, $descM);
+$desc = html_entity_decode($descM[1] ?? '', ENT_QUOTES, 'UTF-8');
+t_assert(mb_strlen($desc) > 0 && mb_strlen($desc) <= 165,
+    'meta description fits a search result (' . mb_strlen($desc) . ' chars)');
+
+// FAQ markup is only allowed to describe what is on the page. Every question in the
+// graph must therefore be visible in the body, and vice versa.
+preg_match_all('~<script type="application/ld\+json">(.*?)</script>~s', $body, $ldM);
+$graph = [];
+foreach ($ldM[1] as $blk) {
+    $d = json_decode($blk, true);
+    t_assert(is_array($d), 'JSON-LD block parses');
+    foreach ($d['@graph'] ?? [$d] as $node) $graph[$node['@type'] ?? '?'] = $node;
+}
+foreach (['WebPage', 'SoftwareApplication', 'VideoObject', 'FAQPage', 'BreadcrumbList'] as $type) {
+    t_assert(isset($graph[$type]), "structured data declares {$type}");
+}
+t_assert(count($graph['SoftwareApplication']['featureList'] ?? []) >= 5,
+    'SoftwareApplication lists what the thing actually does');
+$questions = array_column($graph['FAQPage']['mainEntity'] ?? [], 'name');
+t_assert(count($questions) >= 4, 'FAQPage carries the questions');
+foreach ($questions as $q) {
+    t_contains('<h3>' . htmlspecialchars($q, ENT_QUOTES) . '</h3>', $body,
+        'FAQ markup mirrors a question that is visible on the page');
+}
+
+// The page keeps a plain-text twin for agents. It is hand-written, so it drifts unless
+// something checks that the claims still line up.
+[$code, $md] = http_req('GET', "$BASE/stemma/index.md");
+t_eq(200, $code, 'the markdown mirror is served');
+t_contains('<link rel="alternate" type="text/markdown"', $body, 'the page announces its markdown mirror');
+t_contains('/stemma/index.md', $body, 'and links it where a reader can see it');
+// prose wraps, so compare against a flattened copy rather than the raw file
+$mdFlat = strtolower(preg_replace('~\s+~', ' ', $md));
+foreach (['architecture/*.cs', 'round-trip fidelity', 'stemma.layout.json', 'roslyn',
+          'no runtime database', 'story book'] as $claim) {
+    t_contains($claim, $mdFlat, "the markdown mirror still states: {$claim}");
+}
+$llms = file_get_contents($SANDBOX . '/llms.txt');
+t_contains('## Stemma', $llms, 'llms.txt gives the project its own section');
+t_contains('https://bfrackowiak.pl/stemma/', $llms, 'llms.txt points an agent at the project page');
+t_contains('/stemma/index.md', $llms, 'llms.txt points an agent at the plain-text version');
+
+// Topical links out to the essays that carry the argument.
+foreach (['/blog/the-diagram-that-cannot-lie/', '/blog/diagrams-are-conversations-not-documentation/'] as $essay) {
+    t_contains('href="' . $essay . '"', $body, "project page links {$essay}");
+}
 
 /* ---------------- newsletter (self-hosted) ---------------- */
 section('newsletter');
@@ -484,6 +574,15 @@ t_contains('>automated<', $body, 'and is labelled with why it does not count');
 t_not_contains('Publishing pipeline', $body, 'stats session sees no admin tabs');
 t_not_contains('Field Notes', $body, 'stats session sees no subscriber data');
 t_not_contains('Rebuild site', $body, 'stats session sees no admin actions');
+// The standing pages are listed whether or not they rank, so a quiet destination is
+// still visible. /stemma/ is the one this was added for: it had no row before.
+t_contains('<h2>Destinations', $body, 'dashboard has a standing-destinations table');
+foreach (['/stemma/', '/stemma/index.md', '/blog/start/', '/about/'] as $dest) {
+    t_contains('path=' . rawurlencode($dest) . '"', $body, "destinations table can drill into {$dest}");
+}
+t_contains('Stemma · project page', $body, 'destinations table labels the project page');
+[$code, $sBody] = $asStats('GET', "$BASE/admin.php?days=7&path=" . rawurlencode('/stemma/'));
+t_eq(200, $code, 'drilldown into the project page renders even with no traffic');
 [$code, $body] = $asStats('GET', "$BASE/admin.php?days=7&path=" . rawurlencode('/blog/data-driven-theater/'));
 t_eq(200, $code, 'path drilldown renders');
 preg_match('#<b>([\d,]+)</b><span>Pageviews#', $body, $m);

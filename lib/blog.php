@@ -609,7 +609,10 @@ function render_llms_full(array $posts): string
     $out = '# Field Notes by ' . cfg('author') . ": full content\n\n"
          . '> Weekly essays on software architecture, the people around it, and the corporate machine they form together. '
          . 'Canonical HTML lives at ' . cfg('site_url') . '/blog/ and each essay also has a markdown mirror at its URL + index.md. '
-         . "This file concatenates all essays for LLM ingestion.\n\n";
+         . "This file concatenates all essays for LLM ingestion.\n\n"
+         // essays only — the project page is not an essay, so it is pointed at rather than inlined
+         . 'Not included here: Stemma, the author\'s architecture modelling tool, documented at '
+         . cfg('site_url') . '/stemma/ (plain text: ' . cfg('site_url') . "/stemma/index.md).\n\n";
     foreach ($posts as $p) {
         $out .= "\n\n============================================================\n\n" . render_md($p);
     }

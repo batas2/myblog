@@ -429,11 +429,35 @@ t_assert(isset($noFig['image']['@type']), 'a post with only a hero keeps a singl
 section('publication gate');
 // post_is_public decides whether comments.php will accept a comment at all.
 // A regression here opens drafts and scheduled essays to the public.
+//
+// The unpublished cases use fixtures rather than real essays. post_is_public
+// resolves through post_source_file, which globs the live content directory, so
+// the fixtures have to land there and be removed again — via shutdown, so a
+// failing assertion above cannot leave them behind. Pointing these assertions at
+// a genuinely scheduled post is what broke here before: the post went live on
+// its own publish date and the test started failing on a calendar, not a
+// regression. 2099 is the same never-arrives date the integration fixtures use.
+$gateFixtures = [];
+$mkGate = function (string $file, string $extra) use (&$gateFixtures) {
+    $path = CONTENT_DIR . '/posts/' . $file;
+    file_put_contents($path, "# Gate Fixture\n\n*Gate fixture subtitle.*\n\nBody paragraph with enough words to count as one.\n\n{$extra}\n\n**Tags:** One\n");
+    $gateFixtures[] = $path;
+};
+register_shutdown_function(function () use (&$gateFixtures) {
+    foreach ($gateFixtures as $f) @unlink($f);
+});
+$mkGate('2099-01-01-unit-gate-scheduled.md', '**Publish:** 2099-01-01 09:00');
+$mkGate('2020-01-01-unit-gate-draft.md', '**Status:** draft');
+
 t_assert(post_is_public('mathematicians-vs-lawyers'), 'a published post is public');
-t_assert(!post_is_public('the-bottleneck-moved'), 'a scheduled post is not public');
+t_assert(!post_is_public('unit-gate-scheduled'), 'a scheduled post is not public');
+t_assert(!post_is_public('unit-gate-draft'), 'a draft post is not public');
 t_assert(!post_is_public('no-such-post-anywhere'), 'an unknown slug is not public');
 t_assert(!post_is_public('../../config'), 'a traversal attempt is not public');
 t_assert(!post_is_public(''), 'an empty slug is not public');
+
+foreach ($gateFixtures as $f) unlink($f);
+$gateFixtures = [];
 
 section('analytics ip exclusion');
 // getting the mask wrong here silently excludes everybody, or nobody

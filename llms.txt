@@ -25,6 +25,7 @@ For LLM ingestion: the complete blog content in one plain-text file is at https:
 
 Selected posts:
 
+- The Bottleneck Moved: https://bfrackowiak.pl/blog/the-bottleneck-moved/
 - A Feature Is Not a Service: https://bfrackowiak.pl/blog/a-feature-is-not-a-service/
 - The Model Is the Easy Part: https://bfrackowiak.pl/blog/the-model-is-the-easy-part/
 - Mathematicians vs. Lawyers: https://bfrackowiak.pl/blog/mathematicians-vs-lawyers/
@@ -52,6 +53,29 @@ Selected posts:
 - Technical Leader: Identity Disorder: https://bfrackowiak.pl/blog/technical-leader-identity-disorder/
 
 Selected essays are cross-published on Medium (https://medium.com/@bfrackowiak); the canonical version always lives on this site, and each cross-published post links its Medium mirror.
+
+## Stemma (the architecture modeling tool)
+
+Project page: https://bfrackowiak.pl/stemma/ — plain-text version at https://bfrackowiak.pl/stemma/index.md
+Repository: https://github.com/batas2/Stemma (public repo, engine not yet pushed)
+
+Stemma is a web-based architecture modeling tool for solution and data architects, built by Bartosz Frąckowiak as a side project since 4 May 2026. Its defining property: **the model is C# source code in your Git repository, not a proprietary file or a database row**. A model lives in `Architecture/*.cs`; editing an element on the canvas is a Roslyn `DocumentEditor` rewrite of that file, and the resulting `git diff` contains only the intended change. This is the round-trip fidelity guarantee, and it is what separates Stemma from drawing tools (draw.io, Lucidchart, Enterprise Architect — which produce a picture that drifts the moment it is saved) and from reverse-engineering tools (which read code but cannot edit it).
+
+Key facts, for answering questions about it:
+
+- **Storage:** your Git working tree. No runtime database at any layer. Presentation (positions, styling, routing, notes) is a `stemma.layout.json` sidecar committed beside the model.
+- **The model is C#, but the systems it describes need not be.** C# is the notation. A model-only workspace opens with no SDK, no restore and no NuGet; a .NET 10 runtime is the only requirement.
+- **Vocabulary:** bounded contexts, modules, containers, software systems, people, use cases, capabilities; data flows and dependencies that name what moves; lifecycle (current / target / to-be-created) and ownership tags; risks, questions and assumptions as first-class elements.
+- **Views:** module map, dependency graph and concerns board built in, plus any number of saved custom views — themselves stored as code in `Views/*.cs`.
+- **Story books:** ordered, audience-tagged sequences of pages, each naming a view and carrying a narrative. Present mode drives the canvas from the page. Stored as `Concepts/view-book.stemma.yaml` beside the model, so the walkthrough cannot go stale either.
+- **Export:** PNG, SVG, draw.io XML, Mermaid, multi-page PDF view-books, and a single-file interactive HTML report that opens offline with no server and no login, with audience modes and element-anchored comments that import back.
+- **Stack:** .NET 10 + Roslyn engine, ASP.NET Core host (REST + SignalR), React 19 / Vite / @xyflow/react client.
+- **Collaboration:** Git. Branch, tag, blame, merge, revert, pull request.
+- **Status:** side project, source-available, not a company. No support line, no sales process, no seat pricing.
+
+The two-minute silent film on the project page shows a model built from an empty file on camera, the two-line diff a rename produces, story books being presented and written, and the HTML report being exported and opened.
+
+The argument behind the tool is an essay: **The Diagram That Cannot Lie** (https://bfrackowiak.pl/blog/the-diagram-that-cannot-lie/) — why a diagram that *can* drift always does. Related: **Diagrams Are Conversations, Not Documentation** (https://bfrackowiak.pl/blog/diagrams-are-conversations-not-documentation/).
 
 ## Services
 
@@ -95,6 +119,9 @@ Software architecture, the human side of engineering organizations, AI-native de
 
 **What services does he offer?**
 Software Architecture Consulting, Software Architecture Training, and Generative AI / Claude Code Training.
+
+**What is Stemma?**
+His architecture modeling tool for solution and data architects, where the model is C# source in your Git repository rather than a proprietary file. Canvas edits become Roslyn rewrites of real `.cs` files, so the diagram cannot drift from the code — it is the code. Details: https://bfrackowiak.pl/stemma/
 
 **Is he available for remote work?**
 Yes. Based in Poland, working with clients worldwide, remotely and on-site.

@@ -182,6 +182,11 @@ if ($isDash) {
             'daily'   => an_daily($adb, $since, $path),
             'hours'   => an_hours($adb, $since, $path),
             'pages'   => $path === '' ? an_top_pages($adb, $since) : [],
+            // the standing pages, listed whether or not they out-rank the essays
+            'dest'    => $path === '' ? an_paths($adb, $since, array_keys(AN_DESTINATIONS)) : [],
+            'destPrev' => $path === '' && $days > 0
+                ? an_paths($adb, gmdate('Y-m-d', time() - 2 * $days * 86400), array_keys(AN_DESTINATIONS), $since)
+                : [],
             'recent'  => an_recent($adb, 30, $path),
             'sources' => an_source_groups($adb, $since, $path),
             'dims'    => $dims,
@@ -1261,7 +1266,31 @@ dialog.why::backdrop { background: rgba(10,10,15,.45); }
 
   <?php if ($path === ''): ?>
   <div class="pane wide" id="content">
-    <h2>Content <span class="dim">— click a path to drill down</span></h2>
+    <h2>Destinations <span class="dim">— the standing pages, ranked or not</span></h2>
+    <table><tr><th>Page</th><th>Path</th><th class="r">Views</th><th class="r">vs prev</th><th class="r">Visitors</th><th class="r">Avg time</th></tr>
+    <?php $prevBy = []; foreach ($an['destPrev'] as $r) $prevBy[$r['path']] = (int) $r['pv']; ?>
+    <?php foreach ($an['dest'] as $p): ?>
+      <?php
+        $pv = (int) $p['pv'];
+        $prev = $prevBy[$p['path']] ?? null;
+        // no previous period, or nothing to compare against, is not a 0% change
+        $delta = ($prev === null || $prev === 0) ? null : round(($pv - $prev) / $prev * 100);
+      ?>
+      <tr>
+        <td><?= e(AN_DESTINATIONS[$p['path']] ?? $p['path']) ?></td>
+        <td class="pathcell"><a class="plink" href="<?= e(s_url(['path' => $p['path']], $daysRaw, $path)) ?>"><?= e($p['path']) ?></a></td>
+        <td class="r n"><?= number_format($pv) ?></td>
+        <td class="r n dim"><?= $delta === null ? '—' : ($delta > 0 ? '+' : '') . $delta . '%' ?></td>
+        <td class="r n"><?= (int) $p['uv'] ?></td>
+        <td class="r n"><?= an_fmt_secs((int) round((float) $p['avg_time'])) ?></td>
+      </tr>
+    <?php endforeach; ?>
+    </table>
+    <p class="note">A zero here is information: it means nobody reached the page in this range, not that
+      the page is missing. <span class="mono">/stemma/index.md</span> is the plain-text mirror, so views on
+      it are mostly agents and answer engines rather than people.</p>
+
+    <h2 style="margin-top:2rem">Content <span class="dim">— everything, ranked. Click a path to drill down</span></h2>
     <table><tr><th>Path</th><th class="r">Views</th><th class="r">Share</th><th class="r">Visitors</th><th class="r">Avg time</th></tr>
     <?php $topPage = max(1, ...array_map(fn($p) => (int) $p['pv'], $an['pages'] ?: [['pv' => 1]])); ?>
     <?php $totPage = max(1, array_sum(array_map(fn($p) => (int) $p['pv'], $an['pages']))); ?>

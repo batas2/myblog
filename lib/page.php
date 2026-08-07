@@ -50,23 +50,26 @@ HTML;
 }
 
 /**
- * Site navigation. $active: 'blog' | 'about' | 'start' | '' — marks the current place.
+ * Site navigation. $active: 'blog' | 'about' | 'stemma' | 'start' | '' — marks the current place.
  *
- * Two destinations on purpose. The blog is the site, so it is the root; About
- * is the one page about the person. Everything commercial is reachable from
- * About and from nowhere else, because a reader who smells a funnel stops
- * reading, and the reading is what this site is for.
+ * Three destinations. The blog is the site, so it is the root; Stemma is the
+ * project the writing keeps circling; About is the one page about the person.
+ * Everything commercial is still reachable from About and from nowhere else,
+ * because a reader who smells a funnel stops reading, and the reading is what
+ * this site is for.
  */
 function site_nav(string $active = ''): string
 {
-    $blog  = $active === 'blog' ? ' aria-current="page"' : '';
-    $about = $active === 'about' ? ' aria-current="page"' : '';
+    $blog   = $active === 'blog' ? ' aria-current="page"' : '';
+    $stemma = $active === 'stemma' ? ' aria-current="page"' : '';
+    $about  = $active === 'about' ? ' aria-current="page"' : '';
     return <<<HTML
 <header class="nav">
   <div class="nav-inner">
     <a class="wordmark" href="/">bfrackowiak<span class="tld">.pl</span></a>
     <ul class="nav-links">
       <li><a href="/"{$blog}>Blog</a></li>
+      <li><a href="/stemma/"{$stemma}>Stemma</a></li>
       <li><a href="/about/"{$about}>About</a></li>
     </ul>
   </div>
@@ -98,6 +101,7 @@ function site_footer(): string
       <div class="f-col">
         <span class="f-label">Me</span>
         <a href="/about/">About</a>
+        <a href="/stemma/">Stemma</a>
         <a href="/about/#contact">Contact</a>
       </div>
       <div class="f-col">
