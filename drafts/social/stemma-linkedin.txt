@@ -1,0 +1,43 @@
+--- not posted yet · record the URL here when it goes out
+--- pairs with: assets/video/stemma-film-light.mp4 (1m58s, silent) uploaded
+--- natively. LinkedIn does not unfurl og:video, so a link post shows the og
+--- card and the film never plays in the feed.
+
+The architecture diagram was wrong by the next deploy. It always is. I stopped blaming the people who did not update it about three years ago.
+
+A diagram on a wiki is a picture of the system rather than a part of it, and nothing makes the picture change when the system does. Every tool I have used treats that as a discipline problem — remember to update the model — when it is a structural one. Drawing tools give you something true on the day it was saved. Reverse-engineering tools read the code and cannot write back to it. Both leave you holding two artefacts and a promise to reconcile them. The promise is what fails.
+
+So I built the thing I wanted. Stemma is an architecture modelling tool with one heretical idea underneath it: the source code is the model database.
+
+A model is C# records in Architecture/Architecture.cs, inside your own repository. Editing an element on the canvas is a Roslyn rewrite of that file. No export step to forget, no second copy, no proprietary format in the middle.
+
+Everything rests on one guarantee, and it is the part I would attack first if someone showed this to me. A canvas edit has to arrive as a diff containing only that edit. Rename a module and git diff reports the declaration and the references Roslyn can see — nothing reordered, nothing reformatted, no comment lost, no blank line moved. The codebase carries a standing instruction about it: when the fidelity suite fails, the implementation is wrong, not the test.
+
+What follows from that is the part I did not anticipate. There is no runtime database at any layer — storage is your Git working tree and nowhere else. So an architecture change arrives as a pull request. Blame works. Revert works. The model has a history, because Git already solved that and I did not have to.
+
+The other half of the problem is not modelling, it is getting a room to agree. Story books are ordered pages that drive the canvas while you present, stored beside the model so the deck cannot go stale either. For everyone who will never install it: one self-contained HTML file that opens offline, no server, no login, no seat.
+
+Honest position: a pet project, three months of evenings, not a company. No roadmap owed to anyone and no sales call at the end. The repository is open; the engine lands in it once the operation catalogue is fully covered by fidelity fixtures, because a guarantee has to hold everywhere before it is worth offering.
+
+If you have lived with the drift problem long enough to be cynical about it, you are exactly who I want reading this — and I would rather hear where you think it breaks than be agreed with.
+
+https://bfrackowiak.pl/stemma/?utm_source=linkedin&utm_medium=social&utm_campaign=stemma
+
+#SoftwareArchitecture #SolutionArchitecture #DotNet #ArchitectureAsCode
+
+
+=== short cut, for the native video upload ===
+--- the film carries the demonstration, so the caption only has to make the
+--- claim and get out of the way. Same link, same campaign tag.
+
+The architecture diagram was wrong by the next deploy. It always is — because it is a picture of the system rather than a part of it, and nothing makes the picture change when the system does.
+
+Stemma's answer is not a better canvas. It is that the source code IS the model database. A model is C# records in your own repository; editing an element on the canvas is a Roslyn rewrite of that file. No export step, no second copy, no runtime database at any layer.
+
+The guarantee it all rests on: a canvas edit arrives as a diff containing only that edit. Which means an architecture change is a pull request, and blame, revert and history come free.
+
+Two minutes, silent, no mock-ups — every beat is the real app. Tell me where you think it breaks.
+
+https://bfrackowiak.pl/stemma/?utm_source=linkedin&utm_medium=social&utm_campaign=stemma
+
+#SoftwareArchitecture #SolutionArchitecture #DotNet #ArchitectureAsCode
