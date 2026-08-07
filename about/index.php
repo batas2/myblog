@@ -225,6 +225,27 @@ echo page_head(
     </div>
   </section>
 
+  <?php /* ================= NEWSLETTER =================
+     This page used to send anyone who wanted the newsletter to /#newsletter,
+     which is the bottom of the home page, past twenty-six post cards. So the
+     cheap ask — an email address — was the one that cost a page load, while the
+     expensive one, a written message, sat right here in a form. On 2026-08-07
+     the first real LinkedIn traffic arrived: 22 readers, five of whom got as far
+     as this page, and none of whom could subscribe from it.
+
+     It sits after the goal quote and before the contact form on purpose. Someone
+     who has just read "one essay a week, in public" is as warm as this page
+     makes anybody, and "send me a paragraph" is a much larger thing to ask of
+     them than "leave an address".
+
+     A PHP comment rather than an HTML one: the reasoning belongs in the repo,
+     the traffic numbers do not belong in every visitor's view-source. */ ?>
+  <section class="section" style="padding:4.5rem 0">
+    <div class="wrap">
+      <?= newsletter_box() ?>
+    </div>
+  </section>
+
   <!-- ================= CONTACT ================= -->
   <section id="contact" class="section">
     <div class="wrap">
@@ -243,7 +264,8 @@ echo page_head(
             <li><a href="https://github.com/batas2" target="_blank" rel="noopener">
               <span class="ico"><svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0112 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/></svg></span>
               GitHub <span class="ext">/batas2 ↗</span></a></li>
-            <li><a href="/#newsletter">
+            <?php /* local anchor, not /#newsletter — the form is on this page now */ ?>
+            <li><a href="#newsletter">
               <span class="ico"><svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg></span>
               Newsletter <span class="ext">one essay, most Mondays</span></a></li>
           </ul>

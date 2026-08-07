@@ -31,8 +31,20 @@ function turnstile_widget(string $action): string
 }
 
 /** The loader tag — emit once per page, only when a widget is present. */
+/**
+ * The api.js tag, emitted at most once per request.
+ *
+ * api.js auto-renders every .cf-turnstile on the page when it loads, so a second
+ * copy is not merely a wasted request — it re-renders widgets that already exist.
+ * /about/ carries two protected forms (subscribe and contact), each of which asks
+ * for the script it needs, and neither can know about the other. The guard lives
+ * here so any page can hold any number of widgets and still load api.js once.
+ */
 function turnstile_script(): string
 {
+    static $emitted = false;
+    if ($emitted) return '';
+    $emitted = true;
     return '<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>';
 }
 

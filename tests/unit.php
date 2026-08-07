@@ -623,6 +623,16 @@ $nl = newsletter_box();
 t_contains('action="/n.php"', $nl, 'newsletter posts to the self-hosted endpoint');
 t_contains('type="email"', $nl, 'newsletter has email field');
 t_contains('name="website"', $nl, 'newsletter form carries the honeypot');
+/* api.js renders every .cf-turnstile on the page the moment it loads, so two copies
+   re-render the widgets the first one already drew. /about/ is the page that found
+   this: a subscribe form and a contact form, each asking for the script it needs,
+   neither able to know about the other. turnstile_script() therefore emits once per
+   request — which is a property of the first call, so this must precede any other
+   test that renders a protected form. */
+if (turnstile_enabled()) {
+    t_contains('turnstile/v0/api.js', $nl, 'the first protected form on a page loads turnstile');
+    t_not_contains('turnstile/v0/api.js', newsletter_box(), 'a second form on the same page does not load it again');
+}
 $bs = beacon_script();
 t_contains("sendBeacon('/a.php'", $bs, 'beacon targets a.php');
 t_contains('doNotTrack', $bs, 'beacon honors DNT');

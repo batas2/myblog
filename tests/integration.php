@@ -356,6 +356,27 @@ foreach (['/blog/the-diagram-that-cannot-lie/', '/blog/diagrams-are-conversation
 
 /* ---------------- newsletter (self-hosted) ---------------- */
 section('newsletter');
+/* Every page a reader can land on and decide from carries the form itself. This is
+   asserted rather than assumed because /about/ went live without one: it linked to
+   /#newsletter instead, which is the foot of the home page, and the five readers who
+   reached /about/ from the first LinkedIn post had nothing on the page to fill in.
+   A link to somebody else's form is not a subscribe box — check for the input. */
+foreach (['/' => 'home', '/about/' => 'about', '/blog/start/' => 'start here',
+          '/stemma/' => 'stemma', '/blog/the-bottleneck-moved/' => 'an essay'] as $p => $what) {
+    [$code, $nlBody] = http_req('GET', "$BASE{$p}");
+    t_eq(200, $code, "{$what} page renders");
+    t_contains('id="nl-email"', $nlBody, "{$what} page carries a real subscribe field");
+}
+// and the contact list on /about/ scrolls to it rather than leaving for the home page
+[, $aboutBody] = http_req('GET', "$BASE/about/");
+t_not_contains('href="/#newsletter"', $aboutBody, 'about no longer sends subscribers to the home page');
+/* /about/ is the only page carrying two protected forms — subscribe and contact —
+   and api.js auto-renders every .cf-turnstile it finds, so a second copy re-renders
+   widgets the first one already drew. Asserted as "never more than once" because the
+   sandbox runs with turnstile unconfigured and emits none; turnstile_script()'s
+   once-per-request guard is pinned exactly in tests/unit.php. */
+t_assert(substr_count($aboutBody, 'turnstile/v0/api.js') <= 1, 'about never loads turnstile api.js twice');
+
 [$code, $body] = http_req('POST', "$BASE/n.php", [
     'headers' => "Content-Type: application/x-www-form-urlencoded\r\n",
     'body' => 'email=reader%40example.com&website=',
