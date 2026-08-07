@@ -48,6 +48,20 @@ t_contains('<pre><code>', $html, 'code fence opens');
 t_contains('**not bold**', $html, 'no markdown inside fence');
 t_contains('&quot;', $html, 'fence content escaped');
 
+/* Theme-paired figures. A draw.io export is a transparent PNG and reads on either background, but
+   a diagram captured out of a running app carries that app's canvas, so it needs a twin. The pair
+   is opt-in by filename: -light with a -dark sibling on disk, and nothing else changes. */
+$diag = '/assets/img/posts/we-deleted-the-wrong-half-of-agile/two-jobs-light.png';
+$html = md_to_html(["![Cap.]({$diag})"]);
+t_contains('<picture>', $html, 'a -light image with a -dark twin becomes a picture');
+t_contains('media="(prefers-color-scheme: dark)"', $html, 'the dark twin is behind a colour-scheme query');
+t_contains('two-jobs-dark.png', $html, 'the source points at the dark file');
+t_contains('src="' . $diag . '"', $html, 'the img itself stays the light file for anything without picture support');
+$plain = md_to_html(['![Cap.](/assets/img/posts/the-bottleneck-moved/the-queue-moved.png)']);
+t_not_contains('<picture>', $plain, 'an image with no -light suffix is left alone');
+$orphan = md_to_html(['![Cap.](/assets/img/posts/nope-light.png)']);
+t_not_contains('<picture>', $orphan, 'a -light name with no twin on disk is left alone');
+
 /* ---------------- tags ---------------- */
 section('tags');
 t_eq('software-architecture', tag_slug('Software Architecture'), 'basic slug');

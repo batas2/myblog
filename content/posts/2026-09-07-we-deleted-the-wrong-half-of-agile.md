@@ -24,6 +24,8 @@ What breaks if this is wrong? Why this way and not the obvious simpler way? Does
 
 Every one of those has an artifact-shaped answer available. Blast radius is answerable from the diff when contracts sit at the seams and modules have real boundaries. The rejected alternative is answerable from a decision record, which is the only reason to write one. Whether it does what it claims is answerable from tests that state intent rather than pin implementation, so a green suite means something specific instead of meaning nothing loudly. Scope is answerable from size. That is the entire case for small changes, and it survived every fashion that tried to kill it.
 
+![The four questions a reviewer actually asks, each pointing at the artifact that has to answer it once the author is gone.](/assets/img/posts/we-deleted-the-wrong-half-of-agile/where-the-question-goes-light.png)
+
 None of that is exotic. That is the uncomfortable part.
 
 ## The half we made optional
@@ -31,6 +33,8 @@ None of that is exotic. That is the uncomfortable part.
 Kent Beck put twelve practices in *Extreme Programming Explained* in 1999. Read the list now, with agents in your peripheral vision, and it splits cleanly into two jobs.
 
 One group keeps the author reachable: pair programming, on-site customer, collective code ownership, the stand-up. The other group makes the artifact answer for itself: test-driven development, continuous integration, small releases, simple design, refactoring, coding standards.
+
+![XP's twelve practices, split by the job each was doing. The struck-through four all assume a counterparty you can still walk over and ask.](/assets/img/posts/we-deleted-the-wrong-half-of-agile/two-jobs-light.png)
 
 Scrum industrialised the first job. It has no engineering practices at all, by design, and that was not a scandal for the first decade because the second group survived as craft culture in teams that cared. Martin Fowler named the failure mode in 2009 and called it [FlaccidScrum](https://martinfowler.com/bliki/FlaccidScrum.html): the ceremonies running perfectly while the codebase rotted underneath them. Everyone I knew read that piece and agreed with it. Then we filed it as a maturity problem. Something to get to after the reorg.
 
@@ -84,10 +88,8 @@ I am still reading fifteen reports a month. What I look for now is not the agein
 
 ---
 
-**Scores:** tension=7 originality=8 personal=7 contrarian=8 substance=8 punch=7 trend=8
-**Scored:** 2026-09-07 rubric=v1 model=claude-opus-5 status=provisional
-
-**Status:** draft
+**Scores:** tension=7 originality=6 personal=7 contrarian=8 substance=8 punch=7 trend=8
+**Scored:** 2026-08-07 rubric=v1 model=claude-opus-5
 
 **Publish:** 2026-09-07 09:00
 

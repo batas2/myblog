@@ -46,6 +46,7 @@ declare -A Q=(
   [count-your-rejections]="no vacancy neon sign|vacancy sign motel night"
   [adoption-is-the-deliverable]="network patch panel cables|server rack patch cables"
   [the-bottleneck-moved]="stack of paper documents pile|paperwork stacked desk office"
+  [we-deleted-the-wrong-half-of-agile]="scaffolding supporting building facade|scaffolding old building front"
 )
 
 TMP=$(mktemp -d)

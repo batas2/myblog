@@ -31,6 +31,32 @@ function md_img_dimensions(string $src): string
     return $cache[$src] = $attr;
 }
 
+/**
+ * The `<img>` for a figure, wrapped in a `<picture>` when a dark twin exists on disk.
+ *
+ * Diagrams exported from draw.io are transparent PNGs and read on either background, but the ones
+ * captured out of Stemma are screenshots of an application, so they carry its canvas with them: a
+ * light capture is a glaring white slab for a dark-mode reader, and a dark one is a hole in the
+ * page for everybody else. So a post writes the light file, and if `<name>-dark.<ext>` sits beside
+ * it the browser is told to prefer that one. No new markdown syntax, and the naming is the one
+ * already used by /assets/img/stemma/.
+ *
+ * The `<img>` stays the light file so anything that does not understand `<picture>` (feed readers,
+ * the markdown mirrors, an unfurler) still gets a real image.
+ */
+function md_img_tag(string $rawSrc, string $escSrc, string $alt): string
+{
+    $img = '<img src="' . $escSrc . '" alt="' . $alt . '"' . md_img_dimensions($rawSrc)
+         . ' loading="lazy" style="max-width:100%;height:auto">';
+
+    if (!preg_match('/^(.*)-light(\.[a-z0-9]+)$/i', $rawSrc, $m)) return $img;
+    $darkSrc = $m[1] . '-dark' . $m[2];
+    if (!defined('APP_ROOT') || !is_file(APP_ROOT . $darkSrc)) return $img;
+
+    return '<picture><source media="(prefers-color-scheme: dark)" srcset="'
+         . htmlspecialchars($darkSrc, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '">' . $img . '</picture>';
+}
+
 /* ============================== markdown ============================== */
 
 function md_inline(string $s): string
@@ -101,7 +127,7 @@ function md_to_html(array $lines): string
             $src = htmlspecialchars($m[2], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
             $cap = md_inline($m[1]);
             $alt = htmlspecialchars($m[1], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-            $html .= '<figure class="post-figure"><img src="' . $src . '" alt="' . $alt . '"' . md_img_dimensions($m[2]) . ' loading="lazy" style="max-width:100%;height:auto">'
+            $html .= '<figure class="post-figure">' . md_img_tag($m[2], $src, $alt)
                    . ($m[1] !== '' ? '<figcaption style="font-size:.85em;color:var(--muted);margin-top:.4em">' . $cap . '</figcaption>' : '')
                    . "</figure>\n";
             continue;

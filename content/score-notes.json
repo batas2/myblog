@@ -1,264 +1,275 @@
 {
-  "_readme": "Per-axis evidence and rationale for the scores in content/posts/*.md. Rubric v1 (docs/SCORING-RUBRIC.md) requires one verbatim quote per score. Shown on hover in /admin.php under Scores. Optional: the numbers work without this file.",
-  "technical-leader-identity-disorder": {
-    "tension": "2 — nothing at risk anywhere. 'I have ups and downs' is the strongest friction in the whole piece.",
-    "originality": "3 — knowledge-sharing hours, pair programming, growth 1:1s. Standard tech-lead advice in the author's own words.",
-    "personal": "5 — real practice at real scale ('eight teams with seven developers each') but no scene, no decision, no owned mistake.",
-    "contrarian": "1 — pure consensus. Every claim is one the audience already professes.",
-    "substance": "5 — 'technical excellence' meetings are a nameable, copyable ritual; no failure conditions given.",
-    "punch": "3 — long paragraphs and seven block quotes doing the work the prose should: 'So simple and yet so complex at the same moment.'",
-    "trend": "2 — a 2020 identity question with no hook into any live 2026 conversation."
-  },
-  "the-automerger": {
-    "tension": "4 — 'a full-time job nobody applied for' names a real cost, then resolves it comfortably.",
-    "originality": "5 — automating merge-backs is known; the two-year operating report is the genuine extension.",
-    "personal": "5 — 'At the company I worked for, we lived exactly that.' Real system, no scar.",
-    "contrarian": "2 — automate the toil. Nobody disagrees.",
-    "substance": "7 — five-step design, plus the failure condition stated out loud: 'the workflow relies on real merges, not cherry-picks.'",
-    "punch": "6 — 'the tool only involves humans when a human is actually needed' is the one line that carries.",
-    "trend": "2 — GitFlow-era CI plumbing, adjacent to nothing on the current list."
-  },
-  "stop-calling-it-legacy-code": {
-    "tension": "8 — announces its own discomfort: 'a thesis that might make a few software architects uncomfortable.'",
-    "originality": "7 — 'Knowledge Container' is a named concept the reference blogs do not have.",
-    "personal": "3 — 'We've all been there.' No project, no scene, no cost the author paid. The weakest axis of a strong post.",
-    "contrarian": "7 — 'in the era of AI, legacy code no longer exists' contradicts a norm the audience professes, and argues for it.",
-    "substance": "5 — a model and a role ('Operators'), but no artifact, number, or failure condition.",
-    "punch": "7 — 'code is incredibly cheap now.' Short paragraphs, load-bearing bold, ends on a question.",
-    "trend": "8 — AI applied to legacy comprehension is trend #4, and this was written two years early."
-  },
-  "data-driven-theater": {
-    "tension": "8 — 'I couldn't shake the feeling that I had just watched a performance, not a decision.' Sustains to the last line.",
-    "originality": "6 — 'semantic contracts between people that nobody ever wrote down' is a real extension of a well-covered critique.",
-    "personal": "4 — 'I have lost count of how many meetings I've attended.' Years of experience, zero specific scenes.",
-    "contrarian": "8 — puts the professed virtue of being data-driven on trial and answers the obvious objection in 'It's Rarely the Conclusions'.",
-    "substance": "6 — the raw-vs-over-cleaned failure pair and two questions to ask; no artifacts.",
-    "punch": "8 — 'Well. Enjoy the theater. You're the audience.'",
-    "trend": "4 — adjacent to AI-era measurement debates, but the connection is never made explicit."
-  },
-  "decisions-have-an-architecture-too": {
-    "tension": "6 — 'Three workshops, the same diagrams, largely the same people, and no decision whatsoever.' Named, then resolved comfortably.",
-    "originality": "6 — RAPID is Bain's and credited; 'an API contract for decision-making' is the author's extension.",
-    "personal": "7 — a counted, specific scene ('I once counted the workshops... Three') with an outcome, but no owned mistake.",
-    "contrarian": "6 — 'Alignment is a wonderful outcome and a terrible process goal' is a minority position, defended.",
-    "substance": "7 — three named anti-patterns plus the ADR/RAPID split; usable Monday.",
-    "punch": "8 — 'an ADR without a decider is a wish with a timestamp.'",
-    "trend": "3 — decision rights are evergreen; no live hook."
-  },
-  "nobody-owns-the-sum": {
-    "tension": "7 — 'Silence. Then everyone answered at once, each about their own piece.'",
-    "originality": "7 — a named Conway corollary: 'an org chart can produce parts, but it cannot produce wholes.'",
-    "personal": "8 — owns the mistake directly: 'I've accepted a few orphans myself over the years; it flatters you for about a week.'",
-    "contrarian": "5 — refusing the orphan ('Architecture must not become the attic') is the only real position taken.",
-    "substance": "8 — four diagnostic symptoms, a three-step move, and a fifteen-minute exercise.",
-    "punch": "8 — 'Components get owners; sums get hopes.'",
-    "trend": "4 — platform/ownership design, adjacent to the platform-engineering conversation but not inside it."
-  },
-  "diagrams-are-conversations-not-documentation": {
-    "tension": "7 — 'That diagram changed exactly nothing, and I was very proud of it.'",
-    "originality": "6 — diagram rot is well covered; 'a diagram's value is consumed in the meeting where it is drawn' is the extension.",
-    "personal": "9 — the scar is load-bearing: 'presenting polished work is a way of performing competence... I resisted this for years.'",
-    "contrarian": "7 — argues diagrams should not be documentation at all, and concedes the artifact case rather than dodging it.",
-    "substance": "8 — one diagram / one question, title-with-the-question, 'What am I missing?' over 'any questions?'.",
-    "punch": "8 — 'What survives the meeting is not an asset. It's a receipt.'",
-    "trend": "6 — explicitly inside the agents-generate-artifacts conversation in 'The AI Twist'."
-  },
-  "the-migration-that-never-starts": {
-    "tension": "8 — 'organizations don't fail migrations. They fail to start them.' The discomfort outlives the post.",
-    "originality": "7 — 'decision debt' as the untracked counterpart to technical debt; one-way doors credited to Amazon.",
-    "personal": "6 — owns it ('I have created such folders') but never puts a specific folder on the page.",
-    "contrarian": "7 — inverts the industry's favourite horror story and defends the inversion.",
-    "substance": "8 — three unblockers, decompose-until-two-way-doors, a first step too small to refuse.",
-    "punch": "8 — 'The price of not yet is invoiced monthly and itemized never.'",
-    "trend": "4 — legacy modernisation is live, but this post never connects it to AI."
-  },
-  "the-anti-corruption-layer-is-for-people-too": {
-    "tension": "6 — 'Corruption rarely announces itself; it arrives one borrowed word at a time.' Real, but never confrontational.",
-    "originality": "7 — mapping a DDD pattern onto org boundaries, with the 'just align' trap named as the expensive option.",
-    "personal": "4 — 'years of private observations at integration boundaries.' No scene, no scar, no named system.",
-    "contrarian": "7 — 'let's just align the teams... is the most expensive item on the menu.' Defended. 'Friendship is not a data contract.'",
-    "substance": "8 — states when the pattern is NOT worth it ('map it directly and move on'), which is the rare half.",
-    "punch": "7 — 'nobody inspects the luggage' carries the section.",
-    "trend": "3 — DDD craft, evergreen, no current hook."
-  },
-  "questions-are-an-architects-sharpest-tool": {
-    "tension": "5 — 'an empty Open Questions section is a red flag with a siren attached' is the sharpest edge in an otherwise constructive piece.",
-    "originality": "6 — 'Answers age badly... Good questions compound' is a genuinely fresh asymmetry.",
-    "personal": "7 — a real review, a real silence, and an owned change of mind about what seniority means.",
-    "contrarian": "6 — 'Aren't architects paid for answers?' is raised as the objection and answered.",
-    "substance": "8 — two question types, the one-on-one test, and the owner-plus-check-back-date rule.",
-    "punch": "8 — 'a question without an owner and a check-back date is not a tool, it's a sigh.'",
-    "trend": "2 — pure craft, no market hook."
-  },
-  "adrs-for-an-audience-of-one": {
-    "tension": "5 — self-deprecating rather than confrontational: 'Colleagues have laughed at that ratio.'",
-    "originality": "6 — ADRs are heavily covered; 'the stakeholder with amnesia' plus ADRs as agent context is the extension.",
-    "personal": "9 — named real decisions (chi router, SQLite default, sessions plus TOTP) from the author's own repo.",
-    "contrarian": "5 — 'that ratio is correct' is a mild position, defended but not against a professed norm.",
-    "substance": "8 — the alternatives-considered section as a killer of resume-driven decisions, and deferred decisions with written triggers.",
-    "punch": "8 — 'if a decision isn't worth writing down, it wasn't a decision. It was a mood.'",
-    "trend": "6 — 'AI agents read our repositories now' puts it inside the live context-engineering conversation."
-  },
-  "edge-cases-written-by-parliament": {
-    "tension": "6 — 'The strictest product owner I have ever worked with has never attended a standup.' Affectionate, not confrontational.",
-    "originality": "8 — 'the XML is the legal invoice' and the blank-not-zero VAT column are material no reference blog has.",
-    "personal": "8 — a year of production integrations on the author's own product, with specifics.",
-    "contrarian": "7 — 'I trust these contracts more than most microservices I've met', against the cheapest joke in engineering.",
-    "substance": "8 — three transferable lessons plus concrete artifacts (the KSeF auth choreography, the custom session header).",
-    "punch": "8 — 'A one-pixel difference that is a legal requirement, not a style choice.'",
-    "trend": "3 — regulatory e-invoicing sits outside every item on the current trend list."
-  },
-  "anti-personas-the-users-i-refuse-to-serve": {
-    "tension": "6 — 'It sounds negative. It's the most constructive thing in the repository.'",
-    "originality": "6 — anti-personas exist in UX writing; framing them as edge-case-tree pruning is the extension.",
-    "personal": "8 — real constraints (five thousand lines of Go, no Docker) and an honest 'at 2 a.m., when everything seems like a good idea'.",
-    "contrarian": "6 — 'a product company cannot refuse anyone' is a hard claim about incentives, defended.",
-    "substance": "7 — one mechanical triage question and two practices that port to an organisation.",
-    "punch": "8 — 'a feature list tells you what a product does; the anti-feature list tells you what it is.'",
-    "trend": "2 — product strategy, no hook into any live technical conversation."
-  },
-  "pricing-is-architecture": {
-    "tension": "7 — 'I expected a marketing exercise... What I actually got was a database migration, new middleware, a rewritten registration flow.'",
-    "originality": "8 — the master-tenant pattern and 'commercial policy, compiled into middleware' are not in any reference blog.",
-    "personal": "9 — the author's own SaaS, own design, 'with nobody to blame but myself'.",
-    "contrarian": "6 — 'Architects belong in the pricing meeting' is a minority position, defended.",
-    "substance": "9 — quota guards, read-only degradation, blocked downgrades, entitlements as a bounded context, ~990 tests, 30+ controllers.",
-    "punch": "8 — 'Commercial policy, compiled into middleware. Read that again.'",
-    "trend": "3 — SaaS pricing architecture is off the current trend list."
-  },
-  "the-diagram-that-cannot-lie": {
-    "tension": "8 — 'every single one of them is lying to you right now.' Opens on the accusation and never lets go.",
-    "originality": "8 — Roslyn round-trip editing of the model as source, with fidelity as the overriding rule, is genuinely new.",
-    "personal": "8 — 'almost every diagram I've ever produced started lying within a quarter of being finished', plus a declared bias.",
-    "contrarian": "7 — rejects both drawing tools and reverse-engineering tools, and concedes the project may never ship.",
-    "substance": "8 — the no-database bet, the round-trip rule, the sidecar layout file, five concrete consequences.",
-    "punch": "9 — 'a diagram you can't diff is a rumor with better fonts.' Also 'the way milk goes off.'",
-    "trend": "6 — docs-as-code plus agents reading and writing one shared truth."
-  },
-  "a-company-of-one-staffed-by-agents": {
-    "tension": "8 — the failure section is the payload: 'an agent that made a red test green by weakening the assertion.'",
-    "originality": "6 — solo-with-agents is a crowded 2026 genre; 'review capacity breaks before generation capacity' is the fresh part.",
-    "personal": "9 — the whole post is the author's own evenings, own money, own portfolio, own incident.",
-    "contrarian": "7 — 'the I don't have a team excuse just expired' is aimed straight at the reader.",
-    "substance": "8 — three-part operating model plus a stated trust rule: migrations and money get eyes on every line.",
-    "punch": "9 — 'AI compresses everything except responsibility.' 'The agents are just very fast hands.'",
-    "trend": "9 — agentic workflows and productivity-under-AI, trends #1 and #7, with a position most posts don't have."
-  },
-  "grinding-dijkstra-at-senior-level": {
-    "tension": "8 — status vulnerability sustained: 'almost nobody at my seniority level admits to it, and the silence creates a myth.'",
-    "originality": "6 — interview-grind confessions exist; analysing the loop as someone else's risk function is the extension.",
-    "personal": "9 — 'Twelve-plus years in, carrying the title Solution Architect, and I was grinding shortest-path algorithms in the evenings.'",
-    "contrarian": "8 — 'every senior person should run an interview loop once every few years, even if they fully intend to stay.'",
-    "substance": "6 — three concrete gains, but less that transfers to Monday than the rest of the corpus.",
-    "punch": "8 — 'The loop is the one mirror that hasn't been adjusted to flatter you.'",
-    "trend": "2 — hiring and career, off the current trend list entirely."
-  },
-  "from-signals-to-blips": {
-    "tension": "5 — a problem is posed ('how do you drive change at that scale?') and comfortably solved. It is a build report.",
-    "originality": "7 — an internal AI-fed radar with a multiplicative score and a cite-or-it-didn't-happen rule; the Radar's own publisher hasn't written this.",
-    "personal": "7 — real scale and real numbers (fifteen squads, 42 blips to over 50), but little at risk for the author.",
-    "contrarian": "5 — 'the AI never touches the radar' is a mild position against the automate-everything current.",
-    "substance": "9 — the full formula with anchors and bands, plus what the score explicitly is not: 'signal strength, not validation status.'",
-    "punch": "7 — 'The loudest voice stops mattering; the math does the listening.' Otherwise expository.",
-    "trend": "8 — measuring an AI transformation at scale, trend #7."
-  },
-  "probabilistic-metrics": {
-    "tension": "7 — takes a real risk and says so: 'It won't survive an audit, and that's fine.'",
-    "originality": "8 — 'AI changes the input space of measurement' plus disposable metrics; no equivalent in the reference blogs.",
-    "personal": "6 — method-first rather than scene-first; 'at least one production system behind them' is the anchor.",
-    "contrarian": "8 — 'Coverage beats precision when the job is steering' argues directly against clean-data orthodoxy, with six stated assumptions.",
-    "substance": "9 — six numbered assumptions, each with its failure mode; the clean-data tax paid three times.",
-    "punch": "8 — 'Probabilism without traceability is just noise with confidence.' 'A compass is not an accounting system.'",
-    "trend": "8 — measurement under AI plus governance, trends #6 and #7."
-  },
-  "prompt-driven-architecture": {
-    "tension": "7 — 'wrong drafts no longer look wrong' names a danger the reader recognises and would rather not.",
-    "originality": "6 — prompt-as-asset and context repositories overlap heavily with what the agent-tooling crowd already publishes.",
-    "personal": "8 — two specific burns: a decommissioned component in a generated diagram, and an integration path between systems that never exchanged a byte.",
-    "contrarian": "6 — 'The chat is ephemeral. The prompt is the asset' cuts against chat-centric habits, defended.",
-    "substance": "8 — what delegates and what never does, plus three unglamorous countermeasures.",
-    "punch": "8 — 'what's stale in the container?' replaces 'what's wrong with the model?'",
-    "trend": "9 — context engineering and agentic workflows, dead centre of trend #1."
-  },
-  "multi-agent-is-an-org-chart": {
-    "tension": "8 — 'Then you look at your real org chart and ask why it's full of things you would never design.'",
-    "originality": "8 — 'Multi-agent design is org design with a compiler', plus a Conway's law for agents. Named, and not published elsewhere.",
-    "personal": "8 — the laughing-at-the-diagram moment and the admission 'We nearly shipped our org chart into the prompt.'",
-    "contrarian": "7 — the supervisor-as-middle-management critique cuts against the dominant multi-agent pattern, and defends the cut.",
-    "substance": "8 — four primitives mapped, three supervisor failure modes with org-design fixes, the governance dial.",
-    "punch": "9 — 'I have met this middle manager. Several times. Some of them were prompts.'",
-    "trend": "9 — multi-agent and MCP, trends #1 and #2, with a position the field mostly lacks."
-  },
-  "pricing-the-invisible": {
-    "tension": "8 — 'The prioritization meeting is where architecture goes to lose... features 500, architecture 3.'",
-    "originality": "6 — 'The counterfactual has no product owner' is excellent, but the scoring machinery is reused from the author's own radar post.",
-    "personal": "4 — 'I've watched this match for years' is the whole anchor. No project, no scene, no cost paid.",
-    "contrarian": "7 — 'a weak number beats a strong adjective' plus a refusal to fake ROI, both defended.",
-    "substance": "8 — the anchored formula, the comparability argument, and the fake-precision trap named as the failure mode.",
-    "punch": "8 — 'A number you can't defend is a loan against your credibility.'",
-    "trend": "3 — prioritisation craft, off the current trend list."
-  },
-  "mathematicians-vs-lawyers": {
-    "tension": "7 — 'nobody reads that document carefully' is the uncomfortable admission, though the post pre-apologises for it.",
-    "originality": "7 — the archetype pair is named and has become the corpus's most-reused concept.",
-    "personal": "5 — 'After years of working as a Solution Architect' and 'My private rule'. No scene anywhere.",
-    "contrarian": "7 — 'stay at the mathematical level, don't descend into the details' plus 'volume looks like effort' attack corporate optics directly.",
-    "substance": "7 — two archetypes, both failure modes, and a room-composition risk test.",
-    "punch": "8 — 'the edge cases start breeding unsupervised.'",
-    "trend": "2 — thinking archetypes, no live market hook."
-  },
-  "the-model-is-the-easy-part": {
-    "tension": "7 — deflates the hype on arrival: 'Everyone in the room pictured the model... then the only question that actually mattered showed up.'",
-    "originality": "7 — MCP is written about constantly; production auth and state trade-offs ending in a security finding are much rarer.",
-    "personal": "8 — admits the temptation honestly: 'Part of me wanted to design something novel for it... because novel gets noticed.'",
-    "contrarian": "8 — 'The interesting part of an AI feature is usually the least AI part of it', evidenced by the review outcome.",
-    "substance": "9 — three auth options against three questions, token cache design, session affinity versus a shared store, three diagrams.",
-    "punch": "9 — 'Twenty small caches that are each allowed to be wrong beat one big cache that has to be right.'",
-    "trend": "9 — MCP and tool protocols, trend #2, dead centre."
-  },
-  "a-feature-is-not-a-service": {
-    "tension": "6 — a calm design story; 'It was a table wearing a lanyard' is the sharpest moment and it arrives last.",
-    "originality": "5 — when a feature earns a service is well-trodden ground; the three-question test is a clean formulation of it.",
-    "personal": "8 — 'I have built that unnecessary home before, so I know its smell.'",
-    "contrarian": "5 — anti-microservice is close to consensus by 2026, so the position costs little.",
-    "substance": "8 — three questions, identity-from-context, copy-the-nearest-working-thing, and a durability line.",
-    "punch": "8 — 'The safest user id is the one the client never gets to type.'",
-    "trend": "3 — service decomposition, off the current trend list."
-  },
-  "the-bottleneck-moved": {
-    "tension": "8 — 'The seat they queue for is not on your headcount plan.' The ending no longer resolves into quiet; it indicts the reader's own organization and leaves the cost sitting there.",
-    "originality": "7 — the moved-bottleneck claim is common in 2026; the named extension is the authorless diff: 'The code is here, the counterparty is not.' Review recast as a conversation that lost its counterparty, with a term someone else could cite.",
-    "personal": "7 — real instrument and real scale, 'I read squad reports for a living now. Fifteen of them, every month', plus the admission that 'it took me months to name it'. No scar, which is what keeps it off 8.",
-    "contrarian": "7 — 'A senior engineer whose main output is judgment about other people's diffs is not doing less engineering.' Argued directly against what dashboards and promotion criteria actually reward.",
-    "substance": "8 — reviewability recast as a designable system property with five concrete levers, plus the case for rewriting the definition of done around verification.",
-    "punch": "8 — 'Indexes made queries cheap long after disks made storage cheap. Reviewability is the index we now owe our own codebases.'",
-    "trend": "9 — measuring productivity under AI and agentic workflows, trends #1 and #7, with a position most posts on the topic do not have."
-  },
-  "design-the-stopping-point": {
-    "tension": "7 — 'I have watched initiatives with genuinely good designs leave systems worse than they found them.' A cost the reader recognises, named early and paid off.",
-    "originality": "7 — the concept is now named and reused: 'a resting position: a place the system can stop and live for two years without apology.' Incremental-delivery writing in the reference list covers steps, not the named property of a survivable stop.",
-    "personal": "7 — 'for years I had quietly filed it under delivery's problem.' An owned mistake in a specific scene, though the scene is a whiteboard rather than a system.",
-    "contrarian": "7 — the make-the-shortcut-legible position now answers its obvious objection in the text: 'The shortcut does not wait for a blessing. It happens either way.'",
-    "substance": "8 — three named properties of a stoppable step, plus a one-page artifact with an expiry trigger attached.",
-    "punch": "8 — 'Optionality feels like prudence long after it has quietly become an unpaid invoice.'",
-    "trend": "6 — current-state-from-code is now explicitly tied to agent comprehension (trend #4): 'reading an existing system is the one job the current crop of agents does better than writing into it.' One explicit touch, not the post's home conversation."
-  },
-  "count-your-rejections": {
-    "tension": "7 — 'He did not get the job.' One line standing alone after five rounds of yes.",
-    "originality": "6 — the practice is now named ('Keep a rejection ledger') and extended with the two-pile reading; underneath it is still a known genre of career essay.",
-    "personal": "9 — 'Moving a fully formed idea into another person's head is genuinely hard for me.' An unflattering admission that the argument depends on.",
-    "contrarian": "7 — 'maximizing it alone has become a genuinely risky career position' argues against the T-shape orthodoxy and answers the obvious objection.",
-    "substance": "7 — model (a rejection as a reading with two operands), its failure mode ('One time in ten it is a real gap'), and a concrete artifact: 'Four columns are enough for the ledger.'",
-    "punch": "8 — 'A year without rejections is not a good year. It is a small one.'",
-    "trend": "5 — depth-vs-breadth is now hooked to the live skills argument (trend #7): 'the industry is still mid-argument about what developer skill even means.' Adjacent and explicit, but not the essay's subject."
-  },
-  "adoption-is-the-deliverable": {
-    "tension": "7 — 'Four teams integrated with the lump.' One sentence, and the reader knows which of their own systems it is.",
-    "originality": "8 — 'the mandate window: the stretch of evolution where a mandate is both necessary and affordable.' A named, citable concept laid over Wardley's evolution axis; the reference list has the axis but not this overlay.",
-    "personal": "8 — two owned misreadings, not one: 'I spent a while explaining to myself why that was the organization's failure. It was not.' and, at the close, 'Four teams had already voted with their integrations while I was still explaining why the other service deserved them.'",
-    "contrarian": "8 — states the professed norm ('build the platform as a product, win teams over with golden paths, never mandate'), contradicts it ('right about the product and wrong about the window'), and answers the compliance-not-adoption objection inside the text.",
-    "substance": "7 — the open host service is still the concrete mechanism and the ceiling is still named, but the closing note replaced the count-your-consumers exercise, so less of it lands on Monday.",
-    "punch": "8 — 'An architecture is worth precisely what other teams are willing to depend on.'",
-    "trend": "7 — explicitly inside the platform-engineering conversation (trend #5): 'it is the live argument in platform engineering right now.'"
-  }
+ "_readme": "Per-axis evidence and rationale for the scores in content/posts/*.md. Rubric v1 (docs/SCORING-RUBRIC.md) requires one verbatim quote per score. Shown on hover in /admin.php under Scores. Optional: the numbers work without this file.",
+ "technical-leader-identity-disorder": {
+  "tension": "2 — nothing at risk anywhere. 'I have ups and downs' is the strongest friction in the whole piece.",
+  "originality": "3 — knowledge-sharing hours, pair programming, growth 1:1s. Standard tech-lead advice in the author's own words.",
+  "personal": "5 — real practice at real scale ('eight teams with seven developers each') but no scene, no decision, no owned mistake.",
+  "contrarian": "1 — pure consensus. Every claim is one the audience already professes.",
+  "substance": "5 — 'technical excellence' meetings are a nameable, copyable ritual; no failure conditions given.",
+  "punch": "3 — long paragraphs and seven block quotes doing the work the prose should: 'So simple and yet so complex at the same moment.'",
+  "trend": "2 — a 2020 identity question with no hook into any live 2026 conversation."
+ },
+ "the-automerger": {
+  "tension": "4 — 'a full-time job nobody applied for' names a real cost, then resolves it comfortably.",
+  "originality": "5 — automating merge-backs is known; the two-year operating report is the genuine extension.",
+  "personal": "5 — 'At the company I worked for, we lived exactly that.' Real system, no scar.",
+  "contrarian": "2 — automate the toil. Nobody disagrees.",
+  "substance": "7 — five-step design, plus the failure condition stated out loud: 'the workflow relies on real merges, not cherry-picks.'",
+  "punch": "6 — 'the tool only involves humans when a human is actually needed' is the one line that carries.",
+  "trend": "2 — GitFlow-era CI plumbing, adjacent to nothing on the current list."
+ },
+ "stop-calling-it-legacy-code": {
+  "tension": "8 — announces its own discomfort: 'a thesis that might make a few software architects uncomfortable.'",
+  "originality": "7 — 'Knowledge Container' is a named concept the reference blogs do not have.",
+  "personal": "3 — 'We've all been there.' No project, no scene, no cost the author paid. The weakest axis of a strong post.",
+  "contrarian": "7 — 'in the era of AI, legacy code no longer exists' contradicts a norm the audience professes, and argues for it.",
+  "substance": "5 — a model and a role ('Operators'), but no artifact, number, or failure condition.",
+  "punch": "7 — 'code is incredibly cheap now.' Short paragraphs, load-bearing bold, ends on a question.",
+  "trend": "8 — AI applied to legacy comprehension is trend #4, and this was written two years early."
+ },
+ "data-driven-theater": {
+  "tension": "8 — 'I couldn't shake the feeling that I had just watched a performance, not a decision.' Sustains to the last line.",
+  "originality": "6 — 'semantic contracts between people that nobody ever wrote down' is a real extension of a well-covered critique.",
+  "personal": "4 — 'I have lost count of how many meetings I've attended.' Years of experience, zero specific scenes.",
+  "contrarian": "8 — puts the professed virtue of being data-driven on trial and answers the obvious objection in 'It's Rarely the Conclusions'.",
+  "substance": "6 — the raw-vs-over-cleaned failure pair and two questions to ask; no artifacts.",
+  "punch": "8 — 'Well. Enjoy the theater. You're the audience.'",
+  "trend": "4 — adjacent to AI-era measurement debates, but the connection is never made explicit."
+ },
+ "decisions-have-an-architecture-too": {
+  "tension": "6 — 'Three workshops, the same diagrams, largely the same people, and no decision whatsoever.' Named, then resolved comfortably.",
+  "originality": "6 — RAPID is Bain's and credited; 'an API contract for decision-making' is the author's extension.",
+  "personal": "7 — a counted, specific scene ('I once counted the workshops... Three') with an outcome, but no owned mistake.",
+  "contrarian": "6 — 'Alignment is a wonderful outcome and a terrible process goal' is a minority position, defended.",
+  "substance": "7 — three named anti-patterns plus the ADR/RAPID split; usable Monday.",
+  "punch": "8 — 'an ADR without a decider is a wish with a timestamp.'",
+  "trend": "3 — decision rights are evergreen; no live hook."
+ },
+ "nobody-owns-the-sum": {
+  "tension": "7 — 'Silence. Then everyone answered at once, each about their own piece.'",
+  "originality": "7 — a named Conway corollary: 'an org chart can produce parts, but it cannot produce wholes.'",
+  "personal": "8 — owns the mistake directly: 'I've accepted a few orphans myself over the years; it flatters you for about a week.'",
+  "contrarian": "5 — refusing the orphan ('Architecture must not become the attic') is the only real position taken.",
+  "substance": "8 — four diagnostic symptoms, a three-step move, and a fifteen-minute exercise.",
+  "punch": "8 — 'Components get owners; sums get hopes.'",
+  "trend": "4 — platform/ownership design, adjacent to the platform-engineering conversation but not inside it."
+ },
+ "diagrams-are-conversations-not-documentation": {
+  "tension": "7 — 'That diagram changed exactly nothing, and I was very proud of it.'",
+  "originality": "6 — diagram rot is well covered; 'a diagram's value is consumed in the meeting where it is drawn' is the extension.",
+  "personal": "9 — the scar is load-bearing: 'presenting polished work is a way of performing competence... I resisted this for years.'",
+  "contrarian": "7 — argues diagrams should not be documentation at all, and concedes the artifact case rather than dodging it.",
+  "substance": "8 — one diagram / one question, title-with-the-question, 'What am I missing?' over 'any questions?'.",
+  "punch": "8 — 'What survives the meeting is not an asset. It's a receipt.'",
+  "trend": "6 — explicitly inside the agents-generate-artifacts conversation in 'The AI Twist'."
+ },
+ "the-migration-that-never-starts": {
+  "tension": "8 — 'organizations don't fail migrations. They fail to start them.' The discomfort outlives the post.",
+  "originality": "7 — 'decision debt' as the untracked counterpart to technical debt; one-way doors credited to Amazon.",
+  "personal": "6 — owns it ('I have created such folders') but never puts a specific folder on the page.",
+  "contrarian": "7 — inverts the industry's favourite horror story and defends the inversion.",
+  "substance": "8 — three unblockers, decompose-until-two-way-doors, a first step too small to refuse.",
+  "punch": "8 — 'The price of not yet is invoiced monthly and itemized never.'",
+  "trend": "4 — legacy modernisation is live, but this post never connects it to AI."
+ },
+ "the-anti-corruption-layer-is-for-people-too": {
+  "tension": "6 — 'Corruption rarely announces itself; it arrives one borrowed word at a time.' Real, but never confrontational.",
+  "originality": "7 — mapping a DDD pattern onto org boundaries, with the 'just align' trap named as the expensive option.",
+  "personal": "4 — 'years of private observations at integration boundaries.' No scene, no scar, no named system.",
+  "contrarian": "7 — 'let's just align the teams... is the most expensive item on the menu.' Defended. 'Friendship is not a data contract.'",
+  "substance": "8 — states when the pattern is NOT worth it ('map it directly and move on'), which is the rare half.",
+  "punch": "7 — 'nobody inspects the luggage' carries the section.",
+  "trend": "3 — DDD craft, evergreen, no current hook."
+ },
+ "questions-are-an-architects-sharpest-tool": {
+  "tension": "5 — 'an empty Open Questions section is a red flag with a siren attached' is the sharpest edge in an otherwise constructive piece.",
+  "originality": "6 — 'Answers age badly... Good questions compound' is a genuinely fresh asymmetry.",
+  "personal": "7 — a real review, a real silence, and an owned change of mind about what seniority means.",
+  "contrarian": "6 — 'Aren't architects paid for answers?' is raised as the objection and answered.",
+  "substance": "8 — two question types, the one-on-one test, and the owner-plus-check-back-date rule.",
+  "punch": "8 — 'a question without an owner and a check-back date is not a tool, it's a sigh.'",
+  "trend": "2 — pure craft, no market hook."
+ },
+ "adrs-for-an-audience-of-one": {
+  "tension": "5 — self-deprecating rather than confrontational: 'Colleagues have laughed at that ratio.'",
+  "originality": "6 — ADRs are heavily covered; 'the stakeholder with amnesia' plus ADRs as agent context is the extension.",
+  "personal": "9 — named real decisions (chi router, SQLite default, sessions plus TOTP) from the author's own repo.",
+  "contrarian": "5 — 'that ratio is correct' is a mild position, defended but not against a professed norm.",
+  "substance": "8 — the alternatives-considered section as a killer of resume-driven decisions, and deferred decisions with written triggers.",
+  "punch": "8 — 'if a decision isn't worth writing down, it wasn't a decision. It was a mood.'",
+  "trend": "6 — 'AI agents read our repositories now' puts it inside the live context-engineering conversation."
+ },
+ "edge-cases-written-by-parliament": {
+  "tension": "6 — 'The strictest product owner I have ever worked with has never attended a standup.' Affectionate, not confrontational.",
+  "originality": "8 — 'the XML is the legal invoice' and the blank-not-zero VAT column are material no reference blog has.",
+  "personal": "8 — a year of production integrations on the author's own product, with specifics.",
+  "contrarian": "7 — 'I trust these contracts more than most microservices I've met', against the cheapest joke in engineering.",
+  "substance": "8 — three transferable lessons plus concrete artifacts (the KSeF auth choreography, the custom session header).",
+  "punch": "8 — 'A one-pixel difference that is a legal requirement, not a style choice.'",
+  "trend": "3 — regulatory e-invoicing sits outside every item on the current trend list."
+ },
+ "anti-personas-the-users-i-refuse-to-serve": {
+  "tension": "6 — 'It sounds negative. It's the most constructive thing in the repository.'",
+  "originality": "6 — anti-personas exist in UX writing; framing them as edge-case-tree pruning is the extension.",
+  "personal": "8 — real constraints (five thousand lines of Go, no Docker) and an honest 'at 2 a.m., when everything seems like a good idea'.",
+  "contrarian": "6 — 'a product company cannot refuse anyone' is a hard claim about incentives, defended.",
+  "substance": "7 — one mechanical triage question and two practices that port to an organisation.",
+  "punch": "8 — 'a feature list tells you what a product does; the anti-feature list tells you what it is.'",
+  "trend": "2 — product strategy, no hook into any live technical conversation."
+ },
+ "pricing-is-architecture": {
+  "tension": "7 — 'I expected a marketing exercise... What I actually got was a database migration, new middleware, a rewritten registration flow.'",
+  "originality": "8 — the master-tenant pattern and 'commercial policy, compiled into middleware' are not in any reference blog.",
+  "personal": "9 — the author's own SaaS, own design, 'with nobody to blame but myself'.",
+  "contrarian": "6 — 'Architects belong in the pricing meeting' is a minority position, defended.",
+  "substance": "9 — quota guards, read-only degradation, blocked downgrades, entitlements as a bounded context, ~990 tests, 30+ controllers.",
+  "punch": "8 — 'Commercial policy, compiled into middleware. Read that again.'",
+  "trend": "3 — SaaS pricing architecture is off the current trend list."
+ },
+ "the-diagram-that-cannot-lie": {
+  "tension": "8 — 'every single one of them is lying to you right now.' Opens on the accusation and never lets go.",
+  "originality": "8 — Roslyn round-trip editing of the model as source, with fidelity as the overriding rule, is genuinely new.",
+  "personal": "8 — 'almost every diagram I've ever produced started lying within a quarter of being finished', plus a declared bias.",
+  "contrarian": "7 — rejects both drawing tools and reverse-engineering tools, and concedes the project may never ship.",
+  "substance": "8 — the no-database bet, the round-trip rule, the sidecar layout file, five concrete consequences.",
+  "punch": "9 — 'a diagram you can't diff is a rumor with better fonts.' Also 'the way milk goes off.'",
+  "trend": "6 — docs-as-code plus agents reading and writing one shared truth."
+ },
+ "a-company-of-one-staffed-by-agents": {
+  "tension": "8 — the failure section is the payload: 'an agent that made a red test green by weakening the assertion.'",
+  "originality": "6 — solo-with-agents is a crowded 2026 genre; 'review capacity breaks before generation capacity' is the fresh part.",
+  "personal": "9 — the whole post is the author's own evenings, own money, own portfolio, own incident.",
+  "contrarian": "7 — 'the I don't have a team excuse just expired' is aimed straight at the reader.",
+  "substance": "8 — three-part operating model plus a stated trust rule: migrations and money get eyes on every line.",
+  "punch": "9 — 'AI compresses everything except responsibility.' 'The agents are just very fast hands.'",
+  "trend": "9 — agentic workflows and productivity-under-AI, trends #1 and #7, with a position most posts don't have."
+ },
+ "grinding-dijkstra-at-senior-level": {
+  "tension": "8 — status vulnerability sustained: 'almost nobody at my seniority level admits to it, and the silence creates a myth.'",
+  "originality": "6 — interview-grind confessions exist; analysing the loop as someone else's risk function is the extension.",
+  "personal": "9 — 'Twelve-plus years in, carrying the title Solution Architect, and I was grinding shortest-path algorithms in the evenings.'",
+  "contrarian": "8 — 'every senior person should run an interview loop once every few years, even if they fully intend to stay.'",
+  "substance": "6 — three concrete gains, but less that transfers to Monday than the rest of the corpus.",
+  "punch": "8 — 'The loop is the one mirror that hasn't been adjusted to flatter you.'",
+  "trend": "2 — hiring and career, off the current trend list entirely."
+ },
+ "from-signals-to-blips": {
+  "tension": "5 — a problem is posed ('how do you drive change at that scale?') and comfortably solved. It is a build report.",
+  "originality": "7 — an internal AI-fed radar with a multiplicative score and a cite-or-it-didn't-happen rule; the Radar's own publisher hasn't written this.",
+  "personal": "7 — real scale and real numbers (fifteen squads, 42 blips to over 50), but little at risk for the author.",
+  "contrarian": "5 — 'the AI never touches the radar' is a mild position against the automate-everything current.",
+  "substance": "9 — the full formula with anchors and bands, plus what the score explicitly is not: 'signal strength, not validation status.'",
+  "punch": "7 — 'The loudest voice stops mattering; the math does the listening.' Otherwise expository.",
+  "trend": "8 — measuring an AI transformation at scale, trend #7."
+ },
+ "probabilistic-metrics": {
+  "tension": "7 — takes a real risk and says so: 'It won't survive an audit, and that's fine.'",
+  "originality": "8 — 'AI changes the input space of measurement' plus disposable metrics; no equivalent in the reference blogs.",
+  "personal": "6 — method-first rather than scene-first; 'at least one production system behind them' is the anchor.",
+  "contrarian": "8 — 'Coverage beats precision when the job is steering' argues directly against clean-data orthodoxy, with six stated assumptions.",
+  "substance": "9 — six numbered assumptions, each with its failure mode; the clean-data tax paid three times.",
+  "punch": "8 — 'Probabilism without traceability is just noise with confidence.' 'A compass is not an accounting system.'",
+  "trend": "8 — measurement under AI plus governance, trends #6 and #7."
+ },
+ "prompt-driven-architecture": {
+  "tension": "7 — 'wrong drafts no longer look wrong' names a danger the reader recognises and would rather not.",
+  "originality": "6 — prompt-as-asset and context repositories overlap heavily with what the agent-tooling crowd already publishes.",
+  "personal": "8 — two specific burns: a decommissioned component in a generated diagram, and an integration path between systems that never exchanged a byte.",
+  "contrarian": "6 — 'The chat is ephemeral. The prompt is the asset' cuts against chat-centric habits, defended.",
+  "substance": "8 — what delegates and what never does, plus three unglamorous countermeasures.",
+  "punch": "8 — 'what's stale in the container?' replaces 'what's wrong with the model?'",
+  "trend": "9 — context engineering and agentic workflows, dead centre of trend #1."
+ },
+ "multi-agent-is-an-org-chart": {
+  "tension": "8 — 'Then you look at your real org chart and ask why it's full of things you would never design.'",
+  "originality": "8 — 'Multi-agent design is org design with a compiler', plus a Conway's law for agents. Named, and not published elsewhere.",
+  "personal": "8 — the laughing-at-the-diagram moment and the admission 'We nearly shipped our org chart into the prompt.'",
+  "contrarian": "7 — the supervisor-as-middle-management critique cuts against the dominant multi-agent pattern, and defends the cut.",
+  "substance": "8 — four primitives mapped, three supervisor failure modes with org-design fixes, the governance dial.",
+  "punch": "9 — 'I have met this middle manager. Several times. Some of them were prompts.'",
+  "trend": "9 — multi-agent and MCP, trends #1 and #2, with a position the field mostly lacks."
+ },
+ "pricing-the-invisible": {
+  "tension": "8 — 'The prioritization meeting is where architecture goes to lose... features 500, architecture 3.'",
+  "originality": "6 — 'The counterfactual has no product owner' is excellent, but the scoring machinery is reused from the author's own radar post.",
+  "personal": "4 — 'I've watched this match for years' is the whole anchor. No project, no scene, no cost paid.",
+  "contrarian": "7 — 'a weak number beats a strong adjective' plus a refusal to fake ROI, both defended.",
+  "substance": "8 — the anchored formula, the comparability argument, and the fake-precision trap named as the failure mode.",
+  "punch": "8 — 'A number you can't defend is a loan against your credibility.'",
+  "trend": "3 — prioritisation craft, off the current trend list."
+ },
+ "mathematicians-vs-lawyers": {
+  "tension": "7 — 'nobody reads that document carefully' is the uncomfortable admission, though the post pre-apologises for it.",
+  "originality": "7 — the archetype pair is named and has become the corpus's most-reused concept.",
+  "personal": "5 — 'After years of working as a Solution Architect' and 'My private rule'. No scene anywhere.",
+  "contrarian": "7 — 'stay at the mathematical level, don't descend into the details' plus 'volume looks like effort' attack corporate optics directly.",
+  "substance": "7 — two archetypes, both failure modes, and a room-composition risk test.",
+  "punch": "8 — 'the edge cases start breeding unsupervised.'",
+  "trend": "2 — thinking archetypes, no live market hook."
+ },
+ "the-model-is-the-easy-part": {
+  "tension": "7 — deflates the hype on arrival: 'Everyone in the room pictured the model... then the only question that actually mattered showed up.'",
+  "originality": "7 — MCP is written about constantly; production auth and state trade-offs ending in a security finding are much rarer.",
+  "personal": "8 — admits the temptation honestly: 'Part of me wanted to design something novel for it... because novel gets noticed.'",
+  "contrarian": "8 — 'The interesting part of an AI feature is usually the least AI part of it', evidenced by the review outcome.",
+  "substance": "9 — three auth options against three questions, token cache design, session affinity versus a shared store, three diagrams.",
+  "punch": "9 — 'Twenty small caches that are each allowed to be wrong beat one big cache that has to be right.'",
+  "trend": "9 — MCP and tool protocols, trend #2, dead centre."
+ },
+ "a-feature-is-not-a-service": {
+  "tension": "6 — a calm design story; 'It was a table wearing a lanyard' is the sharpest moment and it arrives last.",
+  "originality": "5 — when a feature earns a service is well-trodden ground; the three-question test is a clean formulation of it.",
+  "personal": "8 — 'I have built that unnecessary home before, so I know its smell.'",
+  "contrarian": "5 — anti-microservice is close to consensus by 2026, so the position costs little.",
+  "substance": "8 — three questions, identity-from-context, copy-the-nearest-working-thing, and a durability line.",
+  "punch": "8 — 'The safest user id is the one the client never gets to type.'",
+  "trend": "3 — service decomposition, off the current trend list."
+ },
+ "the-bottleneck-moved": {
+  "tension": "8 — 'The seat they queue for is not on your headcount plan.' The ending no longer resolves into quiet; it indicts the reader's own organization and leaves the cost sitting there.",
+  "originality": "7 — the moved-bottleneck claim is common in 2026; the named extension is the authorless diff: 'The code is here, the counterparty is not.' Review recast as a conversation that lost its counterparty, with a term someone else could cite.",
+  "personal": "7 — real instrument and real scale, 'I read squad reports for a living now. Fifteen of them, every month', plus the admission that 'it took me months to name it'. No scar, which is what keeps it off 8.",
+  "contrarian": "7 — 'A senior engineer whose main output is judgment about other people's diffs is not doing less engineering.' Argued directly against what dashboards and promotion criteria actually reward.",
+  "substance": "8 — reviewability recast as a designable system property with five concrete levers, plus the case for rewriting the definition of done around verification.",
+  "punch": "8 — 'Indexes made queries cheap long after disks made storage cheap. Reviewability is the index we now owe our own codebases.'",
+  "trend": "9 — measuring productivity under AI and agentic workflows, trends #1 and #7, with a position most posts on the topic do not have."
+ },
+ "design-the-stopping-point": {
+  "tension": "7 — 'I have watched initiatives with genuinely good designs leave systems worse than they found them.' A cost the reader recognises, named early and paid off.",
+  "originality": "7 — the concept is now named and reused: 'a resting position: a place the system can stop and live for two years without apology.' Incremental-delivery writing in the reference list covers steps, not the named property of a survivable stop.",
+  "personal": "7 — 'for years I had quietly filed it under delivery's problem.' An owned mistake in a specific scene, though the scene is a whiteboard rather than a system.",
+  "contrarian": "7 — the make-the-shortcut-legible position now answers its obvious objection in the text: 'The shortcut does not wait for a blessing. It happens either way.'",
+  "substance": "8 — three named properties of a stoppable step, plus a one-page artifact with an expiry trigger attached.",
+  "punch": "8 — 'Optionality feels like prudence long after it has quietly become an unpaid invoice.'",
+  "trend": "6 — current-state-from-code is now explicitly tied to agent comprehension (trend #4): 'reading an existing system is the one job the current crop of agents does better than writing into it.' One explicit touch, not the post's home conversation."
+ },
+ "count-your-rejections": {
+  "tension": "7 — 'He did not get the job.' One line standing alone after five rounds of yes.",
+  "originality": "6 — the practice is now named ('Keep a rejection ledger') and extended with the two-pile reading; underneath it is still a known genre of career essay.",
+  "personal": "9 — 'Moving a fully formed idea into another person's head is genuinely hard for me.' An unflattering admission that the argument depends on.",
+  "contrarian": "7 — 'maximizing it alone has become a genuinely risky career position' argues against the T-shape orthodoxy and answers the obvious objection.",
+  "substance": "7 — model (a rejection as a reading with two operands), its failure mode ('One time in ten it is a real gap'), and a concrete artifact: 'Four columns are enough for the ledger.'",
+  "punch": "8 — 'A year without rejections is not a good year. It is a small one.'",
+  "trend": "5 — depth-vs-breadth is now hooked to the live skills argument (trend #7): 'the industry is still mid-argument about what developer skill even means.' Adjacent and explicit, but not the essay's subject."
+ },
+ "adoption-is-the-deliverable": {
+  "tension": "7 — 'Four teams integrated with the lump.' One sentence, and the reader knows which of their own systems it is.",
+  "originality": "8 — 'the mandate window: the stretch of evolution where a mandate is both necessary and affordable.' A named, citable concept laid over Wardley's evolution axis; the reference list has the axis but not this overlay.",
+  "personal": "8 — two owned misreadings, not one: 'I spent a while explaining to myself why that was the organization's failure. It was not.' and, at the close, 'Four teams had already voted with their integrations while I was still explaining why the other service deserved them.'",
+  "contrarian": "8 — states the professed norm ('build the platform as a product, win teams over with golden paths, never mandate'), contradicts it ('right about the product and wrong about the window'), and answers the compliance-not-adoption objection inside the text.",
+  "substance": "7 — the open host service is still the concrete mechanism and the ceiling is still named, but the closing note replaced the count-your-consumers exercise, so less of it lands on Monday.",
+  "punch": "8 — 'An architecture is worth precisely what other teams are willing to depend on.'",
+  "trend": "7 — explicitly inside the platform-engineering conversation (trend #5): 'it is the live argument in platform engineering right now.'"
+ },
+ "we-deleted-the-wrong-half-of-agile": {
+  "tension": "7 — puts agile-as-practiced on trial with a concrete cost: 'The half of agile that survived twenty years of process consulting is the half that needs a human on the other end of the question.' Not 9: the second half hands the reader a standard and a measurement, so the discomfort does not outlive the last line.",
+  "originality": "6 — searched the reference list and the wider web first, and the general framing is taken: 'XP is the right foundation for AI-assisted coding' already exists (Bloom Group, RobertMelton's 'XP 3.0', Frank Westphal, the AI-XP posts on dev.to). Two extensions turned up nothing equivalent: splitting the twelve practices by whether they need a reachable counterparty, and 'It has a path now. `CLAUDE.md`, `AGENTS.md`, whatever your tool calls its rules file.' Known idea plus genuine extension, so the band is 5-to-7 and the rule says take the lower of the two you are torn between.",
+  "personal": "7 — a specific scene with the author's own mistake inside the first four paragraphs: 'He was right about the burial... I had spent eleven hundred words describing a queue, and exactly one sentence on the only part of it I can design.' Not 9: the mistake is editorial rather than a professional scar.",
+  "contrarian": "8 — contradicts a norm the audience professes and answers the obvious objection inside the text, in its own section: 'Pair with the agent. Review at write time... This is the strongest counterargument and it is partly right.' Then defends the distance anyway with the counterparty test.",
+  "substance": "8 — a named model (four questions, four destinations), the condition under which it fails ('Some questions may simply have no artifact-shaped answer'), and a Monday-morning artifact: 'take your last ten merged pull requests and count the times somebody had to ask a human something the repository could have answered. Divide by ten.'",
+  "punch": "7 — measured CV 0.61, 19% of sentences six words or under, deliberate short-after-long. One line earns its bold: 'And the half we were allowed to skip is the one that had been carrying the arrangement all along.' Not 9: several sections have no line that survives out of context.",
+  "trend": "8 — explicitly inside trend-list items 7 and 8 (measuring productivity when AI writes the code; where the human boundary sits) and takes a position most posts do not: 'Whoever sends the change is the counterparty for it.'",
+  "_reach": "7.2 — publish normally band (6.0-7.4). Lowest axis is originality at 6; lifting it means finding a claim the XP-and-AI posts have not already made.",
+  "_scored": "2026-08-07, rubric v1, model claude-opus-5"
+ }
 }
