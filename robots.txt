@@ -1,5 +1,8 @@
 User-agent: *
 Allow: /
+# Unpublished drafts, reachable only with a share token. Refused to crawlers
+# server-side as well; this line is the polite half of the same rule.
+Disallow: /preview.php
 
 # AI crawlers — welcome, full access.
 # Machine-readable site summary: https://bfrackowiak.pl/llms.txt

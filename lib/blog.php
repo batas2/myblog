@@ -357,6 +357,36 @@ function post_duplicate_sources(): array
 }
 
 /** Source .md path for a slug, or null. */
+/**
+ * The unguessable token that lets one person read an unpublished essay.
+ *
+ * Derived, not stored: HMAC over the slug with a config secret, so there is no
+ * table of live links to keep, and a link for a post is always the same link.
+ * The trade is that revocation is all-or-nothing — rotate `preview_secret` and
+ * every share link dies at once. For handing a draft to two people before it
+ * goes out, that is the right shape; if per-link expiry is ever needed, this is
+ * where it goes, as a signed timestamp inside the same HMAC.
+ *
+ * Returns null when no secret is configured, and every caller must read that as
+ * "sharing is off" rather than falling back to something predictable. A default
+ * secret would make every draft on every install readable by anyone who knows
+ * the scheme.
+ */
+function preview_share_token(string $slug): ?string
+{
+    $secret = (string) cfg('preview_secret', '');
+    if ($secret === '' || str_starts_with($secret, 'CHANGE-ME')) return null;
+    if (!preg_match('/^[a-z0-9-]{3,80}$/', $slug)) return null;
+    return substr(hash_hmac('sha256', 'preview:' . $slug, $secret), 0, 32);
+}
+
+/** The full link to hand to somebody. Null when sharing is not configured. */
+function preview_share_url(string $slug): ?string
+{
+    $token = preview_share_token($slug);
+    return $token === null ? null : cfg('site_url') . '/preview.php?slug=' . rawurlencode($slug) . '&k=' . $token;
+}
+
 function post_source_file(string $slug): ?string
 {
     // callers validate, but never let a malformed slug reach the glob
@@ -513,15 +543,32 @@ function hero_meta(string $slug): ?array
         $f = APP_ROOT . '/assets/img/posts/credits.json';
         $credits = is_file($f) ? (json_decode((string) file_get_contents($f), true) ?: []) : [];
     }
-    $file = APP_ROOT . "/assets/img/posts/{$slug}.jpg";
-    if (!is_file($file)) return null;
+    /* A hero is either a licensed photograph (.jpg) or a figure rendered from a model (.png).
+       The extension decides, and png wins, because a rendered figure is transparent and one
+       file then serves both themes — where a photograph never can, which is the whole reason
+       body figures ship as light/dark pairs. */
+    $ext = null;
+    foreach (['png', 'jpg'] as $e) {
+        if (is_file(APP_ROOT . "/assets/img/posts/{$slug}.{$e}")) { $ext = $e; break; }
+    }
+    if ($ext === null) return null;
+    $file = APP_ROOT . "/assets/img/posts/{$slug}.{$ext}";
     $c = $credits[$slug] ?? [];
     [$w, $h] = getimagesize($file) ?: [null, null];
-    $thumbFile = APP_ROOT . "/assets/img/posts/{$slug}.thumb.jpg";
-    $thumb = is_file($thumbFile) ? "/assets/img/posts/{$slug}.thumb.jpg" : "/assets/img/posts/{$slug}.jpg";
+    $thumbFile = APP_ROOT . "/assets/img/posts/{$slug}.thumb.{$ext}";
+    $thumb = is_file($thumbFile) ? "/assets/img/posts/{$slug}.thumb.{$ext}" : "/assets/img/posts/{$slug}.{$ext}";
     [$tw, $th] = is_file($thumbFile) ? (getimagesize($thumbFile) ?: [null, null]) : [$w, $h];
+    /* The social card, when the hero cannot be one. A transparent figure unfurls as a black
+       slab on one client and a white one on the next, and a hero is whatever shape it is
+       rather than 1200×630 — so `<slug>.og.jpg` overrides it where a post ships one. */
+    $cardFile = APP_ROOT . "/assets/img/posts/{$slug}.og.jpg";
+    $card = is_file($cardFile) ? "/assets/img/posts/{$slug}.og.jpg" : "/assets/img/posts/{$slug}.{$ext}";
+    [$cw, $ch] = is_file($cardFile) ? (getimagesize($cardFile) ?: [$w, $h]) : [$w, $h];
     return [
-        'src'     => "/assets/img/posts/{$slug}.jpg",
+        'src'     => "/assets/img/posts/{$slug}.{$ext}",
+        'card'    => $card,
+        'cw'      => $cw,
+        'ch'      => $ch,
         'w'       => $w,
         'h'       => $h,
         'thumb'   => $thumb,

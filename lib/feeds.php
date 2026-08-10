@@ -54,12 +54,16 @@ function render_sitemap(array $posts): string
     // its own domain, so it is submitted like any other page.
     // …and it changes on its own schedule rather than the publishing one, so it dates itself
     // from its own source instead of borrowing the newest essay's date.
+    // …and its changelog dates itself the same way, from the file that holds the releases.
     $stemmaSrc = APP_ROOT . '/stemma/index.php';
     $stemmaMod = is_file($stemmaSrc) ? date('Y-m-d', (int) filemtime($stemmaSrc)) : $latest;
+    $logSrc = APP_ROOT . '/stemma/changelog/index.php';
+    $logMod = is_file($logSrc) ? date('Y-m-d', (int) filemtime($logSrc)) : $stemmaMod;
     $urls = "  <url><loc>{$site}/</loc><lastmod>{$latest}</lastmod><priority>1.0</priority></url>\n"
           . "  <url><loc>{$site}/blog/start/</loc><lastmod>{$latest}</lastmod><priority>0.8</priority></url>\n"
           . "  <url><loc>{$site}/about/</loc><lastmod>{$latest}</lastmod><priority>0.7</priority></url>\n"
-          . "  <url><loc>{$site}/stemma/</loc><lastmod>{$stemmaMod}</lastmod><priority>0.8</priority></url>\n";
+          . "  <url><loc>{$site}/stemma/</loc><lastmod>{$stemmaMod}</lastmod><priority>0.8</priority></url>\n"
+          . "  <url><loc>{$site}/stemma/changelog/</loc><lastmod>{$logMod}</lastmod><priority>0.5</priority></url>\n";
     foreach ($posts as $p) {
         // a revised essay advertises its revision, not its birthday
         $lastmod = date('Y-m-d', $p['updated_ts'] ?? $p['publish_ts']);

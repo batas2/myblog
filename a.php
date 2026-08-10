@@ -3,10 +3,11 @@
  * a.php — first-party, privacy-first analytics beacon. No cookies, no external
  * services, no personal data at rest.
  *
- * The page JS (beacon_script() in lib/components.php) sends two kinds of
+ * The page JS (beacon_script() in lib/components.php) sends three kinds of
  * sendBeacon POSTs:
  *   pageview   {p: path, r: referrer, q: query, l: language, w: screen width, tz: timezone}
  *   engagement {e: 1, p: path, d: engaged seconds}   — cumulative, on tab hide
+ *   exit       {o: 1, p: path, u: destination}       — an outbound link clicked
  *
  * Stored per pageview: day, ts, path, referrer host + group, UTM tags,
  * country (offline GeoIP, lib/geoip.php), browser/OS/device family, primary
@@ -70,6 +71,22 @@ $visitor = an_visitor($seed, $day, $ip, $ua);
 
 try {
     $db = an_db();
+
+    // exit ping: an outbound link was clicked. Recorded against the page it was
+    // clicked from, so "who leaves, and to where" is answerable per page.
+    if (!empty($in['o'])) {
+        $out = an_outbound(
+            is_string($in['u'] ?? null) ? $in['u'] : '',
+            an_self_hosts((string) ($_SERVER['HTTP_HOST'] ?? ''))
+        );
+        if ($out) {
+            an_click($db, [
+                'day' => $day, 'ts' => time(), 'path' => $path,
+                'host' => $out['host'], 'url' => $out['url'], 'visitor' => $visitor,
+            ]);
+        }
+        exit;
+    }
 
     // engagement ping: attach seconds to the row the pageview created;
     // sessions straddling the UTC day rollover retry with yesterday's identity

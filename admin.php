@@ -190,6 +190,12 @@ if ($isDash) {
             'recent'  => an_recent($adb, 30, $path),
             'sources' => an_source_groups($adb, $since, $path),
             'dims'    => $dims,
+            // exits: where readers go when they leave, scoped by ?path= like everything else
+            'exitSum'   => an_click_summary($adb, $since, $path),
+            'exitPrev'  => $days > 0 ? an_click_summary($adb, gmdate('Y-m-d', time() - 2 * $days * 86400), $path, $since) : null,
+            'exitHosts' => an_click_hosts($adb, $since, 15, $path),
+            'exitLinks' => an_click_links($adb, $since, 25, $path),
+            'exitRecent' => an_click_recent($adb, 20, $path),
             // previous period of the same length, for the trend arrows on the cards
             'prev'    => $days > 0 ? an_summary($adb, gmdate('Y-m-d', time() - 2 * $days * 86400), $path, $since) : null,
         ];
@@ -693,6 +699,7 @@ dialog.why::backdrop { background: rgba(10,10,15,.45); }
     <a href="#overview" <?= $isAdmin ? '' : 'class="active"' ?>>Overview</a>
     <?php if ($path === ''): ?><a href="#content">Content</a><?php endif; ?>
     <a href="#acquisition">Acquisition</a>
+    <a href="#exits">Exits</a>
     <a href="#audience">Audience</a>
     <a href="#activity">Activity</a>
     <?php if ($isAdmin): ?>
@@ -768,6 +775,22 @@ dialog.why::backdrop { background: rgba(10,10,15,.45); }
             <span class="dim">copy · post these instead of the bare URL and Acquisition can tell them apart</span>
           </div>
         </details>
+        <?php /* an unpublished essay has no public URL, so the only way to let somebody read it
+                 is the token link. Refused to crawlers and unfurlers, so pasting it in a chat
+                 shows a bare URL and puts nothing in anyone's cache. */ ?>
+        <?php if ($p['status'] !== 'published'): $shareUrl = preview_share_url($p['slug']); ?>
+        <details class="share">
+          <summary>share this draft</summary>
+          <div class="share-row">
+            <?php if ($shareUrl !== null): ?>
+              <button type="button" class="mini cp" data-url="<?= e($shareUrl) ?>" title="<?= e($shareUrl) ?>">copy read link</button>
+              <span class="dim">anyone with this link can read it · no session needed · bots get a 404 · rotate <code>preview_secret</code> to kill every link</span>
+            <?php else: ?>
+              <span class="dim">set <code>preview_secret</code> in config.php to enable share links</span>
+            <?php endif; ?>
+          </div>
+        </details>
+        <?php endif; ?>
       </td>
       <?php $r = sc_reach($p['scores']); ?>
       <td class="r"><a class="plink badge b-<?= e(sc_band($r)) ?>" href="#scores" title="editorial reach score, rubric <?= e(SC_RUBRIC) ?>"><?= $r !== null ? number_format($r, 1) : 'unscored' ?></a></td>
@@ -1218,6 +1241,7 @@ dialog.why::backdrop { background: rgba(10,10,15,.45); }
   </div>
   <div class="pane" id="content"></div>
   <div class="pane" id="acquisition"></div>
+  <div class="pane" id="exits"></div>
   <div class="pane" id="audience"></div>
   <div class="pane" id="activity"></div>
   <?php else: ?>
@@ -1319,6 +1343,64 @@ dialog.why::backdrop { background: rgba(10,10,15,.45); }
     ?>
   </div>
   </div><!-- /acquisition -->
+
+  <?php
+    /* Exits — Acquisition read backwards. A pageview says somebody arrived; only this
+       says they left on purpose, and for where. Scoped by ?path= like every other
+       analytics view, so drilling into /stemma/ answers "who leaves that page, and to
+       what" rather than the site-wide version of the question. */
+    $ex = $an['exitSum'];
+    // clicks per hundred pageviews. Not a per-reader rate: one reader can click several,
+    // so this can exceed 100 and still be correct.
+    $exRate = $sum['pv'] > 0 ? $ex['clicks'] / $sum['pv'] * 100 : 0.0;
+  ?>
+  <div class="pane wide" id="exits">
+  <h2>Exits <span class="dim">— where readers go when they leave<?= $path !== '' ? ', from ' . e($path) : '' ?></span></h2>
+  <div class="cards">
+    <div class="scard"><b><?= number_format($ex['clicks']) ?><?= s_delta($an['exitPrev'], 'clicks', $ex['clicks']) ?></b><span>Outbound clicks</span></div>
+    <div class="scard" title="Daily visitor hashes again — the same person leaving on two days counts twice."><b><?= number_format($ex['visitors']) ?><?= s_delta($an['exitPrev'], 'visitors', $ex['visitors']) ?></b><span>Visitor-days with an exit</span></div>
+    <div class="scard" title="Outbound clicks per 100 pageviews in this range. One reader can click more than one link, so this is not a percentage of readers and can pass 100."><b><?= number_format($exRate, 1) ?></b><span>Exits per 100 views</span></div>
+  </div>
+
+  <div class="grid">
+    <?php s_table('Destinations', $an['exitHosts'], null, 'clicks'); ?>
+  </div>
+
+  <h2 style="margin-top:2rem">Links <span class="dim">— what was clicked, and the page it was clicked from</span></h2>
+  <table><tr><th>Destination</th><th>From</th><th class="r">Clicks</th><th class="r">Visitors</th><th class="r">Last</th></tr>
+  <?php $topEx = max(1, ...array_map(fn($r) => (int) $r['clicks'], $an['exitLinks'] ?: [['clicks' => 1]])); ?>
+  <?php foreach ($an['exitLinks'] as $r): ?>
+    <tr>
+      <td class="pathcell cell-bar" style="--w:<?= (int) round($r['clicks'] / $topEx * 100) ?>%"><?= e((string) $r['url']) ?></td>
+      <td class="pathcell"><a class="plink" href="<?= e(s_url(['path' => $r['path']], $daysRaw, $path)) ?>"><?= e((string) $r['path']) ?></a></td>
+      <td class="r n"><?= number_format((int) $r['clicks']) ?></td>
+      <td class="r n"><?= (int) $r['visitors'] ?></td>
+      <td class="r n dim"><?= date('m-d H:i', (int) $r['last_ts']) ?></td>
+    </tr>
+  <?php endforeach; ?>
+  <?php if (!$an['exitLinks']): ?><tr><td colspan="5" class="dim">no exits in range</td></tr><?php endif; ?>
+  </table>
+
+  <h2 style="margin-top:2rem">Recent exits <span class="dim">— last <?= count($an['exitRecent']) ?>, filtered ones included</span></h2>
+  <table><tr><th>When</th><th>From</th><th>To</th></tr>
+  <?php foreach ($an['exitRecent'] as $r): $xv = (int) $r['excl']; ?>
+    <tr<?= $xv ? ' class="excluded"' : '' ?>>
+      <td class="n"><?= date('m-d H:i', (int) $r['ts']) ?></td>
+      <td class="pathcell"><?= e((string) $r['path']) ?></td>
+      <td class="pathcell"><?= e((string) $r['url']) ?>
+        <?= $xv ? '<span class="badge b-draft">' . e(an_excl_label($xv)) . '</span>' : '' ?></td>
+    </tr>
+  <?php endforeach; ?>
+  <?php if (!$an['exitRecent']): ?><tr><td colspan="3" class="dim">nothing yet</td></tr><?php endif; ?>
+  </table>
+
+  <p class="note">A click is recorded when a link leaves this host — <span class="mono">github.com</span>,
+    a syndication mirror, a cited source — plus <span class="mono">mailto</span>, which is the strongest
+    intent the site can observe. Query strings and fragments are dropped before storage; the destination
+    path is kept. A click carries no timezone or screen, so it inherits whatever verdict that visitor's
+    pageviews got that day, and a click with no pageview behind it is treated as automated. Nothing new
+    is stored about the reader: same daily-rotating hash, no address, no user agent.</p>
+  </div><!-- /exits -->
 
   <div class="pane" id="audience">
   <h2>Audience <span class="dim">— who and from where</span></h2>

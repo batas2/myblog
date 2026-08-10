@@ -20,6 +20,10 @@ require __DIR__ . '/bootstrap.php';
 // constants only (no config, no side effects) — the scores assertions below
 // check the page against the same axis list and rubric version the site ships
 require_once dirname(__DIR__) . '/lib/scores.php';
+// same deal: constants and pure functions over a PDO handle the caller supplies,
+// so the exit-tracking assertions can call the real readers instead of re-writing
+// their SQL in the test and proving only that two queries agree
+require_once dirname(__DIR__) . '/lib/analytics.php';
 
 $ROOT = dirname(__DIR__);
 $SANDBOX = sys_get_temp_dir() . '/bfrackowiak-test-' . getmypid();
@@ -61,6 +65,7 @@ file_put_contents($SANDBOX . '/config.php', '<?php return ' . var_export([
     'og_image'            => 'https://bfrackowiak.pl/myself.jpeg',
     'newsletter_action'   => '/n.php',
     'comments_secret'     => 'itest-comments-secret',
+    'preview_secret'      => 'itest-preview-secret',
     'stats_key'           => STATS_KEY,
     'admin_password_hash' => password_hash(ADMIN_PW, PASSWORD_DEFAULT),
     'timezone'            => 'Europe/Warsaw',
@@ -146,10 +151,11 @@ section('generated page contracts');
 t_assert(simplexml_load_file($SANDBOX . '/feed.xml') !== false, 'generated feed.xml valid');
 $sm = simplexml_load_file($SANDBOX . '/sitemap.xml');
 t_assert($sm !== false, 'generated sitemap.xml valid');
-t_eq(4 + $pubN + $tagN, count($sm->url), 'sitemap url count = home + start + about + stemma + posts + tags');
+t_eq(5 + $pubN + $tagN, count($sm->url), 'sitemap url count = home + start + about + stemma + changelog + posts + tags');
 t_contains('/blog/start/', $smRaw, 'start page in sitemap');
 t_contains('/about/', $smRaw, 'about page in sitemap');
 t_contains('/stemma/', $smRaw, 'project page in sitemap');
+t_contains('/stemma/changelog/', $smRaw, 'project changelog in sitemap');
 t_not_contains('/services/', $smRaw, 'unlisted commercial page stays out of the sitemap');
 t_assert(is_file($SANDBOX . '/blog/start/index.php'), 'start page generated');
 t_assert(is_file($SANDBOX . '/404.php'), '404 page generated');
@@ -171,6 +177,10 @@ t_assert($ldOk, 'post JSON-LD blocks parse');
 t_contains('COMMENT_SLUG', $post, 'comments include wired');
 t_contains('newsletter', $post, 'newsletter box on post');
 t_contains('sendBeacon', $post, 'analytics beacon on post');
+// the exit listener ships with the beacon, so every page that counts a view also
+// counts a departure — a page it were missing from would look like a dead end
+t_contains("closest('a[href]')", $post, 'the exit listener ships with the beacon');
+t_contains('o: 1', $post, 'and sends the exit payload');
 t_contains('pagehide', $post, 'engagement beacon on post');
 t_contains('Related field notes', $post, 'related essays under the post');
 t_not_contains('fonts.googleapis.com', $post, 'no external fonts on generated pages');
@@ -354,6 +364,55 @@ foreach (['/blog/the-diagram-that-cannot-lie/', '/blog/diagrams-are-conversation
     t_contains('href="' . $essay . '"', $body, "project page links {$essay}");
 }
 
+/* ---------------- the project page: the agentic half ----------------
+   The second authoring surface is the half of the tool a reader is least likely to
+   guess at, so it is asserted rather than assumed: the chapter, its contents entry,
+   and the same claims restated in the plain-text twin an agent will actually read. */
+t_contains('id="agents"', $body, 'the project page carries the agentic chapter');
+t_contains('href="#agents"', $body, 'and reaches it from the contents rail');
+foreach (['stemma render', 'stemma validate', 'Concept', 'Relation'] as $claim) {
+    t_contains($claim, $body, "the project page names {$claim}");
+}
+foreach (['stemma render', 'stemma validate', 'manifest', 'polyform noncommercial'] as $claim) {
+    t_contains($claim, $mdFlat, "the markdown mirror still states: {$claim}");
+}
+// The licence moved from "an open decision" to a named one. A page still hedging is stale.
+t_not_contains('exact terms are still an open decision', $body, 'the licence is no longer described as undecided');
+t_contains('PolyForm Noncommercial', $body, 'the project page names the licence');
+
+/* ---------------- the changelog ----------------
+   Its own page, hand-kept, with a plain-text twin. The failure guarded here is drift:
+   a release added to the page and never to the mirror. Every date in one must be in
+   the other, and the project page's three-release summary must name real releases. */
+[$code, $log] = http_req('GET', "$BASE/stemma/changelog/");
+t_eq(200, $code, 'stemma changelog 200');
+[$code, $logMd] = http_req('GET', "$BASE/stemma/changelog/index.md");
+t_eq(200, $code, 'the changelog markdown mirror is served');
+t_contains('<link rel="alternate" type="text/markdown"', $log, 'the changelog announces its markdown mirror');
+
+// A changelog is asked dated questions — "what's new", "when did X ship" — so the
+// releases are emitted as data, and every one of them must be in it.
+t_contains('"@type":"ItemList"', $log, 'the changelog emits its releases as structured data');
+t_contains('ItemListOrderDescending', $log, 'and declares that it is newest-first');
+
+preg_match_all('~<time class="sc-date" datetime="(\d{4}-\d{2}-\d{2})"~', $log, $dates);
+t_assert(count($dates[1]) >= 5, 'the changelog carries the whole history, not a recent slice');
+foreach ($dates[1] as $d) {
+    t_contains($d, $logMd, "the changelog mirror carries the {$d} release");
+}
+// Newest first, and every release individually linkable.
+$sorted = $dates[1];
+rsort($sorted);
+t_eq($sorted, $dates[1], 'changelog releases are newest first');
+t_eq(count($dates[1]), substr_count($log, 'class="sc-perma"'), 'every release has its own anchor');
+t_eq(count($dates[1]), substr_count($log, '"@type":"ListItem"') - 3, 'every release is in the ItemList too');
+foreach ($dates[1] as $d) t_contains('"datePublished":"' . $d . '"', $log, "release {$d} is dated in the markup");
+
+// The project page shows the most recent releases and hands off to the full record.
+t_contains('href="/stemma/changelog/"', $body, 'project page links its changelog');
+t_contains('id="changelog"', $body, 'project page carries the what-shipped summary');
+t_contains('datetime="' . $dates[1][0] . '"', $body, 'and the summary leads with the newest release');
+
 /* ---------------- newsletter (self-hosted) ---------------- */
 section('newsletter');
 /* Every page a reader can land on and decide from carries the form itself. This is
@@ -362,7 +421,8 @@ section('newsletter');
    reached /about/ from the first LinkedIn post had nothing on the page to fill in.
    A link to somebody else's form is not a subscribe box — check for the input. */
 foreach (['/' => 'home', '/about/' => 'about', '/blog/start/' => 'start here',
-          '/stemma/' => 'stemma', '/blog/the-bottleneck-moved/' => 'an essay'] as $p => $what) {
+          '/stemma/' => 'stemma', '/stemma/changelog/' => 'stemma changelog',
+          '/blog/the-bottleneck-moved/' => 'an essay'] as $p => $what) {
     [$code, $nlBody] = http_req('GET', "$BASE{$p}");
     t_eq(200, $code, "{$what} page renders");
     t_contains('id="nl-email"', $nlBody, "{$what} page carries a real subscribe field");
@@ -554,6 +614,53 @@ t_eq(1, $hitCount('/from-someone-else/'), 'and it is stored, so the exclusion wa
 // leave the fixture exactly as it was found: later assertions count these rows
 $adb->exec("DELETE FROM hits WHERE path = '/from-someone-else/'");
 $sbxConfig(['analytics_exclude_ips' => []]);
+
+/* ---------------- outbound clicks ----------------
+   The one thing a pageview cannot show: that somebody left on purpose, and for
+   where. Same privacy shape as a hit, so the assertions are about what is NOT
+   recorded as much as what is. */
+$exits = [
+    ['https://github.com/batas2/Stemma',              'github.com', 'the repository link'],
+    ['https://github.com/batas2/Stemma?tab=rd#top',   'github.com', 'a link carrying a query and a fragment'],
+    ['mailto:kontakt@bfrackowiak.pl',                 'mailto',     'a mail link'],
+    ['https://bfrackowiak.pl/about/',                 '',           'a same-host link'],
+    ['/blog/the-bottleneck-moved/',                   '',           'a relative link'],
+    ['javascript:alert(1)',                           '',           'a javascript: href'],
+];
+foreach ($exits as [$url, $host, $what]) {
+    [$code] = $beacon($chromeUa, json_encode(['o' => 1, 'p' => '/stemma/', 'u' => $url]));
+    t_eq(204, $code, "exit beacon accepted for {$what}");
+}
+$clickCount = fn(string $sql): int => (int) $adb->query("SELECT COUNT(*) FROM clicks WHERE {$sql}")->fetchColumn();
+t_eq(3, $clickCount('1=1'), 'only the three genuinely outbound links were stored');
+t_eq(2, $clickCount("host = 'github.com'"), 'both github links counted');
+t_eq(1, $clickCount("host = 'mailto'"), 'a mail link counts as an exit, under its own host');
+// the query is dropped, so the two github links collapse onto one destination
+t_eq(1, (int) $adb->query("SELECT COUNT(DISTINCT url) FROM clicks WHERE host = 'github.com'")->fetchColumn(),
+    'query and fragment are stripped, so the same link groups as one');
+t_eq(0, $clickCount("url LIKE '%tab=rd%' OR url LIKE '%#%'"), 'no query string or fragment reaches storage');
+t_eq(0, $clickCount("url LIKE '%kontakt@%'"), 'a mailto stores no address');
+t_eq('/stemma/', (string) $adb->query("SELECT path FROM clicks LIMIT 1")->fetchColumn(),
+    'the exit is recorded against the page it was clicked from');
+t_eq(0, $clickCount('excl <> 0'), 'a reader with pageviews behind them is counted');
+
+// a click with no pageview behind it is what a script does, not a reader
+$beacon('Mozilla/5.0 (X11; Linux x86_64) NoViews/1.0',
+    json_encode(['o' => 1, 'p' => '/never-viewed/', 'u' => 'https://example.com/x']));
+t_eq(1, $clickCount("host = 'example.com' AND excl = 1"), 'an exit with no pageview behind it is marked automated');
+
+// the owner's own browsing is marked after the fact, and the clicks must follow it
+$today = gmdate('Y-m-d');
+an_mark($adb, $today, $today, ['tz' => 'Europe/Warsaw'], AN_OWNER, true);
+t_assert(an_sync_click_verdicts($adb) >= 3, 'marking the owner re-marks the clicks that came with it');
+t_eq(0, (int) an_click_summary($adb, '0000-00-00')['clicks'], 'and those exits leave the totals');
+// nothing was deleted — the whole point of a verdict rather than a DELETE
+t_eq(4, $clickCount('1=1'), 'excluded exits are kept, not dropped');
+$adb->exec("UPDATE clicks SET excl = 0 WHERE host <> 'example.com'");
+an_mark($adb, $today, $today, ['tz' => 'Europe/Warsaw'], AN_COUNTED, true);
+
+t_eq(2, (int) an_click_hosts($adb, '0000-00-00')[0]['pv'], 'github leads the destination table');
+t_contains('/stemma/', (string) an_click_links($adb, '0000-00-00')[0]['path'], 'links carry the page they left from');
 t_eq('laptop', $row['screen'], 'screen bucketed');
 t_eq('Europe/Warsaw', $row['tz'], 'timezone stored');
 t_eq('newsletter', $row['utm_source'], 'utm source stored');
@@ -703,6 +810,13 @@ t_contains('ITest Draft Post', $body, 'draft post visible in pipeline');
 t_contains('tester@example.com', $body, 'comment listed for moderation (full email for admin)');
 t_contains('Acquisition', $body, 'analytics tabs folded into the admin page');
 t_contains('Recent visits', $body, 'activity pane rendered inline');
+// exits: the inbound half has a tab, so the outbound half needs one that renders
+// with real rows in it, not just a heading
+t_contains('href="#exits"', $body, 'exits tab reachable from the dashboard nav');
+t_contains('id="exits"', $body, 'exits pane rendered inline');
+t_contains('Outbound clicks', $body, 'exits pane carries its summary card');
+t_contains('github.com', $body, 'a recorded destination shows up in the dashboard');
+t_contains('Exits per 100 views', $body, 'exit rate stated against pageviews');
 t_contains('Rebuild site', $body, 'admin actions present for the full session');
 
 // editorial scores pane (docs/SCORING-RUBRIC.md): the fixtures are unscored on
@@ -825,6 +939,81 @@ t_eq(404, $code, 'preview 404s on a well-formed slug with no source file');
 // the pipeline has to actually offer the link, which is the whole point
 [, $body] = $asAdmin('GET', "$BASE/admin.php");
 t_contains('preview.php?slug=itest-draft-post', $body, 'pipeline links the draft to its preview');
+
+/* ---------------- share links for drafts ----------------
+   A token in the URL is the whole authorisation, so every way of getting it
+   wrong has to end in the same 404 the sessionless case gives. The bot rule is
+   the one worth guarding hardest: a valid token in a crawler's hands is how an
+   unpublished essay ends up in somebody's index or chat cache. */
+$shareTok = sbx_php('require "lib/config.php"; require "lib/helpers.php"; require "lib/markdown.php";
+    require "lib/blog.php"; echo preview_share_token("itest-draft-post");');
+t_assert(strlen($shareTok) === 32, 'a share token is derived for a draft');
+$human = 'Mozilla/5.0 (X11; Linux x86_64) TestChrome/126';
+$shareGet = fn(string $qs, string $ua = 'Mozilla/5.0 (X11; Linux x86_64) TestChrome/126') =>
+    http_req('GET', "$BASE/preview.php?{$qs}", ['headers' => "User-Agent: {$ua}\r\n"]);
+
+[$code, $sBody, , $sHdrs] = $shareGet("slug=itest-draft-post&k={$shareTok}");
+t_eq(200, $code, 'a valid share link opens the draft with no session at all');
+t_contains('ITest Draft Post', $sBody, 'the shared draft renders its body');
+t_contains('unpublished draft', $sBody, 'the guest banner says what this is');
+t_not_contains('back to admin', $sBody, 'the guest banner offers no admin surface');
+t_not_contains('reach', $sBody, 'the guest banner withholds the editorial score');
+t_assert((bool) array_filter($sHdrs, fn($h) => stripos($h, 'X-Robots-Tag:') === 0 && stripos($h, 'noindex') !== false),
+    'a shared draft still sends noindex');
+t_assert((bool) array_filter($sHdrs, fn($h) => stripos($h, 'Referrer-Policy:') === 0 && stripos($h, 'no-referrer') !== false),
+    'a shared draft sends no-referrer so the token cannot leak downstream');
+
+// every wrong token is the same 404, and a right token for the wrong post too
+foreach ([
+    'no token'          => 'slug=itest-draft-post',
+    'empty token'       => 'slug=itest-draft-post&k=',
+    'wrong token'       => 'slug=itest-draft-post&k=' . str_repeat('a', 32),
+    'truncated token'   => 'slug=itest-draft-post&k=' . substr($shareTok, 0, 16),
+    'token for another' => 'slug=itest-future-post&k=' . $shareTok,
+] as $what => $qs) {
+    [$code] = $shareGet($qs);
+    t_eq(404, $code, "share link refused: {$what}");
+}
+
+// a valid token does not make a crawler welcome
+foreach (['Googlebot/2.1 (+http://www.google.com/bot.html)',
+          'Mozilla/5.0 (compatible; bingbot/2.0)',
+          'Slackbot-LinkExpanding 1.0 (+https://api.slack.com/robots)',
+          'facebookexternalhit/1.1'] as $botUa) {
+    [$code] = $shareGet("slug=itest-draft-post&k={$shareTok}", $botUa);
+    t_eq(404, $code, 'share link refuses a crawler holding a valid token: ' . strtok($botUa, '/ '));
+}
+
+// the draft stays out of everything a machine reads on its own
+$smRaw2 = (string) file_get_contents($SANDBOX . '/sitemap.xml');
+t_not_contains('itest-draft-post', $smRaw2, 'a shared draft is still absent from the sitemap');
+t_not_contains('itest-draft-post', (string) file_get_contents($SANDBOX . '/feed.xml'), 'and from the feed');
+t_assert(!is_dir($SANDBOX . '/blog/itest-draft-post'), 'and has no page on disk');
+t_contains('Disallow: /preview.php', (string) file_get_contents($SANDBOX . '/robots.txt'),
+    'robots.txt asks crawlers to stay off the preview route');
+
+// and the pipeline hands the author a link to copy
+[, $body] = $asAdmin('GET', "$BASE/admin.php");
+t_contains('copy read link', $body, 'pipeline offers a share link for a draft');
+t_contains($shareTok, $body, 'and it is the real token');
+
+/* Fail closed. An install with no secret must switch sharing off, not fall back
+   to something derivable — a default here would make every draft on every copy
+   of this site readable by anyone who knows the scheme. Checked both ways so a
+   pass cannot come from the link being broken for an unrelated reason. */
+foreach (['' => 'an empty secret', 'CHANGE-ME-openssl-rand-hex-24' => 'the shipped placeholder'] as $val => $what) {
+    $sbxConfig(['preview_secret' => $val]);
+    t_eq('', sbx_php('require "lib/config.php"; require "lib/helpers.php"; require "lib/markdown.php";
+        require "lib/blog.php"; echo preview_share_token("itest-draft-post") ?? "";'),
+        "no token is derived from {$what}");
+    [$code] = $shareGet("slug=itest-draft-post&k={$shareTok}");
+    t_eq(404, $code, "a previously valid link stops working under {$what}");
+    [, $pBody] = $asAdmin('GET', "$BASE/admin.php");
+    t_contains('set <code>preview_secret</code>', $pBody, "the pipeline says sharing is off under {$what}");
+}
+$sbxConfig(['preview_secret' => 'itest-preview-secret']);
+[$code] = $shareGet("slug=itest-draft-post&k={$shareTok}");
+t_eq(200, $code, 'and the same link works again once the secret is restored, so rotation is the revocation');
 t_contains('preview.php?slug=itest-future-post', $body, 'pipeline links the scheduled post to its preview');
 
 [$code, , $loc] = $asAdmin('GET', "$BASE/stats.php");

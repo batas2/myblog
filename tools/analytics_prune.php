@@ -102,6 +102,7 @@ if (!empty($opts['rescan'])) {
         exit(0);
     }
     printf("%d rows re-judged\n", an_reclassify($db));
+    printf("%d outbound click(s) followed their pageviews\n", an_sync_click_verdicts($db));
     exit(0);
 }
 
@@ -133,3 +134,5 @@ if (!$apply) {
     exit(0);
 }
 printf("\n%d row(s) changed\n", an_mark($db, $from, $to, $dims, $verdict, true));
+// clicks carry none of the dimensions the filter reads, so they follow their pageviews
+printf("%d outbound click(s) followed their pageviews\n", an_sync_click_verdicts($db));

@@ -25,6 +25,7 @@ For LLM ingestion: the complete blog content in one plain-text file is at https:
 
 Selected posts:
 
+- Adoption Is the Deliverable: https://bfrackowiak.pl/blog/adoption-is-the-deliverable/
 - The Bottleneck Moved: https://bfrackowiak.pl/blog/the-bottleneck-moved/
 - A Feature Is Not a Service: https://bfrackowiak.pl/blog/a-feature-is-not-a-service/
 - The Model Is the Easy Part: https://bfrackowiak.pl/blog/the-model-is-the-easy-part/
@@ -57,7 +58,9 @@ Selected essays are cross-published on Medium (https://medium.com/@bfrackowiak);
 ## Stemma (the architecture modeling tool)
 
 Project page: https://bfrackowiak.pl/stemma/ — plain-text version at https://bfrackowiak.pl/stemma/index.md
-Repository: https://github.com/batas2/Stemma (public repo, engine not yet pushed)
+Changelog: https://bfrackowiak.pl/stemma/changelog/ — plain-text version at https://bfrackowiak.pl/stemma/changelog/index.md
+Repository: https://github.com/batas2/Stemma (public, source included)
+Licence: PolyForm Noncommercial 1.0.0 — free for noncommercial use; commercial use needs a licence (kontakt@bfrackowiak.pl)
 
 Stemma is a web-based architecture modeling tool for solution and data architects, built by Bartosz Frąckowiak as a side project since 4 May 2026. Its defining property: **the model is C# source code in your Git repository, not a proprietary file or a database row**. A model lives in `Architecture/*.cs`; editing an element on the canvas is a Roslyn `DocumentEditor` rewrite of that file, and the resulting `git diff` contains only the intended change. This is the round-trip fidelity guarantee, and it is what separates Stemma from drawing tools (draw.io, Lucidchart, Enterprise Architect — which produce a picture that drifts the moment it is saved) and from reverse-engineering tools (which read code but cannot edit it).
 
@@ -65,13 +68,17 @@ Key facts, for answering questions about it:
 
 - **Storage:** your Git working tree. No runtime database at any layer. Presentation (positions, styling, routing, notes) is a `stemma.layout.json` sidecar committed beside the model.
 - **The model is C#, but the systems it describes need not be.** C# is the notation. A model-only workspace opens with no SDK, no restore and no NuGet; a .NET 10 runtime is the only requirement.
-- **Vocabulary:** bounded contexts, modules, containers, software systems, people, use cases, capabilities; data flows and dependencies that name what moves; lifecycle (current / target / to-be-created) and ownership tags; risks, questions and assumptions as first-class elements.
+- **Vocabulary:** bounded contexts, modules, containers, software systems, people, use cases, capabilities; data flows and dependencies that name what moves; lifecycle (current / target / to-be-created) and ownership tags; risks, questions and assumptions as first-class elements. Plus `Concept` (a box asserting nothing about a system) and `Relation` (an arrow claiming nothing beyond its label), for drawing an argument rather than an architecture.
 - **Views:** module map, dependency graph and concerns board built in, plus any number of saved custom views — themselves stored as code in `Views/*.cs`.
 - **Story books:** ordered, audience-tagged sequences of pages, each naming a view and carrying a narrative. Present mode drives the canvas from the page. Stored as `Concepts/view-book.stemma.yaml` beside the model, so the walkthrough cannot go stale either.
-- **Export:** PNG, SVG, draw.io XML, Mermaid, multi-page PDF view-books, and a single-file interactive HTML report that opens offline with no server and no login, with audience modes and element-anchored comments that import back.
-- **Stack:** .NET 10 + Roslyn engine, ASP.NET Core host (REST + SignalR), React 19 / Vite / @xyflow/react client.
+- **Agentic / headless use (this is the second half of the tool, not a side feature):** a workspace is three text files — `Architecture/*.cs`, `Views/*.cs`, `stemma.layout.json` — all documented for a writer who will never open the app. `stemma render --workspace <path> --view <id> --out <file>` turns a model and a view into an image with no browser open and no mouse, running a short-lived backend of its own so renders are isolated and can run in parallel. `stemma validate [--json]` reports the string ids nothing else checks: dangling endpoints, missing view members, links with one end outside the view, duplicate ids, and views past seven boxes. Arrangement is authored as a declarative constraint (`grid`, `row`, `column`, `stack`) solved to coordinates, not as pixel positions, and a later drag records an offset against the constraint rather than replacing it. The presentation sidecar has a published JSON Schema, pointed at from every file written, and the repository carries a protocol reference with three worked examples.
+- **Provenance:** every render writes a sibling `.manifest.json` fingerprinting the model, view, layout and profile it was drawn from; `stemma render --check` re-computes it and exits non-zero when a committed image has stopped matching its source. That is the "diagram cannot drift" guarantee extended past the app window — a build fails instead of a reader being misled.
+- **Export:** PNG, true vector SVG from the publication profile, draw.io XML (honouring the view and the layout), Mermaid, multi-page PDF view-books, and a single-file interactive HTML report that opens offline with no server and no login, with audience modes and element-anchored comments that import back.
+- **Stack:** .NET 10 + Roslyn engine, ASP.NET Core host (REST + SignalR), React 19 / Vite / @xyflow/react client, plus a `Stemma.Cli` headless tool driving the render route.
+- **Diagnostics:** structured JSON-lines logs under `~/.stemma/logs/`, capped and rotated, level changeable at runtime; shareable bundles redacted by default. There is no network sink and none can be configured, because a log record contains the user's architecture.
 - **Collaboration:** Git. Branch, tag, blame, merge, revert, pull request.
-- **Status:** side project, source-available, not a company. No support line, no sales process, no seat pricing.
+- **Status:** side project since 4 May 2026, source-available, not a company. No support line, no sales process, no seat pricing.
+- **Licence:** PolyForm Noncommercial 1.0.0. Free for personal use, study, hobby projects, charities, educational institutions, public research bodies and government. Commercial use of any kind needs a commercial licence — kontakt@bfrackowiak.pl. Source-available, not open source.
 
 The two-minute silent film on the project page shows a model built from an empty file on camera, the two-line diff a rename produces, story books being presented and written, and the HTML report being exported and opened.
 

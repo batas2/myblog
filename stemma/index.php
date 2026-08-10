@@ -43,6 +43,12 @@ $faq = [
         'A normal Git diff. Renaming one element on the canvas rewrites the declaration and every reference Roslyn can see, and touches nothing else: no reordering, no reformatting, no lost comment. Reviewers read it as the change it was.',
     'How do stakeholders see the model without installing anything?' =>
         'Two ways. A story book is an ordered, audience-tagged sequence of pages that drives the canvas as you present, stored beside the model so it cannot go stale either. Or export a single self-contained HTML report — one file, opens offline with no server, no login and no seat, with audience modes and element-anchored comments that import back.',
+    'Can an agent use this without opening the canvas?' =>
+        'That is the whole second half of the tool. A workspace is three text files — Architecture/*.cs, Views/*.cs and stemma.layout.json — and all three are documented for a writer who will never see the app. An agent authors them, runs stemma validate to catch the string ids nothing else checks, and runs stemma render to produce the image with no browser open and no mouse. Arrangement is expressed as a constraint (grid, row, column, stack) rather than as coordinates, because a model is good at intent and bad at pixels.',
+    'What stops a published diagram from going stale?' =>
+        'Every render writes a sibling manifest fingerprinting the model, the view, the layout and the profile it was drawn from. stemma render --check re-computes that fingerprint and exits non-zero when the committed image has stopped matching its source, so a build fails instead of a reader being misled. It is the same drift guarantee as the diff, extended past the app window.',
+    'What licence is it under?' =>
+        'PolyForm Noncommercial 1.0.0. Free for any noncommercial purpose — personal use, study, hobby projects, and use by charities, educational institutions, public research bodies and government. Commercial use of any kind needs a commercial licence: kontakt@bfrackowiak.pl. It is source-available, not open source, and the distinction is deliberate.',
 ];
 
 $extra  = ld_script([
@@ -53,13 +59,16 @@ $extra  = ld_script([
             '@id' => $url . '#page',
             'url' => $url,
             'name' => 'Stemma — the architecture model that is your source code',
-            'description' => 'How Stemma works: the C# model, the diff a rename produces, the views, the story books, and the single-file HTML report.',
+            'description' => 'How Stemma works: the C# model, the diff a rename produces, the headless pipeline an agent drives, the views, the story books, and the single-file HTML report.',
             'inLanguage' => 'en',
             'isPartOf' => ['@id' => cfg('site_url') . '/#website'],
             'about' => ['@id' => $url . '#app'],
             'primaryImageOfPage' => ['@type' => 'ImageObject', 'url' => $shot],
+            // the changelog counts: a release is the most common reason anything on this
+            // page stopped being current, and it lives in its own file
             'dateModified' => date('Y-m-d', (int) max(
                 filemtime(__FILE__),
+                filemtime(__DIR__ . '/changelog/index.php') ?: 0,
                 filemtime(dirname(__DIR__) . '/assets/video/stemma-film-dark.mp4') ?: 0,
             )),
         ],
@@ -74,11 +83,13 @@ $extra  = ld_script([
             'operatingSystem' => 'Linux, macOS, Windows',
             'softwareRequirements' => '.NET 10 runtime',
             'author' => ['@id' => cfg('site_url') . '/#person'],
-            'description' => 'An architecture modelling tool for solution architects in which the C# source on disk is the model database. Canvas edits become Roslyn rewrites of real .cs files, so the diagram cannot drift from the code.',
+            'description' => 'An architecture modelling tool for solution architects in which the C# source on disk is the model database. Canvas edits become Roslyn rewrites of real .cs files, so the diagram cannot drift from the code — and the same model can be authored as text by an agent and rendered headlessly with one command.',
             'codeRepository' => $repo,
             'softwareHelp' => $repo,
             'screenshot' => $shot,
             'video' => ['@id' => $url . '#film'],
+            'license' => 'https://polyformproject.org/licenses/noncommercial/1.0.0/',
+            'releaseNotes' => $url . 'changelog/',
             // Drawn from the specifications the page states below — claims, not marketing.
             'featureList' => [
                 'Model stored as C# in Architecture/*.cs inside your Git repository',
@@ -86,9 +97,16 @@ $extra  = ld_script([
                 'Canvas modelling of bounded contexts, modules, containers, systems, people, capabilities and use cases',
                 'Data flows and dependencies that carry what moves, not only that something moves',
                 'Lifecycle and ownership tags, plus risks, questions and assumptions as first-class elements',
+                'Concept elements and Relation links for boxes and arrows that assert nothing about a system',
                 'Module map, dependency graph and concerns board, plus saved custom views stored as code',
                 'Narrated, audience-tagged story books that drive the canvas in present mode',
-                'Export to PNG, SVG, draw.io, Mermaid, PDF view-books and a single-file interactive HTML report',
+                'Headless CLI: stemma render turns a model and a view into an image with no browser and no mouse',
+                'stemma validate reports the dangling ids, empty views and half-drawn links the compiler cannot see',
+                'Layout expressed as a declarative constraint — grid, row, column, stack — solved to coordinates',
+                'A render manifest and stemma render --check, so a build fails when a published image stops matching its model',
+                'A published JSON Schema for the presentation sidecar, and a protocol reference for authoring a workspace as text',
+                'Export to PNG, true vector SVG, draw.io, Mermaid, PDF view-books and a single-file interactive HTML report',
+                'Local-only diagnostics: structured logs with no network sink, and redacted shareable bundles',
                 'No runtime database — Git is the store and the collaboration model',
             ],
         ],
@@ -253,7 +271,10 @@ $extra .= <<<'CSS'
 
 /* ---- the fact strip under the hero --------------------------------------- */
 .st-strip { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
-.st-strip dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+/* 165px, not 190: five facts have to sit on one row down to the 940px breakpoint
+   where the borders flip from left to top, or the fifth wraps and wears a left
+   border in the middle of nowhere. */
+.st-strip dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); }
 .st-strip dl > div { padding: 1.6rem 1.6rem 1.6rem 1.8rem; border-left: 1px solid var(--line); }
 .st-strip dl > div:first-child { padding-left: 0; border-left: 0; }
 .st-strip dt { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.45rem; }
@@ -301,6 +322,38 @@ $extra .= <<<'CSS'
 .st-reads { list-style: none; max-width: 60rem; margin: 1.6rem auto 0; display: grid; gap: 0.9rem; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
 .st-reads li { border-top: 2px solid var(--accent); padding-top: 0.7rem; font-size: 0.9rem; color: var(--muted); line-height: 1.6; }
 .st-reads b { display: block; color: var(--ink); font-weight: 600; font-size: 0.86rem; margin-bottom: 0.2rem; }
+
+/* ---- a listing that spans more than one file -----------------------------
+   The agent's workspace is three files and the point is that it is three
+   files, so they are shown in one panel with the boundaries drawn rather than
+   in three panels the reader has to assemble. */
+.st-file {
+  color: var(--faint); border-top: 1px solid var(--line); margin-top: 0.55rem;
+  padding-top: 0.55rem !important;
+}
+.st-code .l.st-file:first-child { border-top: 0; margin-top: 0; padding-top: 0 !important; }
+
+/* ---- terminal ------------------------------------------------------------
+   A transcript, not a screenshot: it is text, so it is selectable, searchable
+   and legible in both themes without a second asset. */
+.st-term { max-width: 62rem; margin: 3rem auto 0; }
+.st-term pre { font-size: 0.76rem; line-height: 1.8; }
+.st-term .l-p { color: var(--accent); }
+.st-term .l-c { color: var(--ink); }
+.st-term .l-o { color: var(--muted); }
+.st-term .l-w { color: var(--st-new); }
+.st-term .l-e { color: #d1435b; }
+.st-term .l-gap { height: 0.85rem; }
+.st-term .l-ok { color: var(--st-ok); }
+
+/* ---- what shipped: the last few releases, in front of the roadmap -------- */
+.st-ship { max-width: 50rem; margin: 3rem auto 0; }
+.st-ship li { display: grid; grid-template-columns: 8.5rem minmax(0, 1fr); gap: 1.8rem; padding: 1.4rem 0; border-bottom: 1px solid var(--line); }
+.st-ship li:last-child { border-bottom: 0; }
+.st-ship time { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.72rem; letter-spacing: 0.04em; color: var(--muted); padding-top: 0.28em; }
+.st-ship b { display: block; color: var(--ink); font-weight: 650; font-size: 1.02rem; letter-spacing: -0.015em; margin-bottom: 0.3rem; }
+.st-ship span { font-size: 0.92rem; color: var(--muted); line-height: 1.65; }
+.st-more { display: block; max-width: 50rem; margin: 2rem auto 0; text-align: center; }
 
 /* ---- reference tables ---------------------------------------------------- */
 /* min() so the track can still shrink below its ideal width on a phone, rather
@@ -439,7 +492,10 @@ $extra .= <<<'CSS'
   .st-hero-shot { margin-top: 2.2rem; }
   .st-layer { grid-template-columns: 1fr; gap: 0.3rem; }
   .st-specs > div { grid-template-columns: 1fr; gap: 0.35rem; }
+  .st-ship li { grid-template-columns: 1fr; gap: 0.4rem; }
+  .st-ship time { padding-top: 0; }
   .st-code pre { font-size: 0.66rem; }
+  .st-term pre { font-size: 0.6rem; }
   .st-plate img, .st-hero-shot img { border-radius: 10px; }
 }
 </style>
@@ -469,11 +525,13 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
       <li><a href="#source">The source</a></li>
       <li><a href="#edit">The edit</a></li>
       <li><a href="#vocabulary">The vocabulary</a></li>
+      <li><a href="#agents">The agent's half</a></li>
       <li><a href="#views">The views</a></li>
       <li><a href="#books">Story books</a></li>
       <li><a href="#shape">The shape of it</a></li>
       <li><a href="#compare">How it differs</a></li>
       <li><a href="#specs">Specifications</a></li>
+      <li><a href="#changelog">What shipped</a></li>
       <li><a href="#roadmap">Roadmap</a></li>
       <li><a href="#questions">Questions</a></li>
       <li><a href="#repository">The repository</a></li>
@@ -487,12 +545,13 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
       <h1 class="st-h1">The diagram <em>is</em> the code.</h1>
       <p class="st-sub">
         An architecture model for solution architects that lives in your repository as C# source:
-        edit the canvas, and Roslyn rewrites the file. Then walk stakeholders through it in a narrated
-        book that travels with the model and cannot go stale either.
+        edit the canvas, and Roslyn rewrites the file. Or skip the canvas entirely — the same model is
+        three text files an agent can write, and one command renders the picture with no browser open
+        and no mouse.
       </p>
       <p class="st-cta">
         <a class="btn btn-primary" href="#repository">Where to find it <?= arrow_icon() ?></a>
-        <a class="btn btn-ghost" href="#specs">Technical specifications</a>
+        <a class="btn btn-ghost" href="#agents">The agent's half</a>
       </p>
     </div>
     <!-- The screenshot is the poster. On a phone that is all it ever is: the video
@@ -524,6 +583,7 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
         <div><dt>Storage</dt><dd>Your Git working tree<span>No runtime database, at any layer</span></dd></div>
         <div><dt>Engine</dt><dd>Roslyn <span class="st-mono">DocumentEditor</span><span>Targeted rewrites, never string rebuilds</span></dd></div>
         <div><dt>Guarantee</dt><dd>Round-trip fidelity<span>A UI edit diffs as only that edit</span></dd></div>
+        <div><dt>Headless</dt><dd><span class="st-mono">stemma render</span><span>Model in, image out. No browser, no mouse</span></dd></div>
         <div><dt>Narrative</dt><dd>Story books<span>The walkthrough that lands it, kept with the model</span></dd></div>
       </dl>
     </div>
@@ -674,6 +734,7 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
               <tr><th>Risk</th><td>A design risk, anchored to what it concerns</td></tr>
               <tr><th>Question</th><td>An open design question, anchored the same way</td></tr>
               <tr><th>Assumption</th><td>A standing assumption everything downstream rests on</td></tr>
+              <tr><th>Concept</th><td>A named box that asserts <em>nothing</em> about a system — for drawing an argument rather than an architecture</td></tr>
             </tbody>
           </table>
         </div>
@@ -685,6 +746,7 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
             <tbody>
               <tr><th>DataFlow</th><td>From, to, a payload name shown as the edge label, and a direction</td></tr>
               <tr><th>Dependency</th><td>From, to, and a kind — uses, calls, reads, publishes, consumes</td></tr>
+              <tr><th>Relation</th><td>From, to, and a free label — an arrow that claims nothing beyond what it says</td></tr>
               <tr><th>Lifecycle</th><td>Status (current, target, to-adapt, to-be-created, deprecated, or your own word), phase, valid-from, valid-until</td></tr>
               <tr><th>Ownership</th><td>Squad, domain, and RAPID role lists — recommend, agree, perform, input, decide</td></tr>
               <tr><th>Tag.For</th><td>Attaches a lifecycle and/or an ownership to any element <em>or any link</em></td></tr>
@@ -696,8 +758,115 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
     </div>
   </section>
 
+  <!-- ==================== THE AGENT'S HALF ====================
+       The second authoring surface. Everything above this point needs a mouse;
+       this chapter is the claim that none of it has to. The listing and the
+       transcript are both real — the workspace draws a diagram that already
+       exists on this site, which is why it was chosen. -->
+  <section class="st-sec st-stage" id="agents">
+    <div class="wrap">
+      <div class="st-open reveal">
+        <?= eyebrow('The agent&rsquo;s half') ?>
+        <h2 class="st-h2">Nobody has to open it.</h2>
+        <p class="st-sub">
+          Everything above happens with a mouse in it. But a workspace is three text files in a
+          vocabulary that is written down — so the canvas is <strong>an</strong> authoring surface, not
+          the only one. An agent with a shell writes the model; one command turns it into a picture.
+        </p>
+      </div>
+
+      <div class="st-source">
+        <div class="st-pin">
+          <div class="st-code st-lit">
+            <div class="st-code-bar"><b>One workspace, three files</b><span class="st-r">abbreviated</span></div>
+<pre><code><span class="l on st-file" data-g="model"><span class="c">// Architecture/Architecture.cs</span></span><span class="l on" data-g="model">var humanDiff = <span class="k">new </span>Concept(<span class="s">"con_human_diff"</span>, <span class="s">"a colleague's diff"</span>);</span><span class="l on" data-g="model">var ask       = <span class="k">new </span>Concept(<span class="s">"con_ask"</span>, <span class="s">"ask them why"</span>);</span><span class="l on" data-g="model">var answered  = <span class="k">new </span>Concept(<span class="s">"con_answered"</span>, <span class="s">"answered in a sentence"</span>);</span><span class="l on" data-g="model">var agentDiff = <span class="k">new </span>Concept(<span class="s">"con_agent_diff"</span>, <span class="s">"an agent's diff"</span>);</span><span class="l on" data-g="model">var nobody    = <span class="k">new </span>Concept(<span class="s">"con_nobody"</span>, <span class="s">"nobody to ask"</span>);</span><span class="l on" data-g="model">var artifacts = <span class="k">new </span>Concept(<span class="s">"con_artifacts"</span>,</span><span class="l on" data-g="model">      <span class="s">"tests, contracts, decision records"</span>);</span><span class="l st-file" data-g="view"><span class="c">// Views/WhoDoYouAsk.cs</span></span><span class="l" data-g="view"><span class="k">public static </span>View Define() =&gt; <span class="k">new</span>(</span><span class="l" data-g="view">    Id: <span class="s">"view_ask"</span>, Name: <span class="s">"Who do you ask"</span>, BaseView: <span class="s">"all"</span>,</span><span class="l" data-g="view">    ElementIds: <span class="k">new</span>[] { <span class="s">"con_human_diff"</span>, <span class="s">"con_ask"</span>, <span class="s">"con_answered"</span>,</span><span class="l" data-g="view">                        <span class="s">"con_agent_diff"</span>, <span class="s">"con_nobody"</span>,</span><span class="l" data-g="view">                        <span class="s">"con_artifacts"</span> });</span><span class="l st-file" data-g="layout"><span class="c">// stemma.layout.json</span></span><span class="l" data-g="layout"><span class="s">"custom:view_ask"</span>: {</span><span class="l" data-g="layout">  <span class="s">"layout"</span>: {</span><span class="l" data-g="layout">    <span class="s">"kind"</span>: <span class="k">"grid"</span>,</span><span class="l" data-g="layout">    <span class="s">"columns"</span>: [[<span class="s">"con_human_diff"</span>, <span class="s">"con_agent_diff"</span>],</span><span class="l" data-g="layout">                [<span class="s">"con_ask"</span>,        <span class="s">"con_nobody"</span>],</span><span class="l" data-g="layout">                [<span class="s">"con_answered"</span>,   <span class="s">"con_artifacts"</span>]],</span><span class="l" data-g="layout">    <span class="s">"gap"</span>: [60, 40], <span class="s">"align"</span>: <span class="k">"center"</span></span><span class="l" data-g="layout">  },</span><span class="l" data-g="ink">  <span class="s">"shapes"</span>: [</span><span class="l" data-g="ink">    { <span class="s">"id"</span>: <span class="s">"sh_human"</span>, <span class="s">"kind"</span>: <span class="k">"label"</span>, <span class="s">"x"</span>: -140, <span class="s">"y"</span>: 10,</span><span class="l" data-g="ink">      <span class="s">"text"</span>: <span class="k">"human"</span>, <span class="s">"color"</span>: <span class="k">"#767884"</span> }</span><span class="l" data-g="ink">  ]</span><span class="l" data-g="ink">}</span></code></pre>
+          </div>
+        </div>
+
+        <div class="st-notes">
+          <div class="st-note" data-g="model">
+            <span class="st-tick">The model</span>
+            <h3>A box that asserts nothing.</h3>
+            <p>Every other element kind is a claim — <em>this is a bounded context</em>, <em>this is
+              deployable</em>. An argument's boxes claim nothing, and forcing one into a
+              <span class="st-mono">Module</span> writes a falsehood into a file other people will copy
+              from. <span class="st-mono">Concept</span> and <span class="st-mono">Relation</span> are
+              the way out: a named box and a labelled arrow that mean only what they say.</p>
+          </div>
+          <div class="st-note" data-g="view">
+            <span class="st-tick">The view</span>
+            <h3>The view is the question.</h3>
+            <p>A view names the subset this particular picture is about. A link is drawn only when
+              <em>both</em> of its endpoints are in it — the single most common reason a diagram comes
+              out looking right and missing an arrow. So the validator reports that case by name,
+              rather than leaving it to be noticed.</p>
+          </div>
+          <div class="st-note" data-g="layout">
+            <span class="st-tick">The layout</span>
+            <h3>Say what the arrangement is, not where things are.</h3>
+            <p>A language model is good at intent and poor at pixels, so it states the intent — three
+              columns, sixty apart, centred — and Stemma solves it to coordinates. Nudging one box by
+              hand records an offset <em>against</em> the constraint instead of replacing it, so the
+              arrangement survives being corrected and the nudge travels with its slot when the grid
+              re-solves. <span class="st-mono">row</span>, <span class="st-mono">column</span> and
+              <span class="st-mono">stack</span> work the same way.</p>
+          </div>
+          <div class="st-note" data-g="ink">
+            <span class="st-tick">Annotation</span>
+            <h3>Ink is not architecture.</h3>
+            <p>Swimlane labels, brackets, callouts — anything carrying no architectural meaning — are
+              free-form shapes in the sidecar, never elements. Worth stating plainly, because it is the
+              rule an agent breaks first: if you want to add an element so that a picture looks better,
+              what you want is a shape.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="st-term st-code reveal">
+        <div class="st-code-bar"><b>a shell, no browser open</b><span>check it, draw it, then catch it going stale</span><span class="st-r">wrapped to fit</span></div>
+<pre><code><span class="l"><span class="l-p">$ </span><span class="l-c">stemma validate --workspace .</span></span>
+<span class="l l-o">  info    model/is-a-figure            6 of 6 elements are Concepts — this is</span>
+<span class="l l-o">                                       a figure rather than an architecture,</span>
+<span class="l l-o">                                       which is a fine thing to be</span>
+<span class="l l-ok">stemma validate: 0 error(s), 0 warning(s)</span>
+<span class="l l-gap"> </span>
+<span class="l"><span class="l-p">$ </span><span class="l-c">stemma render --workspace . --view view_ask \</span></span>
+<span class="l l-c">      --out assets/img/posts/the-bottleneck-moved/who-do-you-ask.png</span>
+<span class="l l-o">  who-do-you-ask.png  1180x512  6 nodes</span>
+<span class="l l-ok">stemma render: wrote 1 file</span>
+<span class="l l-gap"> </span>
+<span class="l l-o">  # a fortnight later, after the model moved and the image did not</span>
+<span class="l l-gap"> </span>
+<span class="l"><span class="l-p">$ </span><span class="l-c">stemma render --check --workspace . --view view_ask \</span></span>
+<span class="l l-c">      --out assets/img/posts/the-bottleneck-moved/who-do-you-ask.png</span>
+<span class="l l-e">stemma render --check: who-do-you-ask.png is out of date</span>
+<span class="l l-e">  elements 6 -&gt; 7, links 5 -&gt; 6, view members 6 -&gt; 7</span>
+<span class="l l-w">  # non-zero, so the build stops rather than shipping a stale picture</span>
+</code></pre>
+      </div>
+
+      <ul class="st-reads reveal">
+        <li><b>Deterministic</b>Same input, same picture. Each render starts a short-lived backend of its own, so two can run at once and neither disturbs a workspace you have open.</li>
+        <li><b>Checkable</b>Every render writes a manifest fingerprinting the model, the view, the layout and the profile it came from. <span class="st-mono">--check</span> re-computes it and fails the build when a committed image has stopped matching its source.</li>
+        <li><b>Written down</b>The sidecar has a published JSON Schema and every file written points at it. The protocol reference explains the whole chain to somebody who will never open the app, with three worked examples that were built and rendered exactly as printed.</li>
+      </ul>
+
+      <p class="st-kick reveal" style="margin-top:2.4rem">
+        The workspace above draws a diagram that already exists on this site — the one in
+        <a href="/blog/the-bottleneck-moved/">The Bottleneck Moved</a>, originally made in draw.io.
+        Reproducing it from a model, with one command and no mouse, transparent and identical across two
+        machines, was the acceptance test for this whole pipeline. Its origin is less flattering: a later
+        essay's diagrams <em>were</em> drawn from a Stemma model, by a 190-line Playwright script that
+        started the app, opened a real browser and dragged every node into position with synthetic mouse
+        gestures — three passes, re-reading an anchor node before each one, because dragging was the only
+        thing that stuck. It worked, and it was a bug report against the product.
+        <strong><span class="st-mono">stemma render</span> is what deleted it.</strong>
+      </p>
+    </div>
+  </section>
+
   <!-- ==================== VIEWS ==================== -->
-  <section class="st-sec st-stage" id="views">
+  <section class="st-sec" id="views">
     <div class="wrap">
       <div class="st-open reveal">
         <?= eyebrow('The views') ?>
@@ -933,21 +1102,78 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
         <div><dt>Runtime database</dt><dd>None. The model lives in memory while a workspace is open; permanent storage is the files.</dd></div>
         <div><dt>Operations</dt><dd>Add, rename and remove elements; re-parent; set attributes; add and remove links; set link attributes; set lifecycle; set ownership; restore — each with its own round-trip fixtures.</dd></div>
         <div><dt>Views</dt><dd>Module map, dependency graph and concerns board built in; any number of saved custom views, each stored as code.</dd></div>
-        <div><dt>Layout</dt><dd>Architectural (by type), hierarchical, force-directed and manual — tunable per view, remembered per view. A manual move flips that view to custom.</dd></div>
+        <div><dt>Layout</dt><dd>Architectural (by type), hierarchical, force-directed and manual — tunable per view, remembered per view. A manual move flips that view to custom. Or a declarative constraint — <code>grid</code>, <code>row</code>, <code>column</code>, <code>stack</code> — solved to coordinates and kept live, with a later drag recorded as an offset against it.</dd></div>
         <div><dt>Canvas</dt><dd>Pan, zoom (0.05×–2.5×), minimap, snap to 20px grid, multi-select, align and distribute, undo and redo, six connection dots per node, draw.io-style edge docking, four routing modes, both-end markers.</dd></div>
-        <div><dt>Export</dt><dd>PNG · SVG · draw.io · Mermaid · multi-page PDF view-books · a single-file interactive HTML report that opens offline with no network requests.</dd></div>
+        <div><dt>Headless</dt><dd><code>stemma render</code> — a workspace and a view become an image with no browser open and no mouse; profile, palette, theme, format, scale, padding and transparency as flags; a short-lived backend per render, so renders are isolated and can run in parallel. <code>stemma validate</code> — dangling endpoints, missing view members, half-drawn links, duplicate ids, busy views, with <code>--json</code> for a caller acting on the answer.</dd></div>
+        <div><dt>Provenance</dt><dd>Every render writes a sibling <code>.manifest.json</code> fingerprinting the model, the view, the layout and the profile. <code>stemma render --check</code> re-computes it and exits non-zero when a committed image no longer matches its source.</dd></div>
+        <div><dt>Authoring as text</dt><dd>A published JSON Schema for <code>stemma.layout.json</code>, pointed at from every file written, plus a protocol reference covering the whole chain — vocabulary, view, sidecar, render command — with three worked examples. <em>Written for somebody who will never open the app.</em></dd></div>
+        <div><dt>Export</dt><dd>PNG · true vector SVG from the publication profile · draw.io (honouring the view and the layout) · Mermaid · multi-page PDF view-books · a single-file interactive HTML report that opens offline with no network requests.</dd></div>
         <div><dt>Report</dt><dd>Audience modes (builder, stakeholder, reviewer), per-view layer toggles, element search, and element-anchored comments that export as a pack and import back into the workspace.</dd></div>
         <div><dt>Story books</dt><dd>Ordered, audience-tagged sequences of pages; each page references a view and carries a title and a narrative. Present mode drives the canvas from the page, with prev/next, drag-to-reorder, in-place narrative editing and multi-page PDF export. Stored as <code>Concepts/view-book.stemma.yaml</code> beside the model.</dd></div>
-        <div><dt>Validation</dt><dd>Dangling references and architecture-rule violations surfaced inline on the canvas and in the status bar.</dd></div>
+        <div><dt>Validation</dt><dd>Dangling references and architecture-rule violations surfaced inline on the canvas and in the status bar, and reported on the command line by <code>stemma validate</code>.</dd></div>
+        <div><dt>Diagnostics</dt><dd>A leveled, structured record of what the engine did — JSON lines under <code>~/.stemma/logs/</code>, capped at 20 MB and 14 days without being asked, level changeable while running. Shareable bundles are redacted by default. <em>There is no network sink and none can be configured: a log record contains your architecture.</em></dd></div>
         <div><dt>Collaboration</dt><dd>Git. Branch, tag, blame, merge, revert, pull request. Live sync over SignalR for clients open on the same workspace; external file edits reconcile without clobbering in-flight work.</dd></div>
         <div><dt>Fidelity</dt><dd>Every operation carries minimal, realistic and pathological round-trip fixtures. A failing fixture blocks the change, not the other way round.</dd></div>
-        <div><dt>Licence</dt><dd>Source-available. The exact terms are still an open decision and will be settled in writing before the code lands, not after.</dd></div>
+        <div><dt>Samples</dt><dd><code>samples/AuroraRail</code> — a fictional rail-ticketing platform: 66 elements, four saved views, three narrative books, exercising every part of the DSL. <code>samples/StemmaArchitecture</code> — Stemma modelling itself.</dd></div>
+        <div><dt>Licence</dt><dd>PolyForm Noncommercial 1.0.0 — source-available, <em>not</em> open source. Free for any noncommercial purpose: personal use, study, hobby projects, and use by charities, educational institutions, public research bodies and government. Commercial use of any kind needs a commercial licence.</dd></div>
       </dl>
     </div>
   </section>
 
+  <!-- ==================== WHAT SHIPPED ====================
+       The three most recent releases only. The whole record lives at
+       /stemma/changelog/, which is the page that grows; this one stays the
+       length it is. -->
+  <section class="st-sec" id="changelog">
+    <div class="wrap">
+      <div class="st-open reveal">
+        <?= eyebrow('What shipped') ?>
+        <h2 class="st-h2">It is still being built.</h2>
+        <p class="st-sub">
+          The three most recent releases. A project page can claim anything about a side project;
+          dated releases are the only version of that claim you can check.
+        </p>
+      </div>
+
+      <ul class="st-ship reveal">
+        <li>
+          <time datetime="2026-08-08">8 Aug 2026</time>
+          <div>
+            <b>The headless half</b>
+            <span><span class="st-mono">stemma render</span> and <span class="st-mono">stemma validate</span>,
+              a publication profile, layout as a declarative constraint, a render manifest with
+              <span class="st-mono">--check</span>, true vector SVG, the
+              <span class="st-mono">Concept</span> and <span class="st-mono">Relation</span> kinds, a
+              published sidecar schema and the protocol reference — plus local-only diagnostics.</span>
+          </div>
+        </li>
+        <li>
+          <time datetime="2026-08-03">3 Aug 2026</time>
+          <div>
+            <b>In the open</b>
+            <span>The repository, PolyForm Noncommercial 1.0.0, and two workspaces worth reading first:
+              Aurora Rail, and Stemma's own architecture modelled in Stemma.</span>
+          </div>
+        </li>
+        <li>
+          <time datetime="2026-08-01">1 Aug 2026</time>
+          <div>
+            <b>Stemma, and a workspace with no solution in it</b>
+            <span>The rename from Verso, and model-only workspaces: a folder holding
+              <span class="st-mono">Architecture/</span> and nothing else opens with no MSBuild, no SDK,
+              no restore and no NuGet.</span>
+          </div>
+        </li>
+      </ul>
+
+      <p class="st-more reveal">
+        <a class="btn btn-ghost" href="/stemma/changelog/">The whole changelog, back to 4 May <?= arrow_icon() ?></a>
+      </p>
+    </div>
+  </section>
+
   <!-- ==================== ROADMAP ==================== -->
-  <section class="st-sec" id="roadmap">
+  <section class="st-sec st-stage" id="roadmap">
     <div class="wrap">
       <div class="st-open reveal">
         <?= eyebrow('Roadmap') ?>
@@ -964,12 +1190,14 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
           <h3>Now <span class="st-chip st-c-ok">current</span></h3>
           <ul style="color:var(--body)">
             <li><b>The Roslyn engine</b> and the fidelity suite that gates it</li>
-            <li><b>The canonical model</b> — elements, links, lifecycle, ownership, views as code</li>
+            <li><b>The canonical model</b> — elements, links, lifecycle, ownership, views as code, and the kinds that assert nothing</li>
             <li><b>The canvas</b> — module map, dependency graph, saved views, layout, styling, shapes, notes</li>
-            <li><b>The committed sidecar</b> that keeps presentation out of the model</li>
+            <li><b>The committed sidecar</b>, with a published schema and a protocol reference for writing it by hand</li>
+            <li><b>The headless CLI</b> — render and validate, the publication profile, layout as a constraint, the render manifest</li>
             <li><b>Story books</b> — narrated, audience-tagged page sequences, with present mode and PDF export</li>
             <li><b>The single-file HTML report</b>, with audience modes and a comment loop</li>
             <li><b>Model-only workspaces</b> and the from-scratch onboarding path</li>
+            <li><b>Local-only diagnostics</b> — structured logs, redacted bundles, no network sink</li>
           </ul>
         </section>
         <section style="color:var(--st-tgt)">
@@ -978,6 +1206,9 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
             <li><b>Fidelity fixtures across the whole operation catalogue</b> — every operation, no exception</li>
             <li><b>A desktop window</b>, so it stops reading as a dev server</li>
             <li><b>One-command install</b> as a global tool</li>
+            <li><b>A workspace brief</b> — a <span class="st-mono">STEMMA.md</span> dropped into every new workspace, so the agent that opens it needs no other document</li>
+            <li><b>An embedded font in the vector export</b>, so an SVG cannot re-wrap on a machine that lacks the one it was drawn in</li>
+            <li><b>Auto-layout from the command line</b> — the four algorithms are pure functions already, and reachable only from the canvas</li>
             <li><b>Clearer view management</b> — faster switching, better handling</li>
             <li><b>An accessibility pass</b> — keyboard, focus, contrast, reduced motion</li>
             <li><b>A curated sample gallery</b> as living documentation</li>
@@ -999,7 +1230,7 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
   </section>
 
   <!-- ==================== QUESTIONS ====================
-       The same six answers are emitted as FAQPage in the head. If you edit one,
+       The same answers are emitted as FAQPage in the head. If you edit one,
        edit the other — they are the same $faq array, so there is only one. -->
   <section class="st-sec" id="questions">
     <div class="wrap">
@@ -1007,7 +1238,7 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
         <?= eyebrow('Questions') ?>
         <h2 class="st-h2">What people ask first.</h2>
         <p class="st-sub">
-          Six objections, answered where you can find them rather than three emails in.
+          Nine objections, answered where you can find them rather than three emails in.
         </p>
       </div>
 
@@ -1040,9 +1271,18 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
       <div class="st-repo reveal">
         <a class="st-repo-url" href="<?= e($repo) ?>" rel="noopener"><?= $ghIcon ?>github.com/batas2/Stemma</a>
         <p>
-          The repository is open. The engine lands in it once the operation catalogue is fully covered by
-          fidelity fixtures — the guarantee has to hold everywhere before it is offered to anyone, and
-          that is the one thing worth waiting for. Watch it there to know when.
+          The source is there, engine included, with the fidelity suite that gates it. It needs the
+          .NET&nbsp;10 SDK and Node&nbsp;24 — no database, no container, nothing to procure —
+          and <span class="st-mono">./run.sh --dev --workspace samples/AuroraRail</span> opens the
+          reference model. What is still in flight is stated on the
+          <a href="#roadmap">roadmap</a> and what has already landed is dated in the
+          <a href="/stemma/changelog/">changelog</a>, so you can judge the pace yourself.
+        </p>
+        <p>
+          <strong>PolyForm Noncommercial 1.0.0.</strong> Free for personal use, study, hobby projects,
+          and for charities, educational institutions, public research bodies and government. Source-available,
+          not open source: commercial use of any kind needs a commercial licence, which is
+          <a href="/about/#contact">a short email</a> rather than a procurement process.
         </p>
         <p>
           If you want to argue with any of the above — which is more useful to me than agreement —
@@ -1051,8 +1291,10 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
         </p>
         <p class="st-plain">
           Reading this with a machine? The whole page is also
-          <a href="/stemma/index.md">plain markdown</a>, and the site's context file is
-          <a href="/llms.txt">llms.txt</a>.
+          <a href="/stemma/index.md">plain markdown</a>, the changelog is
+          <a href="/stemma/changelog/index.md">plain markdown</a>, and the site's context file is
+          <a href="/llms.txt">llms.txt</a>. The repository carries a JSON Schema for the presentation
+          sidecar and a protocol reference for writing a workspace without opening the app.
         </p>
       </div>
     </div>
@@ -1072,9 +1314,11 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
   <div class="st-colophon">
     <div class="wrap">
       <p>
-        Stemma is a pet project. It is built by one person on evenings and weekends, it is open source,
-        and it is not a company — there is no roadmap I owe anybody, no support line and no sales call
-        at the end of this page. It exists because I wanted the tool and nobody had built it.
+        Stemma is a pet project. It is built by one person on evenings and weekends, the source is
+        readable by anyone, and it is not a company — there is no roadmap I owe anybody, no support line
+        and no sales call at the end of this page. A commercial licence exists because the licence had to
+        say something and that is the honest thing for it to say, not because there is a funnel behind it.
+        The tool exists because I wanted it and nobody had built it.
       </p>
     </div>
   </div>
@@ -1194,26 +1438,33 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
 })();
 </script>
 <script>
-/* Scroll-linked emphasis on the source listing: whichever note the reader is on
+/* Scroll-linked emphasis on a pinned listing: whichever note the reader is on
    lights its lines and dims the rest. Armed only here, so with no script — or on
-   a narrow screen, where nothing is pinned — every line stays fully legible. */
+   a narrow screen, where nothing is pinned — every line stays fully legible.
+
+   Scoped per .st-source block rather than per document: two chapters use this
+   pattern now, and a global note selector would have the second one's notes
+   driving the first one's panel. */
 (function () {
-  var panel = document.getElementById('st-src');
-  if (!panel || !('IntersectionObserver' in window)) return;
+  if (!('IntersectionObserver' in window)) return;
   if (!matchMedia('(min-width: 941px)').matches) return;
 
-  var lines = panel.querySelectorAll('.l');
-  var notes = document.querySelectorAll('.st-note[data-g]');
-  if (!lines.length || !notes.length) return;
+  [].forEach.call(document.querySelectorAll('.st-source'), function (block) {
+    var panel = block.querySelector('.st-code.st-lit');
+    if (!panel) return;                                  // a block with no emphasis to drive
+    var lines = panel.querySelectorAll('.l');
+    var notes = block.querySelectorAll('.st-note[data-g]');
+    if (!lines.length || !notes.length) return;
 
-  function light(group) {
-    lines.forEach(function (l) { l.classList.toggle('on', l.dataset.g === group); });
-  }
-  var io = new IntersectionObserver(function (entries) {
-    entries.forEach(function (en) { if (en.isIntersecting) light(en.target.dataset.g); });
-  }, { rootMargin: '-45% 0px -45% 0px' });
-  notes.forEach(function (n) { io.observe(n); });
-  light(notes[0].dataset.g);
+    function light(group) {
+      [].forEach.call(lines, function (l) { l.classList.toggle('on', l.dataset.g === group); });
+    }
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) { if (en.isIntersecting) light(en.target.dataset.g); });
+    }, { rootMargin: '-45% 0px -45% 0px' });
+    [].forEach.call(notes, function (n) { io.observe(n); });
+    light(notes[0].dataset.g);
+  });
 })();
 </script>
 

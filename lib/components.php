@@ -58,7 +58,14 @@ function hero_figure(array $h, string $alt): string
     }
     // no creator/license recorded: fall back to the stored caption (e.g. "Image from the Medium original")
     if ($credit === 'Photo' && $h['caption'] !== '') $credit = e($h['caption']);
-    $link = $h['source'] !== '' ? ' · <a href="' . e($h['source']) . '" rel="noopener nofollow">source</a>' : '';
+    // nofollow is for the stock-photo host at the other end of a licence credit. A figure drawn
+    // here credits a page on this site, and telling search engines not to follow your own link
+    // is a self-inflicted wound.
+    $internal = $h['source'] !== '' && (str_starts_with($h['source'], '/')
+        || str_starts_with($h['source'], (string) cfg('site_url')));
+    $rel = $internal ? '' : ' rel="noopener nofollow"';
+    $label = $internal ? 'how' : 'source';
+    $link = $h['source'] !== '' ? ' · <a href="' . e($h['source']) . '"' . $rel . '>' . $label . '</a>' : '';
     return '<figure class="post-hero">' . img_eager($h['src'], $alt, $h['w'], $h['h'])
          . '<figcaption>' . $credit . $link . '</figcaption></figure>';
 }
@@ -265,6 +272,19 @@ function beacon_script(): string
     tick();
     if (acc > 999) send({ e: 1, p: location.pathname, d: Math.round(acc / 1000) });
   });
+  /* Exits. A reader leaving for GitHub, Medium or a mail client is the one thing
+     a pageview cannot show, and it is the last thing that happens — so it goes
+     out through sendBeacon, which is the only send that survives the navigation.
+     Capture phase, so a handler that stops propagation cannot hide the click.
+     `a.host` is '' for mailto: and equal to ours for an in-page anchor, which is
+     the whole filter. */
+  addEventListener('click', function (ev) {
+    var t = ev.target, a = t && t.closest ? t.closest('a[href]') : null;
+    if (!a || a.host === location.host) return;
+    var h = a.href || '';
+    if (!/^(https?|mailto):/i.test(h)) return;
+    send({ o: 1, p: location.pathname, u: h.slice(0, 500) });
+  }, true);
 })();
 </script>
 HTML;

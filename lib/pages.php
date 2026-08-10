@@ -45,14 +45,15 @@ function render_post(array $p, ?array $prev, ?array $next, array $all = []): str
         $extra .= '<link rel="syndication" href="' . e($syndUrl) . '">' . "\n";
     }
     if ($hero) {
-        $extra .= '<meta property="og:image:width" content="' . $hero['w'] . '">' . "\n";
-        $extra .= '<meta property="og:image:height" content="' . $hero['h'] . '">' . "\n";
+        // the card, not the hero: they are the same file unless the post ships a `.og.jpg`
+        $extra .= '<meta property="og:image:width" content="' . $hero['cw'] . '">' . "\n";
+        $extra .= '<meta property="og:image:height" content="' . $hero['ch'] . '">' . "\n";
         $extra .= '<meta property="og:image:alt" content="' . e($p['title']) . '">' . "\n";
         $extra .= '<link rel="preload" as="image" href="' . e($hero['src']) . '" fetchpriority="high">' . "\n";
     }
 
     $html  = page_head($p['title'] . ' · Bartosz Frąckowiak', $p['subtitle'], $url, $extra,
-                       $hero ? cfg('site_url') . $hero['src'] : (string) cfg('og_image'));
+                       $hero ? cfg('site_url') . $hero['card'] : (string) cfg('og_image'));
     $html .= site_nav('blog');
 
     $html .= '<main class="article-body">';

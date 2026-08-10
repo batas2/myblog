@@ -67,6 +67,11 @@ pick() { # $1 = json file -> tsv: url creator license landing title
 }
 
 for slug in "${!Q[@]}"; do
+  # A .png hero is a figure rendered from a model, not a stock photo — never replace one,
+  # not even with --force. Openverse has no opinion worth hearing about those.
+  if [ -f "assets/img/posts/$slug.png" ]; then
+    skip=$((skip+1)); continue
+  fi
   if [ "$FORCE" -eq 0 ] && [ -f "assets/img/posts/$slug.jpg" ]; then
     skip=$((skip+1)); continue
   fi

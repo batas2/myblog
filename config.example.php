@@ -31,6 +31,11 @@ return [
     // analytics-only access key: /stats.php?key=<this> mints a read-only
     // session and redirects into admin.php's analytics tabs
     // (a logged-in admin session sees the same tabs without the key)
+    // HMAC key for shareable draft links: /preview.php?slug=<slug>&k=<token>.
+    // Lets one person read an unpublished essay without an admin session.
+    // Leave it as-is and sharing stays off; rotating it revokes every link.
+    'preview_secret' => 'CHANGE-ME-openssl-rand-hex-24',
+
     'stats_key' => 'CHANGE-ME-openssl-rand-hex-24',
 
     // admin.php password as a PHP password hash; empty = admin disabled

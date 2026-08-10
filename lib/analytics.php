@@ -103,7 +103,7 @@ function an_is_excluded_ip(string $ip, ?array $blocks = null): bool
 }
 
 /** Bump when the schema below changes; an_db() fast-paths matching databases. */
-const AN_SCHEMA_VERSION = 3;
+const AN_SCHEMA_VERSION = 4;
 
 /** Everything the v1 table lacked — an_db() migrates any older hits table in place. */
 const AN_COLUMNS = [
@@ -164,6 +164,19 @@ function an_db(?string $path = null): PDO
     $db->exec('CREATE INDEX IF NOT EXISTS idx_hits_day ON hits(day)');
     $db->exec('CREATE INDEX IF NOT EXISTS idx_hits_day_visitor ON hits(day, visitor)');
     $db->exec('CREATE INDEX IF NOT EXISTS idx_hits_ts ON hits(ts)');
+    /* Outbound clicks (schema v4). A separate table rather than a hits column:
+       it is a different event with different dimensions, several can happen on
+       one pageview, and none of them is a pageview. Same privacy shape as hits
+       — the daily-rotating visitor hash, no address, no user-agent — and the
+       same "nothing is deleted, excluded rows just sit outside the totals"
+       rule, so `excl` is here too. */
+    $db->exec("CREATE TABLE IF NOT EXISTS clicks (
+        day TEXT NOT NULL, ts INTEGER NOT NULL, path TEXT NOT NULL,
+        host TEXT NOT NULL, url TEXT NOT NULL, visitor TEXT NOT NULL,
+        excl INTEGER NOT NULL DEFAULT 0)");
+    $db->exec('CREATE INDEX IF NOT EXISTS idx_clicks_day ON clicks(day)');
+    $db->exec('CREATE INDEX IF NOT EXISTS idx_clicks_day_host ON clicks(day, host)');
+    $db->exec('CREATE INDEX IF NOT EXISTS idx_clicks_day_visitor ON clicks(day, visitor)');
     // history predates the exclusion rule, so judge it once on the way in
     if (!in_array('excl', $have, true)) an_reclassify($db);
     $db->exec('PRAGMA user_version = ' . AN_SCHEMA_VERSION);
@@ -405,6 +418,105 @@ function an_record(PDO $db, array $r): void
 }
 
 /**
+ * Split a clicked link into (host, url), or null if it is not worth recording.
+ *
+ * The beacon already filters same-host links, but it is the client and this is
+ * the server, so the rule is enforced again here. Query strings and fragments
+ * are dropped: every outbound link on this site is one the site itself wrote,
+ * so a query adds nothing but the risk of storing something that turns out to
+ * carry state.
+ *
+ * `mailto:` counts, and lands under the host `mailto` — somebody opening a
+ * mail client from a page is the strongest intent signal the site can observe,
+ * and the only address involved is the author's own.
+ *
+ * $selfHosts is every name this site answers to. It has to be a list, not the
+ * request's Host header: that header carries a port on any non-default one,
+ * which no URL's host component ever does, so a single-value comparison
+ * silently stops matching the moment the site is served anywhere but :443.
+ * an_self_hosts() builds the list.
+ */
+function an_outbound(string $raw, array $selfHosts): ?array
+{
+    $raw = trim(substr($raw, 0, 500));
+    if ($raw === '') return null;
+
+    if (stripos($raw, 'mailto:') === 0) return ['host' => 'mailto', 'url' => 'mailto:'];
+
+    $parts = @parse_url($raw);
+    if (!is_array($parts)) return null;
+    $scheme = strtolower((string) ($parts['scheme'] ?? ''));
+    $host   = strtolower((string) ($parts['host'] ?? ''));
+    if (!in_array($scheme, ['http', 'https'], true) || $host === '') return null;
+    if (in_array($host, $selfHosts, true)) return null;               // not outbound after all
+
+    $url = $scheme . '://' . $host . ($parts['path'] ?? '');
+    return ['host' => substr($host, 0, 100), 'url' => substr($url, 0, 300)];
+}
+
+/**
+ * Every host name that is still "this site": the canonical one from config,
+ * its www. form, and whatever the request actually arrived on, port stripped.
+ */
+function an_self_hosts(string $requestHost = ''): array
+{
+    $hosts = [];
+    $canonical = strtolower((string) parse_url((string) cfg('site_url'), PHP_URL_HOST));
+    if ($canonical !== '') {
+        $hosts[] = $canonical;
+        $hosts[] = str_starts_with($canonical, 'www.') ? substr($canonical, 4) : 'www.' . $canonical;
+    }
+    $req = strtolower(trim($requestHost));
+    if ($req !== '') {
+        // strip :port — a URL's host component never carries one
+        $req = (string) preg_replace('/:\d+$/', '', $req);
+        if ($req !== '') $hosts[] = $req;
+    }
+    return array_values(array_unique(array_filter($hosts)));
+}
+
+/**
+ * Record one outbound click.
+ *
+ * The verdict is inherited from whatever the same visitor's pageviews were
+ * judged to be today, because a click carries none of the fields the automation
+ * rule reads — no timezone, no screen, no language. A headless browser that
+ * follows links therefore stays excluded, and an ordinary reader stays counted,
+ * without a second rule that could disagree with the first.
+ */
+function an_click(PDO $db, array $r): void
+{
+    $verdict = $r['excl'] ?? null;
+    if ($verdict === null) {
+        $st = $db->prepare('SELECT MAX(excl) FROM hits WHERE day = ? AND visitor = ?');
+        $st->execute([$r['day'], $r['visitor']]);
+        $seen = $st->fetchColumn();
+        // no pageview from this visitor today: the click arrived without one, which
+        // is what a script does and a reader does not
+        $verdict = $seen === false || $seen === null ? AN_AUTOMATED : (int) $seen;
+    }
+    $st = $db->prepare('INSERT INTO clicks (day, ts, path, host, url, visitor, excl) VALUES (?, ?, ?, ?, ?, ?, ?)');
+    $st->execute([$r['day'], $r['ts'], $r['path'], $r['host'], $r['url'], $r['visitor'], (int) $verdict]);
+}
+
+/**
+ * Re-derive every click verdict from the pageviews of the same visitor-day.
+ *
+ * an_mark() and an_reclassify() work on `hits`, and a click has none of the
+ * dimensions those filter on. Rather than teach them a second filter, the
+ * clicks follow their pageviews afterwards. Returns rows changed.
+ */
+function an_sync_click_verdicts(PDO $db): int
+{
+    $st = $db->prepare('UPDATE clicks SET excl = COALESCE(
+            (SELECT MAX(h.excl) FROM hits h WHERE h.day = clicks.day AND h.visitor = clicks.visitor), excl)
+        WHERE excl <> COALESCE(
+            (SELECT MAX(h.excl) FROM hits h WHERE h.day = clicks.day AND h.visitor = clicks.visitor), excl)');
+    $st->execute();
+    return $st->rowCount();
+}
+
+/**
  * Attach engaged seconds to the visitor's latest view of a path on $day.
  * The beacon reports cumulative time on every hide, so keep the maximum.
  * Returns whether a row matched — the caller retries with the previous
@@ -610,6 +722,62 @@ function an_top_pages(PDO $db, string $since, int $limit = 25): array
     return $st->fetchAll(PDO::FETCH_ASSOC);
 }
 
+/* ---------------- outbound clicks ----------------
+   an_where() is reused verbatim: `clicks` carries day, path and excl under the
+   same names and the same meaning, where `path` is the page the reader left
+   from. Passing a $path therefore scopes every exit query to one page, exactly
+   as it scopes the pageview queries. */
+
+/**
+ * Where readers go when they leave: destination hosts, ranked.
+ *
+ * Columns are named v/pv/uv so the dashboard's shared breakdown table renders
+ * this the same way it renders referrers and countries — the mirror image of
+ * the same question, and it should not look like a different kind of answer.
+ */
+function an_click_hosts(PDO $db, string $since, int $limit = 15, string $path = ''): array
+{
+    $args = [];
+    $where = an_where($since, $path, $args);
+    $st = $db->prepare("SELECT host AS v, COUNT(*) pv, COUNT(DISTINCT visitor) uv
+        FROM clicks WHERE {$where} GROUP BY host ORDER BY pv DESC LIMIT " . max(1, $limit));
+    $st->execute($args);
+    return $st->fetchAll(PDO::FETCH_ASSOC);
+}
+
+/** The individual links, with the page each was clicked from. */
+function an_click_links(PDO $db, string $since, int $limit = 25, string $path = ''): array
+{
+    $args = [];
+    $where = an_where($since, $path, $args);
+    $st = $db->prepare("SELECT url, path, COUNT(*) clicks, COUNT(DISTINCT visitor) visitors, MAX(ts) last_ts
+        FROM clicks WHERE {$where} GROUP BY url, path ORDER BY clicks DESC LIMIT " . max(1, $limit));
+    $st->execute($args);
+    return $st->fetchAll(PDO::FETCH_ASSOC);
+}
+
+/** Totals for the range: clicks, and how many distinct visitor-days produced one. */
+function an_click_summary(PDO $db, string $since, string $path = '', string $until = ''): array
+{
+    $args = [];
+    $where = an_where($since, $path, $args, $until);
+    $st = $db->prepare("SELECT COUNT(*) clicks, COUNT(DISTINCT visitor) visitors FROM clicks WHERE {$where}");
+    $st->execute($args);
+    $row = $st->fetch(PDO::FETCH_ASSOC) ?: [];
+    return ['clicks' => (int) ($row['clicks'] ?? 0), 'visitors' => (int) ($row['visitors'] ?? 0)];
+}
+
+/** The latest exits, newest first. Excluded rows included, like Recent visits. */
+function an_click_recent(PDO $db, int $limit = 20, string $path = ''): array
+{
+    $sql = 'SELECT ts, day, path, host, url, excl FROM clicks';
+    $args = [];
+    if ($path !== '') { $sql .= ' WHERE path = ?'; $args[] = $path; }
+    $st = $db->prepare($sql . ' ORDER BY ts DESC LIMIT ' . max(1, $limit));
+    $st->execute($args);
+    return $st->fetchAll(PDO::FETCH_ASSOC);
+}
+
 /**
  * The standing destinations: the pages that are not essays and do not come and go.
  *
@@ -620,7 +788,9 @@ const AN_DESTINATIONS = [
     '/'                 => 'Home · essay index',
     '/blog/start/'      => 'Start here',
     '/stemma/'          => 'Stemma · project page',
+    '/stemma/changelog/' => 'Stemma · changelog',
     '/stemma/index.md'  => 'Stemma · plain text (agents)',
+    '/stemma/changelog/index.md' => 'Stemma · changelog, plain text (agents)',
     '/about/'           => 'About',
     '/services/'        => 'Services (unlisted)',
 ];
