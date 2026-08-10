@@ -1,0 +1,83 @@
+{
+  "$schema": "https://raw.githubusercontent.com/batas2/Stemma/main/schema/stemma.layout.schema.json",
+  "version": 1,
+  "views": {
+    "custom:view_worth": {
+      "//": "A grid, not absolute positions. Absolute `nodes` are documented as authoritative under layoutMode 'custom' and are silently ignored by `stemma render` for a view whose members come from ElementIds — verified on a two-box workspace, so this is the tool's gap rather than this file's. The constraint is honoured, so the composition is stated as one.",
+      "//grid": "Rows are as tall as their tallest member, so a multi-line box in column 1 stretches the gap between the teams beside it. Both services therefore sit in row 0 — one tall row, then three tight ones — instead of one in row 0 and one in row 1, which stretched two gaps and made the stack look ragged.",
+      "layout": {
+        "kind": "grid",
+        "columns": [
+          [
+            "con_team_a",
+            "con_team_b",
+            "con_team_c",
+            "con_team_d"
+          ],
+          [
+            "con_lump"
+          ],
+          [
+            "con_correct"
+          ]
+        ],
+        "gap": [
+          104,
+          26
+        ],
+        "align": "center"
+      },
+      "//offsets": "Row 0 puts the correct service level with the lump. It belongs below and apart — the emptiness around it is the argument — so it is nudged down. An offset rides on top of the solved arrangement instead of replacing it, which is the whole reason to prefer a constraint over coordinates.",
+      "offsets": {
+        "con_correct": {
+          "x": -370,
+          "y": 330
+        }
+      },
+      "//edges": "Default docking is left/right, which routed every arrow out of a team's left side and all the way around the canvas. Leaving right and arriving left is the only reading that matches the sentence.",
+      "edges": {
+        "rel_a": {
+          "handles": {
+            "source": "r",
+            "target": "l"
+          }
+        },
+        "rel_b": {
+          "handles": {
+            "source": "r",
+            "target": "l"
+          }
+        },
+        "rel_c": {
+          "handles": {
+            "source": "r",
+            "target": "l"
+          }
+        },
+        "rel_d": {
+          "handles": {
+            "source": "r",
+            "target": "l"
+          }
+        }
+      },
+      "//shapes": "Ink, not model: it asserts nothing about a system, so it must never become an element. Only one label survives — a second reading 'four teams integrated' said what four visible arrows already say, and it landed on top of the lump's text.",
+      "shapes": [
+        {
+          "id": "sh_none",
+          "kind": "label",
+          "x": 320,
+          "y": 300,
+          "text": "nobody called it",
+          "fontSize": 14,
+          "color": "#767884",
+          "z": 1
+        }
+      ]
+    }
+  },
+  "nodeStyles": {},
+  "edgeStyles": {},
+  "notes": {},
+  "customProps": {}
+}

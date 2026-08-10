@@ -44,7 +44,9 @@ declare -A Q=(
   [a-feature-is-not-a-service]="library card catalog drawers|card catalog wooden drawers"
   [design-the-stopping-point]="unfinished bridge construction river|incomplete bridge span"
   [count-your-rejections]="no vacancy neon sign|vacancy sign motel night"
-  [adoption-is-the-deliverable]="network patch panel cables|server rack patch cables"
+  # a desire path, not cables: the essay is about the worn shortcut beating the
+  # paved route, and "patch panel" was illustrating the noun rather than the argument
+  [adoption-is-the-deliverable]="desire path grass|worn path beside paved footpath"
   [the-bottleneck-moved]="stack of paper documents pile|paperwork stacked desk office"
   [we-deleted-the-wrong-half-of-agile]="scaffolding supporting building facade|scaffolding old building front"
 )

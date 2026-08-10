@@ -1,0 +1,23 @@
+{
+  "view": "view_worth",
+  "profile": "publication",
+  "palette": "dual-theme",
+  "transparent": true,
+  "scale": 2,
+  "source": {
+    "hash": "6c7aa298ec66ec5b",
+    "elements": 6,
+    "links": 4,
+    "viewMembers": 6
+  },
+  "files": [
+    {
+      "path": "what-it-is-worth.png",
+      "theme": "light",
+      "format": "png",
+      "nodes": 6,
+      "width": 1564,
+      "height": 1079
+    }
+  ]
+}

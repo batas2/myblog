@@ -85,6 +85,6 @@ The design never owed anything. The trail did.
 **Scores:** tension=7 originality=7 personal=7 contrarian=7 substance=8 punch=8 trend=6
 **Scored:** 2026-07-27 rubric=v1 model=claude-fable-5
 
-**Publish:** 2026-08-10 09:00
+**Publish:** 2026-08-24 09:00
 
 **Tags:** Software Architecture, Technical Debt, Decision Making, Engineering Leadership, Systems Thinking
