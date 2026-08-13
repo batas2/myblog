@@ -24,6 +24,8 @@
   var tip = document.getElementById('rv-tip');
   var comments = DATA.comments.slice();
   var active = null;
+  var filter = 'open';
+  var savedHtml = new WeakMap();   // last accepted innerHTML per block, for undo
 
   /* ------------------------------------------------------------------ helpers */
 
@@ -93,6 +95,52 @@
       }
     }
     return null;
+  }
+
+  /* ------------------------------------------------------------- readability */
+
+  /**
+   * The same arithmetic as tools/read_check.php, so a block flagged here is a block the gate would
+   * flag. Commas plus subordinators, minus the commas inside a series, because a list is walked
+   * down rather than held open.
+   */
+  var SUBORD = /\b(which|that|who|whose|where|when|while|because|although|though|if|unless|whereas|since)\b/gi;
+
+  function load(sentence) {
+    var commas = (sentence.match(/,/g) || []).length;
+    var series = sentence.match(/(?:,[^,;:]{1,70}){2,},\s+(?:and|or)\s/gi) || [];
+    series.forEach(function (run) { commas -= Math.max(0, (run.match(/,/g) || []).length - 1); });
+    return Math.max(0, commas) + (sentence.match(SUBORD) || []).length;
+  }
+
+  function sentences(text) {
+    return (text.match(/[^.!?]+[.!?]*/g) || []).filter(function (s) { return s.trim().split(/\s+/).length > 1; });
+  }
+
+  /** Mark the blocks that cost the most to read, and say why on hover. */
+  function flagDensity() {
+    Array.prototype.forEach.call(prose.querySelectorAll('.rv-b'), function (b) {
+      var old = b.querySelector('.rv-dense');
+      if (old) old.remove();
+      b.classList.remove('is-dense');
+      if (!b.classList.contains('is-editable')) return;
+
+      var worst = null;
+      sentences(b.textContent).forEach(function (s) {
+        var l = load(s), w = s.trim().split(/\s+/).length;
+        if (l >= 5 && (!worst || l > worst.l)) worst = { l: l, w: w, s: s.trim() };
+      });
+      if (!worst) return;
+
+      b.classList.add('is-dense');
+      var tag = document.createElement('span');
+      tag.className = 'rv-dense';
+      tag.textContent = worst.l;
+      tag.title = worst.l + ' clauses in one ' + worst.w + '-word sentence. The reader holds each one open '
+                + 'until the sentence ends.\n\n' + worst.s.slice(0, 220)
+                + '\n\nSplit it, and put the claim in the short half.';
+      b.appendChild(tag);
+    });
   }
 
   /* ------------------------------------------------------- highlights + rail */
@@ -196,13 +244,24 @@
     rail.appendChild(box);
   }
 
+  function visible(c) {
+    if (!c.__at) return false;
+    if (filter === 'all') return true;
+    return filter === 'resolved' ? c.status === 'resolved' : c.status !== 'resolved';
+  }
+
   function renderRail() {
     if (!rail) return;
     rail.textContent = '';
-    if (!comments.filter(function (c) { return c.__at; }).length) { railEmpty(); }
+    var nOpen = comments.filter(function (c) { return c.__at && c.status !== 'resolved'; }).length;
+    var nDone = comments.filter(function (c) { return c.__at && c.status === 'resolved'; }).length;
+    var eo = document.getElementById('rv-n-open'), ed = document.getElementById('rv-n-done');
+    if (eo) eo.textContent = nOpen;
+    if (ed) ed.textContent = nDone;
+    if (!comments.filter(visible).length) { railEmpty(); }
     var railTop = rail.getBoundingClientRect().top + window.scrollY;
     var placed = [];
-    comments.filter(function (c) { return c.__at; })
+    comments.filter(visible)
       .sort(function (a, b) { return a.__at.el.offsetTop - b.__at.el.offsetTop || a.__at.start - b.__at.start; })
       .forEach(function (c) {
         var el = card(c);
@@ -214,8 +273,19 @@
         el.style.top = Math.max(0, y) + 'px';
         placed.push(y + el.offsetHeight + 10);
       });
-    var openN = comments.filter(function (c) { return c.status !== 'resolved' && c.__at; }).length;
-    if (countEl) countEl.textContent = openN + ' open';
+  }
+
+  /** Step to the next or previous note and put it under the eye. */
+  function step(dir) {
+    var list = comments.filter(visible)
+      .sort(function (a, b) { return a.__at.el.offsetTop - b.__at.el.offsetTop || a.__at.start - b.__at.start; });
+    if (!list.length) return;
+    var at = list.findIndex(function (c) { return c.id === active; });
+    var next = list[(at + (dir > 0 ? 1 : list.length - 1) + list.length) % list.length] || list[0];
+    if (at < 0) next = list[0];
+    focusNote(next.id);
+    var mark = prose.querySelector('mark.rv-hl[data-cid="' + next.id + '"]') || next.__at.el;
+    mark.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
   function focusNote(id) {
@@ -342,8 +412,10 @@
         block.dataset.hash = res.json.hash;
         block.dataset.md = res.json.md;
         block.classList.remove('is-dirty', 'is-stale');
+        savedHtml.set(block, block.innerHTML);
         flag('saved');
         paint();
+        flagDensity();
       } else if (res.status === 409) {
         block.classList.add('is-stale');
         flag('changed elsewhere — reload', true);
@@ -357,9 +429,12 @@
   function wireEditing() {
     Array.prototype.forEach.call(prose.querySelectorAll('.rv-b.is-editable'), function (block) {
       block.dataset.md = serialize(block);
+      savedHtml.set(block, block.innerHTML);
 
+      block.addEventListener('focus', function () { readout(block); });
       block.addEventListener('input', function () {
         block.classList.add('is-dirty');
+        readout(block);
         clearTimeout(timers[block.dataset.id]);
         timers[block.dataset.id] = setTimeout(function () { save(block); }, 900);
       });
@@ -379,8 +454,27 @@
         if (ev.key === 'Escape') { ev.preventDefault(); block.blur(); }
         if ((ev.metaKey || ev.ctrlKey) && ev.key.toLowerCase() === 'b') { ev.preventDefault(); document.execCommand('bold'); }
         if ((ev.metaKey || ev.ctrlKey) && ev.key.toLowerCase() === 'i') { ev.preventDefault(); document.execCommand('italic'); }
+        // Browser undo inside a contenteditable is unreliable once we have rewritten the block, so
+        // the block keeps its own last-accepted state and hands it back whole.
+        if ((ev.metaKey || ev.ctrlKey) && ev.key.toLowerCase() === 'z' && savedHtml.has(block)) {
+          ev.preventDefault();
+          block.innerHTML = savedHtml.get(block);
+          block.classList.remove('is-dirty');
+          clearTimeout(timers[block.dataset.id]);
+          flag('reverted');
+          paint(); flagDensity();
+        }
       });
     });
+  }
+
+  /** While you are inside a block, say what it costs rather than making you guess. */
+  function readout(block) {
+    var text = block.textContent.trim();
+    var words = text ? text.split(/\s+/).length : 0;
+    var worst = 0;
+    sentences(text).forEach(function (s) { worst = Math.max(worst, load(s)); });
+    flag(words + 'w · worst sentence ' + worst + ' clause' + (worst === 1 ? '' : 's'));
   }
 
   /* ------------------------------------------------------------------- boot */
@@ -388,6 +482,34 @@
   paint();
   if (REVIEW) {
     wireEditing();
+    flagDensity();
+    Array.prototype.forEach.call(document.querySelectorAll('#rv-filter button'), function (b) {
+      b.addEventListener('click', function () {
+        filter = b.dataset.f;
+        Array.prototype.forEach.call(document.querySelectorAll('#rv-filter button'), function (x) {
+          x.classList.toggle('is-on', x === b);
+        });
+        paint();
+      });
+    });
+    var jump = document.getElementById('rv-jump');
+    if (jump) jump.addEventListener('click', function () { step(1); });
+    document.addEventListener('keydown', function (e) {
+      if (/^(INPUT|TEXTAREA)$/.test(e.target.nodeName) || e.target.isContentEditable) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === 'n') { e.preventDefault(); step(1); }
+      if (e.key === 'p') { e.preventDefault(); step(-1); }
+      if (e.key === 'r' && active) {
+        e.preventDefault();
+        var c = comments.filter(function (x) { return x.id === active; })[0];
+        if (!c) return;
+        var next = c.status === 'resolved' ? 'open' : 'resolved';
+        post({ action: 'comment_update', id: c.id, status: next }).then(function () {
+          c.status = next; if (next === 'open') c.resolution = null;
+          paint(); flag(next === 'resolved' ? 'resolved' : 'reopened');
+        });
+      }
+    });
     document.addEventListener('mouseup', function () { setTimeout(onSelect, 0); });
     document.addEventListener('keyup', function (e) { if (e.shiftKey) setTimeout(onSelect, 0); });
     document.getElementById('rv-tip-btn').addEventListener('click', compose);

@@ -1088,3 +1088,39 @@ a.tag:hover { color: var(--accent-deep); text-decoration: underline; text-underl
 }
 .rv-link.has-open { border-color: var(--accent); }
 .rv-link:hover b { background: #fff; color: var(--accent); }
+
+/* ---- admin pipeline: quieter rows -------------------------------------------------- */
+/* The row used to carry seven columns and four always-visible publishing controls. Most posts are
+   settled, so the machinery folds away and the row shows what you scan by: state, date, title. */
+.r-split td {
+  padding: 1.6rem 0 0.5rem !important; border: none !important;
+  background: none !important;
+}
+.r-split span {
+  display: block; padding-top: 1rem; border-top: 1px solid var(--line);
+  font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.68rem;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--faint);
+}
+.post-meta {
+  display: flex; gap: 0.9rem; align-items: center; margin-top: 0.4rem;
+  font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.68rem; color: var(--faint);
+}
+.post-meta .badge { font-size: 0.66rem; }
+details.statusbox > summary {
+  font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.68rem;
+  color: var(--faint); cursor: pointer; list-style: none; white-space: nowrap;
+}
+details.statusbox > summary::-webkit-details-marker { display: none; }
+details.statusbox > summary::before { content: '⋯ '; }
+details.statusbox > summary:hover { color: var(--accent); }
+details.statusbox[open] > summary { color: var(--ink); }
+.acts-in { display: flex; flex-direction: column; gap: 0.4rem; align-items: flex-end; margin-top: 0.5rem; }
+/* All three disclosures sit together on the right, so the left half of the row is only the thing
+   you read it for: state, date, title. */
+td.r .acts { display: flex; flex-direction: column; align-items: flex-end; gap: 0.25rem; }
+td.r .acts > details > summary {
+  font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.68rem;
+  color: var(--faint); cursor: pointer; white-space: nowrap;
+}
+td.r .acts > details > summary:hover { color: var(--accent); }
+td.r .acts .share-row, td.r .acts .tag-links { text-align: left; }

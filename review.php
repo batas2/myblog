@@ -143,7 +143,14 @@ $csrf = admin_csrf_token();
       <span aria-hidden="true">✎</span> Comment &amp; edit</a>
   </div>
 
-  <span class="rv-count" id="rv-count"><?= $open ?> open</span>
+  <?php /* With more than a handful of notes the rail becomes a list you scroll past rather than
+           work through, so it gets a filter and a way to step between them without the mouse. */ ?>
+  <div class="rv-filter" id="rv-filter" role="group" aria-label="Which notes">
+    <button type="button" data-f="open" class="is-on">Open <b id="rv-n-open">0</b></button>
+    <button type="button" data-f="resolved">Done <b id="rv-n-done">0</b></button>
+    <button type="button" data-f="all">All</button>
+  </div>
+  <button type="button" class="rv-jump" id="rv-jump" title="Next note (n)">↓ next</button>
   <span class="rv-save" id="rv-save" aria-live="polite"></span>
   <?php if ($post['status'] === 'published'): ?>
     <a class="rv-back" href="/blog/<?= e($slug) ?>/" target="_blank" rel="noopener">live ↗</a>
@@ -154,7 +161,7 @@ $csrf = admin_csrf_token();
 <div class="rv-hint">
   <span><b>Select any text</b> to leave a note in the margin.</span>
   <span><b>Click a paragraph</b> to correct it. Edits save on their own.</span>
-  <span class="rv-hint-k">⌘B bold · ⌘I italic · Esc to leave a block</span>
+  <span class="rv-hint-k">n / p step through notes · ⌘Z undoes a block · ⌘B ⌘I · Esc leaves a block</span>
 </div>
 <?php else: ?>
 <?php /* Preview is the default and does nothing but show the post, so it has to say out loud where

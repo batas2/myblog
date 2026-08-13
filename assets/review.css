@@ -163,3 +163,39 @@
 }
 .rv-empty b { display: block; color: var(--ink); font-size: 0.86rem; margin-bottom: 0.3rem; }
 .rv-empty .rv-cta-go { margin: 0.7rem 0 0; font-size: 0.78rem; padding: 0.3rem 0.8rem; }
+
+/* ---- note filter and navigator ---- */
+.rv-filter { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.rv-filter button {
+  font-family: 'Inter', system-ui, sans-serif; font-size: 0.76rem;
+  background: var(--surface); border: 0; color: var(--muted);
+  padding: 0.3rem 0.7rem; cursor: pointer; display: flex; align-items: center; gap: 0.3rem;
+}
+.rv-filter button + button { border-left: 1px solid var(--line); }
+.rv-filter button.is-on { background: var(--wash); color: var(--ink); font-weight: 600; }
+.rv-filter b {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.64rem; font-weight: 600;
+  background: var(--line); color: var(--muted); border-radius: 999px; padding: 0 0.3rem;
+}
+.rv-filter button.is-on b { background: var(--accent); color: #fff; }
+.rv-jump {
+  font-family: 'Inter', system-ui, sans-serif; font-size: 0.76rem; cursor: pointer;
+  background: none; border: 1px solid var(--line); border-radius: 8px;
+  padding: 0.3rem 0.65rem; color: var(--muted);
+}
+.rv-jump:hover { color: var(--accent); border-color: var(--accent); }
+
+/* ---- density marker ----
+   A block that costs the reader gets a number in the margin rather than a colour wash: the point
+   is to say how much it costs, and to stay quiet on the blocks that are already fine. */
+.rv-b.is-dense { padding-right: 1.6rem; }
+.rv-dense {
+  position: absolute; top: 0.15rem; right: 0.1rem;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; font-weight: 600;
+  width: 1.15rem; height: 1.15rem; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; cursor: help;
+  color: #b45309; background: color-mix(in srgb, #b45309 14%, transparent);
+  border: 1px solid color-mix(in srgb, #b45309 35%, transparent);
+}
+.rv-b.is-dense:focus .rv-dense { opacity: 0.35; }
+@media (prefers-color-scheme: dark) { .rv-dense { color: #fbbf24; border-color: #fbbf2455; background: #fbbf2418; } }

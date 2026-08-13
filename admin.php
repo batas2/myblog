@@ -745,8 +745,15 @@ dialog.why::backdrop { background: rgba(10,10,15,.45); }
   <?php endif; ?>
 
   <table>
-    <tr><th>Status</th><th>Goes live</th><th>Post</th><th class="r">Reach</th><th class="r">Read</th><th class="r">Comments</th><th>Change status</th></tr>
+    <tr><th>Status</th><th>Goes live</th><th>Post</th><th class="r">Actions</th></tr>
+    <?php $seenPublished = false; ?>
     <?php foreach ($pipeline as $p): ?>
+    <?php /* One divider between the posts that still need a decision and the ones that are done.
+             Without it 27 settled posts carry the same visual weight as the four that do not. */
+      if (!$seenPublished && $p['status'] === 'published'):
+        $seenPublished = true; ?>
+      <tr class="r-split"><td colspan="4"><span>Published</span></td></tr>
+    <?php endif; ?>
     <tr class="r-<?= e($p['status']) ?>">
       <td><span class="badge b-<?= e($p['status']) ?>"><?= e($p['status']) ?></span></td>
       <td class="when">
@@ -772,6 +779,17 @@ dialog.why::backdrop { background: rgba(10,10,15,.45); }
              if ($rvc['open']) echo '<b>' . (int) $rvc['open'] . '</b>'; ?></a>
         </span>
         <span class="post-sub"><?= e($p['subtitle']) ?></span>
+        <?php /* Three narrow columns became one line. They are reference numbers, not things you
+                 scan a table by, and as columns they cost more width than they returned. */
+          $r = sc_reach($p['scores']); ?>
+        <span class="post-meta">
+          <a class="plink badge b-<?= e(sc_band($r)) ?>" href="#scores" title="editorial reach score, rubric <?= e(SC_RUBRIC) ?>"><?= $r !== null ? number_format($r, 1) : 'unscored' ?></a>
+          <span><?= $p['minutes'] ?> min</span>
+          <?php if ($p['comments']): ?><span><?= (int) $p['comments'] ?> comment<?= $p['comments'] === 1 ? '' : 's' ?></span><?php endif; ?>
+        </span>
+      </td>
+      <td class="r">
+        <div class="acts">
         <?php /* every cross-post host hides the referrer, so an untagged link comes back as 'direct' */ ?>
         <details class="share">
           <summary>tagged links</summary>
@@ -799,13 +817,12 @@ dialog.why::backdrop { background: rgba(10,10,15,.45); }
           </div>
         </details>
         <?php endif; ?>
-      </td>
-      <?php $r = sc_reach($p['scores']); ?>
-      <td class="r"><a class="plink badge b-<?= e(sc_band($r)) ?>" href="#scores" title="editorial reach score, rubric <?= e(SC_RUBRIC) ?>"><?= $r !== null ? number_format($r, 1) : 'unscored' ?></a></td>
-      <td class="r n"><?= $p['minutes'] ?> min</td>
-      <td class="r n"><?= $p['comments'] ?: '·' ?></td>
-      <td>
-        <div class="acts">
+          <?php /* The publishing controls were on every row, which meant 27 "publish now" buttons
+                   for posts that are already published. They fold away now; the row's primary
+                   action is the one you actually reach for. */ ?>
+          <details class="statusbox">
+            <summary>change status</summary>
+            <div class="acts-in">
           <?php if ($p['status'] !== 'published'): ?>
           <form method="POST" action="/admin.php">
             <input type="hidden" name="action" value="setstatus">
@@ -832,6 +849,8 @@ dialog.why::backdrop { background: rgba(10,10,15,.45); }
             <input class="dt" type="datetime-local" name="when" required value="<?= date('Y-m-d\TH:i', max($p['publish_ts'], time())) ?>">
             <button class="mini" type="submit">⏱ schedule</button>
           </form>
+            </div>
+          </details>
         </div>
       </td>
     </tr>
