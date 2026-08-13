@@ -1,93 +1,102 @@
 # Turn the Sequence Diagram on Its Side
 
-*A lifeline is a line, and you cannot write on a line. The rotation is the boring part. What you are finally allowed to put in the space is not.*
+*A lifeline is a line, and nothing fits on a line. Turn the picture sideways and every participant gets a band you can write in.*
 
-Two weeks ago I sent a design round for review. Seven pages. When I briefed the agent that helped me draw it, I asked for "C1, C2 and maybe some data flow diagram." In that order. The flow was the afterthought.
+Two weeks ago I sent an architecture design for review. Seven pages, for a room of architecture stakeholders. When I briefed the AI agent that drew it with me, I asked for "C1, C2 and maybe some data flow diagram." In that order. The flow was an afterthought.
 
-Nobody said one word about the container page.
+Not one person commented on the container page. I had spent the longest on it.
 
-Both flow pages came back marked up, and one started an argument that ran two days and moved a boundary. That has happened often enough that I have stopped calling it luck. The flow pages were the only ones with team names on them. A picture with team names on it can be counted.
+Both flow pages came back covered in comments. One started an argument that ran for two days and moved a boundary. This happens often enough that I have stopped calling it luck. The flow pages were the only ones with team names on them. You can count a picture that has team names on it.
 
 ## A lifeline is a line
 
-Somebody names another organisation as a partner, and the platform has to work out whether it is already a node before it can draw the edge.
+Somebody names another company as a partner. The platform has to answer one question: is this company already in our graph, or is it new?
 
-![Adding one edge to an organisation graph, in UML sequence notation, drawn properly: an interaction frame, activation bars, returns, and open arrowheads on the two asynchronous messages.](/assets/img/posts/turn-the-sequence-diagram-on-its-side/same-flow-in-uml-light.png)
+![Adding one edge to an organisation graph, in UML sequence notation. Drawn properly, with an interaction frame, activation bars, returns, and open arrowheads on the two asynchronous messages.](/assets/img/posts/turn-the-sequence-diagram-on-its-side/same-flow-in-uml-light.png)
 
-Frame, activation bars, real returns, open arrowheads on the messages nobody waits for. UML doing what UML is good at. I want that stipulated before the next paragraph.
+That is a correct sequence diagram. Frame, activation bars, real returns, open arrowheads on the messages nobody waits for. I want to say that clearly before I start complaining.
 
-Now the things that are true here and nowhere on the page. Identity matching runs on a confidence score, and under the threshold nothing is rejected: a second company is minted and never merges back. Two in five arrive with no registration number. One new edge recomputes a rollup for every node above it, in a graph 40 million deep. Four of these five participants exist. One is new.
+Now what is true here and nowhere on the page.
 
-The lazy claim is that sequence notation cannot express any of that. It can. A state invariant on the lifeline for the duplicate, an `opt` fragment around the missing-registration path, a `ref` to the matching sub-interaction. All legal UML. Each one also widens the picture or stretches the time axis, and costs you a reader who knows that glyph family.
+Identity matching runs on a confidence score. Below the threshold we reject nothing. We create a second company instead, and it never merges back. Two in five arrive with no registration number. One new edge makes us recompute a number for every node above it, in a graph 40 million deep. Four of these five participants already exist. One is new.
 
-So the limit is not capability. It is room. **An arrow label fits about four words before it collides with its neighbour**, and the rest of this post follows from that number.
+You could say that sequence notation cannot show any of that. It can. UML has a state invariant for the duplicate, an `opt` fragment for the missing number, a `ref` for the matching logic. All legal. All of it also makes the picture wider, and costs a reader who knows those symbols.
 
-Put the remainder in a paragraph underneath and you have built the [split-attention effect](https://bpspsychub.onlinelibrary.wiley.com/doi/abs/10.1111/j.2044-8279.1992.tb01017.x) on purpose, which Chandler and Sweller measured back in 1991: split what a reader has to hold together and they get less out of both halves than if you had merged them.
+So the limit is not what the notation can express. The limit is space. **An arrow label holds about four words before it touches the next one.** The rest of this post follows from that number.
+
+Put everything else in a paragraph underneath, and you have built a known problem on purpose. Chandler and Sweller measured it in 1991 and called it the [split-attention effect](https://bpspsychub.onlinelibrary.wiley.com/doi/abs/10.1111/j.2044-8279.1992.tb01017.x). Split what a reader has to combine, and they get less from both halves.
 
 ## What a band has room for
 
-So rotate it. Participants down the left, time across.
+So turn it sideways. Participants down the left, time across the bottom.
 
-![The same flow transposed. Same participants, same eight messages, same topology, with Directory still holding the request open across the grey bar. A row has height, so a step is a box instead of an arrow.](/assets/img/posts/turn-the-sequence-diagram-on-its-side/same-flow-in-lanes-light.png)
+![The same flow, turned sideways. Same participants, same eight messages, same shape, with Directory still holding the request open across the grey bar. A row has height, so a step becomes a box instead of an arrow.](/assets/img/posts/turn-the-sequence-diagram-on-its-side/same-flow-in-lanes-light.png)
 
-Same five participants, same eight messages, same shape. Directory still blocks on both calls and still emits the event at the end. That is what the grey bar says. One thing changed. A row has height, so a step is a box carrying about 25 words instead of an arrow carrying four.
+Same five participants. Same eight messages. Same shape, because Directory still waits for both answers and still sends the event at the end. That is what the grey bar means.
 
-Three rules spend it. The lane label carries the owning team, not just the service name. The box body carries the mechanism, not the method name. One note box carries the reason, because the reason is the first thing to go missing.
+One thing is different. A row has height. So a step is a box that holds about 25 words, not an arrow that holds four.
 
+Three rules use that space, and together they are the whole notation:
+
+- the lane label carries the owning team, not only the service name
+- the box carries how the step works, not the name of the method
+- one note box carries the reason, because the reason disappears first
 
 ![What each notation can carry. Bands win on ownership, danger and reasoning. Lifelines win on control flow, combined fragments, and being text you can diff.](/assets/img/posts/turn-the-sequence-diagram-on-its-side/what-each-notation-carries-light.png)
 
 ## What comes back is different
 
-The part I did not expect was that the kind of comment changed, not the number of them.
+I did not expect this part. The number of comments stayed the same. The kind of comment changed.
 
-Send a sequence diagram round and half of what you get back is about the notation. Does that dashed arrow mean asynchronous, or does it mean a return. Is anybody blocked here. All fair questions, and not one of them is about the design. You spend the review teaching people to read the picture. The picture was supposed to be the cheap part.
+Send a sequence diagram round, and half of what comes back is about the notation. Does this dashed arrow mean async, or a return? Is anybody blocked here? Fair questions. Not one of them is about the design. You spend the review teaching people to read the picture, and the picture was supposed to be the cheap part.
 
-Send the lane version and the questions arrive about the system instead. Why does this cross my team. What happens to a company that gets minted twice. Who picks that up.
+Send the lane version, and the questions are about the system instead. Why does this cross my team? What happens to a company we created twice? Who picks that up?
 
-Nobody has ever asked me what a lane means. A row with a squad name needs no explaining, and that is the difference between a diagram people review and one they approve.
+Nobody has ever asked me what a lane means. A row with a squad name needs no explaining. That is the difference between a diagram people review and one they approve.
 
-Who joins in surprised me more. Product read these without being taught, and I have stopped expecting anyone outside engineering to read a sequence diagram at all. **The people who can tell you a boundary is wrong are very often the same people who were never going to read a sequence diagram.**
+The bigger surprise was who joined in. Product people read these without any training, and I have stopped expecting anyone outside engineering to read a sequence diagram. **The people who can tell you a boundary is wrong are often the same people who were never going to read UML.**
 
 ## Count the handovers, not the arrows
 
-The part worth the trouble is one line per lane.
+This is the part worth the effort. It costs one line per lane.
 
-Write the owning team next to each participant. The picture stops being five services and becomes four squads with three handovers between them, and **a handover is a conversation somebody has to have before any of this gets built.**
+Write the owning team next to each participant. The picture is no longer five services. It is four squads with three handovers, and **each handover is a conversation somebody has to have before any code gets written.**
 
-Count them properly, because this is where the idea gets misused. Not arrows crossing lanes. Two lanes owned by one squad make a crossing and no conversation, six arrows between the same two squads are still one conversation, and what you want is the number of distinct team pairs that hand each other something. On the page I sent for review, 8 lanes and 14 steps collapsed to 3 teams and 3 pairs. It also broke my own rule about splitting past 6 lanes. Breaking it was the tell.
+Count them carefully, because this is where the idea gets used wrongly. Do not count arrows. Two lanes owned by one squad make a crossing but no conversation. Six arrows between the same two squads are still one conversation. Count the team pairs that hand each other something.
+
+On the page I sent for review, 8 lanes and 14 steps came down to 3 teams and 3 pairs. It also broke my own rule about splitting past 6 lanes. Breaking it was the warning.
 
 That number belongs next to the estimate. It counts the roadmap slots you need inside other teams, and the people who can say no.
 
-None of this came from software. Rummler and Brache popularised the swimlane in *Improving Performance: How to Manage the White Space on the Organization Chart*, on the observation that process failures cluster at the handoffs between departments rather than inside them. (A famous 80% is attached to that. I cannot source it.)
+None of this came from software. Rummler and Brache made the swimlane popular in *Improving Performance: How to Manage the White Space on the Organization Chart*. Their finding was simple. Processes do not fail inside departments. They fail at the handoffs between them. (A famous 80% is attached to that. I could not find the source.)
 
-A sequence diagram has no white space to point at. Its participants are objects, and objects do not have managers, quarters, or a backlog that is already full.
+A sequence diagram has no white space to point at. Its participants are objects. Objects do not have managers, quarters, or a backlog that is already full.
 
-The note box ends with the line I now put on every one of these: whose ticket that is gets agreed here, or it gets agreed in an incident.
+The note box ends with a line I now put on all of them. Whose ticket this is gets agreed here, or it gets agreed during an incident.
 
 ## Yes, this is a swimlane
 
-Somebody is about to say it, so I will.
+Somebody will say it, so I will.
 
-[BPMN](https://www.omg.org/spec/BPMN/2.0/) has had pools and lanes since 2004, and a lane already means the team responsible. UML ships activity partitions, which are swimlanes, in the same specification as the sequence diagram I have been arguing with. PlantUML takes `|Identity|`. Mermaid has them now. The rotation is twenty years old. None of it is mine.
+[BPMN](https://www.omg.org/spec/BPMN/2.0/) has had pools and lanes since 2004, and a lane already means the responsible team. UML has activity partitions, which are swimlanes, in the same specification as the sequence diagram I have been arguing with. PlantUML takes `|Identity|`. Mermaid has them too. The rotation is twenty years old. None of it is mine.
 
-The discipline is what I have not found in any of them. BPMN lanes carry a role, then bury the rationale in a properties panel. PlantUML gives you one line per step. None asks for the mechanism. None makes you write down what the picture will cost in other people's quarters.
+What I have not found anywhere is the discipline. BPMN lanes carry a role, then hide the reasoning in a properties panel. PlantUML gives you one line per step. None asks for the mechanism. None makes you write down what the picture will cost in other people's quarters.
 
 ## What I still cannot do
 
-Returns. A sequence diagram shows precisely when control comes back; my grey bar only says it is held.
+Returns. A sequence diagram shows exactly when control comes back. My grey bar only shows that somebody is still holding it.
 
-The tooling is worse than it looks. These pictures come out of a 150-line model file through a generator, so they diff and regenerate. The skill below does not. It has an agent emit absolute coordinates, the fragile dead artifact I complained about in [The Diagram That Cannot Lie](/blog/the-diagram-that-cannot-lie/). I know roughly what the fix is. I have not written it.
+The tooling is worse than it looks. These pictures come from a model file through a generator, so they diff and regenerate. The skill below does not. It makes an agent write absolute coordinates, the dead artifact I complained about in [The Diagram That Cannot Lie](/blog/the-diagram-that-cannot-lie/). I know roughly how to fix it. I have not done it.
 
-Then the one I like least. Open one on a phone and the box bodies land under 4px. **A notation whose whole advantage is text density is the one a narrow column punishes hardest.** A desktop artifact, and I have no answer.
+Then the part I like least. Open one on a phone and the text in the boxes drops below 4px. **A notation whose only advantage is text density is the one a narrow screen hurts most.** It is a desktop artifact, and I have no answer.
 
 ## Take the notation, not the picture
 
-The pictures here are worth nothing to you. The notation might be, so it is a file rather than advice. Drop `SKILL.md` into `.claude/skills/`, describe a flow, get a `.drawio` back.
+The pictures here are worth nothing to you. The notation might be. So it is a file, not advice. Drop `SKILL.md` into `.claude/skills/`, describe a flow, get a `.drawio` back.
 
-**[SKILL.md](/assets/skills/lane-flow-diagram/SKILL.md)** ⋅ MIT, no attribution needed, swap the palette for yours.
+**[SKILL.md](/assets/skills/lane-flow-diagram/SKILL.md)** ⋅ MIT, no attribution needed, swap the palette for your own.
 
-Its last section is a checklist. That is the part I would keep if I had to throw the rest away. One question asks how many team handovers the picture holds, and whether that number sits next to the estimate. It has changed more designs than any arrow I have drawn.
+Its last section is a checklist. That is the part I would keep if I had to throw away the rest. One question asks how many team handovers the picture holds, and whether that number sits next to the estimate.
 
 The drawing takes a minute now. Working out which teams belong in the room still takes the week it always took.
 

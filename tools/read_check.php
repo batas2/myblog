@@ -48,6 +48,9 @@ function rc_prose(string $file): string
     $t = preg_replace('/^\*[^*]+\*\s*$/m', '', (string) $t);
     $t = preg_replace('/^\*\*[A-Za-z]+:\*\*.*$/m', '', (string) $t);
     $t = preg_replace('/\[([^\]]+)\]\([^)\s]+\)/', '$1', (string) $t);
+    // A list item is a unit the reader finishes, but it carries no full stop, so without this the
+    // whole list counts as one enormous sentence and every bulleted post looks unreadable.
+    $t = preg_replace('/^\s*(?:[-*]|\d+\.)\s+(.*?)\s*$/m', '$1.', (string) $t);
     return trim(preg_replace('/[*`_]/', '', (string) $t) ?? '');
 }
 
@@ -74,7 +77,7 @@ function rc_load(string $s): int
 function rc_measure(string $file): ?array
 {
     $t = rc_prose($file);
-    $sents = array_values(array_filter(preg_split('/(?<=[.!?])\s+/', $t) ?: [], fn($s) => str_word_count($s) > 1));
+    $sents = array_values(array_filter(preg_split('/(?<=[.!?])["\x{201D}]?\s+/u', $t) ?: [], fn($s) => str_word_count($s) > 1));
     preg_match_all("/[A-Za-z][A-Za-z'-]*/", $t, $m);
     $words = $m[0];
     if (!$sents || !$words) return null;
