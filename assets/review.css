@@ -1,0 +1,128 @@
+/* ==========================================================================
+   review.css — the margin-note surface. Loaded only by review.php.
+   Uses the site's own tokens so the prose reads exactly as it will ship;
+   everything added here is chrome around that, never inside it.
+   ========================================================================== */
+
+.rv-body { background: var(--paper); color: var(--body); font-family: 'Inter', system-ui, sans-serif; }
+
+/* ---- top bar ---- */
+.rv-bar {
+  position: sticky; top: 0; z-index: 30;
+  display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+  padding: 0.7rem 1.4rem;
+  background: var(--nav-bg); backdrop-filter: saturate(180%) blur(12px);
+  border-bottom: 1px solid var(--line);
+}
+.rv-back { font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: var(--muted); text-decoration: none; }
+.rv-back:hover { color: var(--accent); }
+.rv-title { font-weight: 600; color: var(--ink); font-size: 0.95rem; }
+.rv-chip {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; letter-spacing: 0.06em;
+  text-transform: uppercase; padding: 0.16rem 0.5rem; border-radius: 999px;
+  border: 1px solid var(--line); color: var(--muted);
+}
+.rv-chip-published { color: #2f855a; border-color: #2f855a55; }
+.rv-chip-scheduled { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+
+.rv-modes { margin-left: auto; display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.rv-mode {
+  padding: 0.32rem 0.85rem; font-size: 0.82rem; text-decoration: none;
+  color: var(--muted); background: var(--surface);
+}
+.rv-mode + .rv-mode { border-left: 1px solid var(--line); }
+.rv-mode.is-on { background: var(--accent); color: #fff; }
+.rv-count { font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: var(--muted); }
+.rv-save { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--faint); min-width: 7ch; }
+.rv-save.is-err { color: #c0392b; }
+
+.rv-hint {
+  padding: 0.55rem 1.4rem; font-size: 0.8rem; color: var(--muted);
+  background: var(--wash); border-bottom: 1px solid var(--line);
+}
+
+/* ---- layout ---- */
+.rv-main {
+  display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 2.4rem;
+  max-width: 1240px; margin: 2.2rem auto 6rem; padding-inline: 24px; align-items: start;
+}
+.rv-doc { min-width: 0; }
+.rv-doc h1 { font-size: clamp(1.9rem, 3.2vw, 2.6rem); line-height: 1.12; color: var(--ink); letter-spacing: -0.02em; }
+.rv-sub { color: var(--muted); font-size: 1.06rem; margin-top: 0.6rem; }
+.rv-rail { position: relative; min-height: 100%; }
+@media (max-width: 940px) {
+  .rv-main { grid-template-columns: 1fr; }
+  .rv-rail { display: none; }
+}
+
+/* ---- blocks ---- */
+.rv-b { position: relative; border-radius: 6px; margin-bottom: 1.35rem; }
+/* The wrapper carries the rhythm now, so the block inside it must not add its own on top. */
+.rv-b > :last-child { margin-bottom: 0; }
+.rv-b[data-type="h2"] { margin-top: 2.6rem; }
+.rv-b[data-type="figure"] { margin-block: 1.8rem; }
+.rv-b.is-editable { outline: 1px solid transparent; transition: outline-color .12s, background .12s; }
+.rv-b.is-editable:hover { outline-color: var(--line); }
+.rv-b.is-editable:focus {
+  outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  outline-offset: 4px; background: var(--surface);
+}
+.rv-b.is-dirty { outline-color: color-mix(in srgb, var(--accent) 70%, transparent); }
+.rv-b.is-stale { outline: 2px solid #c0392b; }
+
+/* ---- highlights ---- */
+.rv-hl {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  border-bottom: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  color: inherit; border-radius: 2px; cursor: pointer;
+}
+.rv-hl.is-resolved { background: color-mix(in srgb, var(--muted) 12%, transparent); border-bottom-color: var(--line); }
+.rv-hl.is-active { background: color-mix(in srgb, var(--accent) 30%, transparent); }
+
+/* ---- note cards ---- */
+.rv-card {
+  position: absolute; left: 0; width: 100%;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+  padding: 0.75rem 0.85rem; font-size: 0.86rem; line-height: 1.5;
+  transition: top .18s ease, border-color .12s;
+}
+.rv-card.is-active { border-color: var(--accent); box-shadow: 0 4px 18px rgba(0,0,0,.09); }
+.rv-card.is-resolved { opacity: .62; }
+.rv-card blockquote {
+  margin: 0 0 0.45rem; padding-left: 0.6rem; border-left: 2px solid var(--line);
+  color: var(--faint); font-size: 0.78rem; font-style: italic;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.rv-card .rv-body-text { color: var(--ink); white-space: pre-wrap; word-break: break-word; }
+.rv-card textarea {
+  width: 100%; border: 1px solid var(--line); border-radius: 6px; padding: 0.45rem;
+  font: inherit; background: var(--paper); color: var(--ink); resize: vertical; min-height: 4.6rem;
+}
+.rv-card .rv-meta { margin-top: 0.5rem; display: flex; gap: 0.7rem; align-items: center; }
+.rv-card button, .rv-del, .rv-tip button {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.66rem; letter-spacing: 0.04em;
+  background: none; border: 1px solid var(--line); border-radius: 6px;
+  padding: 0.22rem 0.55rem; color: var(--muted); cursor: pointer;
+}
+.rv-card button:hover, .rv-del:hover { color: var(--accent); border-color: var(--accent); }
+.rv-card button.rv-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.rv-card .rv-when { margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; color: var(--faint); }
+.rv-card .rv-fix { margin-top: 0.5rem; padding-top: 0.45rem; border-top: 1px dashed var(--line); font-size: 0.78rem; color: var(--muted); }
+
+/* ---- selection tooltip ---- */
+.rv-tip { position: absolute; z-index: 40; transform: translate(-50%, -100%); }
+.rv-tip button { background: var(--ink); color: var(--paper); border-color: var(--ink); padding: 0.3rem 0.7rem; }
+
+/* ---- orphans ---- */
+.rv-orphans { max-width: 1240px; margin: 0 auto 5rem; padding-inline: 24px; }
+.rv-orphans h2 { font-size: 1.05rem; color: var(--ink); margin-bottom: 0.3rem; }
+.rv-orphans > p { color: var(--muted); font-size: 0.86rem; margin-bottom: 1rem; }
+.rv-orphan {
+  border: 1px dashed var(--line); border-radius: 10px; padding: 0.8rem 1rem;
+  margin-bottom: 0.7rem; font-size: 0.86rem;
+}
+.rv-orphan blockquote { margin: 0 0 0.4rem; color: var(--faint); font-style: italic; }
+.rv-orphan p { color: var(--ink); margin-bottom: 0.5rem; }
+
+/* Read mode keeps the document inert: no outlines, no cursors that suggest an edit. */
+.rv-body[data-mode="read"] .rv-b { outline: none !important; background: none !important; }

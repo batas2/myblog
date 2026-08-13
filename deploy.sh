@@ -14,6 +14,9 @@ set -euo pipefail
 #   ./deploy.sh --verbose   stream every command's raw output (-v works too).
 #                           Without it the deploy prints one line per step and
 #                           a summary; a failing step still dumps its full log.
+#   ./deploy.sh --pull      bring post sources and review notes home, then
+#                           write the briefs an agent works from
+#   ./deploy.sh --force     push even when the server is ahead (last resort)
 #   ./deploy.sh --pull-logs pull the live site's runtime data into
 #                           _remote-logs/<timestamp>/ and exit without
 #                           deploying anything. Read-only on the server.
@@ -49,7 +52,7 @@ RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; BO
 
 # --- output helpers ---
 STEP_NUM=0
-STEP_TOTAL=6
+STEP_TOTAL=7   # +1 for the two-way guard
 STEP_START=0
 step() {
   STEP_NUM=$((STEP_NUM + 1))
@@ -70,6 +73,8 @@ RSYNC_MODE=()
 SKIP_GEOIP=0
 VERBOSE=0
 PULL_LOGS=0
+PULL_REVIEW=0
+FORCE_PUSH=0
 for arg in "$@"; do
   case "$arg" in
     --clean)    DELETE_FLAG=(--delete) ;;
@@ -77,6 +82,8 @@ for arg in "$@"; do
     --no-geoip) SKIP_GEOIP=1 ;;
     --verbose|-v) VERBOSE=1 ;;
     --pull-logs) PULL_LOGS=1 ;;
+    --pull)     PULL_REVIEW=1 ;;
+    --force)    FORCE_PUSH=1 ;;
     *) die "Unknown option: ${arg}" ;;
   esac
 done
@@ -121,6 +128,77 @@ dump_log() {
 
 # run() failed: show what happened, then stop.
 fail_with_log() { dump_log "$1"; die "$2"; }
+
+# --- the two-way guard --------------------------------------------------------
+# review.php writes post sources on the server, and a deploy pushes post sources up. Without a
+# marker there is no way to tell "I edited locally, push it" from "I edited on the site and forgot
+# to pull", and the second one silently destroys the afternoon's corrections.
+#
+# So every pull and every successful push records what both sides agreed on. A file whose remote
+# hash differs from local AND from that record changed on the server since, and the push stops.
+SYNC_STATE="${LOCAL_DIR}content/.sync-state"
+
+# md5 of every post source and review note, one "hash  path" per line, sorted.
+sync_hashes_local() {
+  ( cd "${LOCAL_DIR}" && find content/posts content/review -type f \( -name '*.md' -o -name '*.json' \) 2>/dev/null \
+    | sort | xargs -r md5sum 2>/dev/null ) || true
+}
+sync_hashes_remote() {
+  ssh -p "${SSH_PORT}" -o ConnectTimeout=15 "${SSH_USER}@${SSH_HOST}" \
+    "cd '${REMOTE_DIR}' 2>/dev/null && find content/posts content/review -type f \( -name '*.md' -o -name '*.json' \) 2>/dev/null | sort | xargs -r md5sum 2>/dev/null" || true
+}
+sync_state_write() { sync_hashes_local > "${SYNC_STATE}" 2>/dev/null || true; }
+
+# --- --pull: bring the writing round trip home, then stop ---
+# review.php edits post sources in place and stores margin notes next to them, so after a reading
+# session the server holds the newer copy of both. This is the only thing that brings them back, and
+# it must run before the next deploy or the push guard below will (correctly) refuse to start.
+#
+# Everything here is a plain file copy: no snapshot, no database, nothing on the server changes.
+if [ "${PULL_REVIEW}" -eq 1 ]; then
+  STEP_TOTAL=2
+  DRY=0
+  [ ${#RSYNC_MODE[@]} -eq 0 ] || DRY=1
+
+  echo -e "${BOLD}Pulling post sources and review notes${NC}"
+  echo -e "  source: ${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}"
+  echo -e "  target: ${LOCAL_DIR}content/"
+  [ "${DRY}" -eq 0 ] || echo -e "  mode:   dry-run (nothing is written)"
+  echo
+
+  step "Downloading content/posts and content/review"
+  run "${LOG_DIR}/pullreview.log" rsync -az "${RSYNC_PROGRESS[@]}" --itemize-changes "${RSYNC_MODE[@]}" \
+    --include='/content/' \
+    --include='/content/posts/' \
+    --include='/content/posts/*.md' \
+    --include='/content/review/' \
+    --include='/content/review/*.json' \
+    --exclude='*' \
+    -e "ssh -p ${SSH_PORT}" \
+    "${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}/" \
+    "${LOCAL_DIR}" \
+    || fail_with_log "${LOG_DIR}/pullreview.log" "Downloading posts and review notes failed."
+
+  CHANGED="$(grep -cE '^[<>ch][fL]' "${LOG_DIR}/pullreview.log" || true)"
+  if [ "${DRY}" -eq 1 ]; then
+    step_done "${CHANGED} file(s) would be updated"
+  else
+    step_done "${CHANGED} file(s) updated"
+    sync_state_write
+  fi
+
+  step "Writing the briefs"
+  if [ "${DRY}" -eq 1 ]; then
+    step_done "skipped in dry-run"
+  else
+    php "${LOCAL_DIR}tools/review_export.php" || warn "review_export.php reported a problem"
+    step_done "drafts/review/ is current"
+  fi
+
+  echo
+  echo -e "${GREEN}${BOLD}Done.${NC} Point Claude Code at drafts/review/, then ./deploy.sh to push the result."
+  exit 0
+fi
 
 # --- --pull-logs: bring the live site's runtime data home, then stop ---
 # Runtime data is excluded from the sync in both directions, which also means a
@@ -312,7 +390,7 @@ SNAPSHOT_PHP
   exit 0
 fi
 
-[ ${#RSYNC_MODE[@]} -eq 0 ] || STEP_TOTAL=5   # --dry-run skips the backup step
+[ ${#RSYNC_MODE[@]} -eq 0 ] || STEP_TOTAL=6   # --dry-run skips the backup step
 
 echo -e "${BOLD}Deploying bfrackowiak.pl${NC}"
 echo -e "  target: ${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}"
@@ -382,6 +460,41 @@ else
   warn "geoip refresh failed (local copy: ${GEOIP_WAS})"
   note "the existing database was not modified and the remote one is protected"
   note "deploy continues; retry later with: php tools/geoip_update.php"
+fi
+
+# --- 3b. refuse to overwrite a server that is ahead ---
+# Cheap: one ssh, a few dozen md5s. Runs before the backup so a refusal costs nothing.
+step "Checking the server is not ahead"
+REMOTE_H="$(sync_hashes_remote)"
+LOCAL_H="$(sync_hashes_local)"
+CONFLICTS=""
+if [ -n "${REMOTE_H}" ]; then
+  while IFS= read -r line; do
+    [ -n "${line}" ] || continue
+    RHASH="${line%% *}"
+    RPATH="${line#* }"; RPATH="${RPATH# }"
+    LHASH="$(printf '%s\n' "${LOCAL_H}" | awk -v p="${RPATH}" '$2==p {print $1; exit}')"
+    [ "${RHASH}" != "${LHASH}" ] || continue                 # identical: nothing to decide
+    KHASH=""
+    [ ! -f "${SYNC_STATE}" ] || KHASH="$(awk -v p="${RPATH}" '$2==p {print $1; exit}' "${SYNC_STATE}")"
+    # remote still matches what we last agreed on, so the difference is our local edit going up
+    [ "${RHASH}" != "${KHASH}" ] || continue
+    CONFLICTS="${CONFLICTS}  ${RPATH}\n"
+  done <<< "${REMOTE_H}"
+fi
+
+if [ -n "${CONFLICTS}" ] && [ "${FORCE_PUSH}" -eq 0 ]; then
+  echo
+  warn "The server has changes these files do not have locally:"
+  echo -en "${CONFLICTS}"
+  echo
+  die "Run ./deploy.sh --pull first, or ./deploy.sh --force to overwrite the server."
+fi
+if [ -n "${CONFLICTS}" ]; then
+  warn "--force: overwriting server-side changes in $(echo -en "${CONFLICTS}" | wc -l) file(s)"
+  step_done "Guard overridden"
+else
+  step_done "Server is in step"
 fi
 
 # --- 4. backup remote -> local archive (skipped on --dry-run) ---
@@ -462,6 +575,9 @@ XFERRED="$(grep -m1 'Number of regular files transferred' "${RSYNC_LOG}" | grep 
 SENT="$(grep -m1 -oE 'Total transferred file size: [0-9.,]+ bytes' "${RSYNC_LOG}" | grep -oE '[0-9.,]+ bytes' || true)"
 DELETED="$(grep -c '^\*deleting' "${RSYNC_LOG}" || true)"
 step_done "Synced (${XFERRED} files transferred${SENT:+, ${SENT}}$([ "${DELETED}" -eq 0 ] || echo ", ${DELETED} deleted"))"
+
+# Both sides now hold the same post sources, so record that: the next push measures against this.
+[ ${#RSYNC_MODE[@]} -ne 0 ] || sync_state_write
 
 # A dry run exists to be read: quiet mode still lists what would move, capped so
 # a first-time sync cannot bury the summary.

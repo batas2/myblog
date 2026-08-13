@@ -1068,3 +1068,13 @@ a.tag:hover { color: var(--accent-deep); text-decoration: underline; text-underl
   letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted);
 }
 .backlink:hover { color: var(--accent-deep); }
+
+/* review entry point in the admin post list */
+.rv-link {
+  font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.66rem;
+  letter-spacing: 0.04em; color: var(--muted); text-decoration: none;
+  border: 1px solid var(--line); border-radius: 5px; padding: 0.08rem 0.4rem;
+  margin-left: 0.55rem; white-space: nowrap;
+}
+.rv-link:hover { color: var(--accent); border-color: var(--accent); }
+.rv-link b { color: var(--accent); font-weight: 600; }

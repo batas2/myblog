@@ -58,3 +58,8 @@ deploy.env
 
 # render intermediates: the .drawio beside them is the editable source
 drafts/diagrams/**/*.svg
+
+# review notes are pulled from the live site, never committed as a build artifact
+content/review/
+content/.sync-state
+drafts/review/

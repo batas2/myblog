@@ -1300,4 +1300,105 @@ if (($smtpCfg['pass'] ?? '') === '') {
 $ndb = null;
 @unlink($nlTmp); @unlink($nlTmp . '-wal'); @unlink($nlTmp . '-shm');
 
+
+/* ---------------- review: block addressing ---------------- */
+section('review_blocks');
+require_once APP_ROOT . '/lib/review_blocks.php';
+require_once APP_ROOT . '/lib/review_store.php';
+
+$rbFix = [
+    '# A Title',
+    '',
+    '*A subtitle in italics.*',
+    '',
+    'First paragraph.',
+    '',
+    '## A heading',
+    '',
+    '- one',
+    '- two',
+    '',
+    '> quoted',
+    '',
+    '```',
+    '## not a heading',
+    '```',
+    '',
+    '![Cap.](/x.png)',
+    '',
+    '**Tags:** A, B',
+];
+$rb = rb_blocks($rbFix);
+$types = array_column($rb['blocks'], 'type');
+t_eq(['p', 'h2', 'ul', 'quote', 'code', 'figure'], $types, 'every block kind is recognised in order');
+t_eq(4, $rb['blocks'][0]['from'], 'the first paragraph keeps its source line');
+t_eq([8, 9], [$rb['blocks'][2]['from'], $rb['blocks'][2]['to']], 'a list spans its own lines');
+t_assert($rb['blocks'][4]['editable'] === false, 'a code fence is never editable');
+t_assert($rb['blocks'][5]['editable'] === false, 'a figure is never editable');
+t_assert($rb['blocks'][0]['editable'] === true, 'a paragraph is editable');
+foreach ($rb['blocks'] as $b) {
+    t_not_contains('**Tags:**', $b['md'], 'meta never becomes an editable block');
+}
+t_not_contains('A subtitle', implode(' ', array_column($rb['blocks'], 'md')), 'the subtitle is not a block');
+t_eq('one two', rb_plain("- one\n- two"), 'rb_plain strips list markers');
+t_eq('bold and code and link', rb_plain('**bold** and `code` and [link](/x/)'), 'rb_plain unwraps inline markup');
+
+// a surgical write: one line replaced, every other byte identical
+$rbTmp = CONTENT_DIR . '/.rbtest.md';
+file_put_contents($rbTmp, implode("\n", $rbFix));
+$before = file_get_contents($rbTmp);
+$blk = rb_find(rb_load($rbTmp), 'b0');
+t_eq('', rb_write_block($rbTmp, 'b0', 'Rewritten paragraph.', rb_hash($blk['md'])), 'a block write succeeds');
+$after = file_get_contents($rbTmp);
+t_eq(substr_count($before, "\n"), substr_count($after, "\n"), 'the write changes no line count');
+t_contains('Rewritten paragraph.', $after, 'the new text landed');
+t_contains('**Tags:** A, B', $after, 'the meta block is untouched');
+t_contains('## not a heading', $after, 'the code fence is untouched');
+t_eq('stale', rb_write_block($rbTmp, 'b0', 'again', rb_hash($blk['md'])), 'a stale hash is refused');
+t_eq('block is not editable', rb_write_block($rbTmp, 'b4', 'x', ''), 'a code fence refuses to be written');
+t_eq('refusing to empty a block', rb_write_block($rbTmp, 'b1', '  ', ''), 'a block cannot be emptied');
+$blk2 = rb_find(rb_load($rbTmp), 'b1');
+rb_write_block($rbTmp, 'b1', "## Two\nlines", rb_hash($blk2['md']));
+t_not_contains("## Two\nlines", file_get_contents($rbTmp), 'a single-line block cannot smuggle in a newline');
+@unlink($rbTmp);
+
+/* ---------------- review: notes and anchoring ---------------- */
+section('review_store');
+$rvSlug = 'unit-review-fixture';
+@unlink(rv_path($rvSlug));
+$rvParsed = rb_blocks(['# T', '', 'The quick brown fox jumps over the lazy dog.']);
+$sel = ['block' => 'b0', 'quote' => 'brown fox', 'prefix' => 'The quick ', 'suffix' => ' jumps'];
+
+t_eq(null, rv_add($rvSlug, $sel, '   '), 'an empty note body is refused');
+t_eq(null, rv_add($rvSlug, ['quote' => ''], 'body'), 'a note with no quote is refused');
+$note = rv_add($rvSlug, $sel, 'tighten this');
+t_assert(is_array($note) && $note['status'] === 'open', 'a note is stored open');
+
+$located = rv_reanchor(rv_load($rvSlug)['comments'], $rvParsed);
+t_eq('b0', $located[0]['anchor']['block'], 'a fresh note anchors to its own block');
+t_eq(10, $located[0]['anchor']['start'], 'the anchor lands on the quoted text');
+
+// the sentence moves: the note follows it rather than pointing at the old offset
+$moved = rb_blocks(['# T', '', 'Something else entirely first. The quick brown fox jumps on.']);
+$after = rv_reanchor(rv_load($rvSlug)['comments'], $moved);
+t_eq(41, $after[0]['anchor']['start'], 'a note re-anchors after the text around it changes');
+
+// the sentence goes: the note is orphaned rather than matched to something else
+$gone = rb_blocks(['# T', '', 'Nothing remotely similar remains in this paragraph.']);
+$orph = rv_reanchor(rv_load($rvSlug)['comments'], $gone);
+t_eq(null, $orph[0]['anchor'], 'a note whose text is deleted is orphaned, never guessed');
+
+t_assert(rv_update($rvSlug, $note['id'], ['status' => 'resolved']), 'a note resolves');
+t_eq(1, rv_counts($rvSlug, $rvParsed)['resolved'], 'counts follow the status');
+t_assert(rv_update($rvSlug, $note['id'], ['status' => 'open']), 'a note reopens');
+t_eq(null, rv_load($rvSlug)['comments'][0]['resolution'], 'reopening clears the resolution note');
+t_assert(!rv_update($rvSlug, 'nope', ['body' => 'x']), 'patching an unknown note reports failure');
+t_assert(rv_delete($rvSlug, $note['id']), 'a note deletes');
+t_eq([], rv_load($rvSlug)['comments'], 'the thread is empty again');
+@unlink(rv_path($rvSlug));
+
+// review.php must never answer to a visitor
+t_contains('admin_session_active', file_get_contents(APP_ROOT . '/review.php'), 'review.php gates on an admin session');
+t_contains('admin_csrf_check', file_get_contents(APP_ROOT . '/review.php'), 'every review write checks CSRF');
+
 if (basename($_SERVER['SCRIPT_NAME'] ?? '') === 'unit.php') exit(t_summary());
