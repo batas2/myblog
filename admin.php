@@ -771,6 +771,12 @@ dialog.why::backdrop { background: rgba(10,10,15,.45); }
           'comments' => (int) $p['comments'], 'read' => $rc,
           'thumb' => $h['thumb'] ?? null, 'path' => post_path($p['slug']),
           'share' => $sh, 'tags' => $p['tags'], 'links' => array_values(share_urls($p['slug'])),   // keyed by platform, and JSON turns that into an object
+          // Where it has already been. Syndication is a republication, shared is a link to it, and
+          // the row has to answer "where is this one" without opening drafts/ — which never ships.
+          'out' => array_map(
+              fn($k, $u) => ['badge' => (SYNDICATION[$k]['badge'] ?? SHARED_ON[$k]['badge'] ?? '?'),
+                             'label' => (SYNDICATION[$k]['label'] ?? SHARED_ON[$k]['label'] ?? $k), 'url' => $u],
+              array_keys($p['syndication'] + $p['shared']), array_values($p['syndication'] + $p['shared'])),
           // Why there is no link matters as much as the link: without this the drawer would simply
           // omit the section and leave you wondering whether sharing is broken or switched off.
           'shareOff' => $sh === null ? 'set preview_secret in config.php to enable share links' : null,
@@ -778,11 +784,11 @@ dialog.why::backdrop { background: rgba(10,10,15,.45); }
   }
   ?>
   <table class="plist">
-    <tr><th></th><th>Status</th><th>Post</th><th class="r">Goes live</th><th class="r">Reads</th></tr>
+    <tr><th></th><th>Status</th><th>Post</th><th class="r">Goes live</th><th class="r">Reads</th><th class="r">Out</th></tr>
     <?php $seenPublished = false; ?>
     <?php foreach ($rows as $r): ?>
     <?php if (!$seenPublished && $r['status'] === 'published'): $seenPublished = true; ?>
-      <tr class="r-split"><td colspan="5"><span>Published</span></td></tr>
+      <tr class="r-split"><td colspan="6"><span>Published</span></td></tr>
     <?php endif; ?>
     <tr class="prow r-<?= e($r['status']) ?>" data-slug="<?= e($r['slug']) ?>" tabindex="0" role="button"
         aria-label="<?= e($r['title']) ?>">
@@ -800,6 +806,9 @@ dialog.why::backdrop { background: rgba(10,10,15,.45); }
         <?php if ($r['countdown']): ?><br><span class="countdown"><?= e($r['countdown']) ?></span><?php endif; ?>
       </td>
       <td class="r"><?php if ($r['read']): ?><span class="rd rd-<?= e($r['read']) ?>"><?= e($r['read']) ?></span><?php endif; ?></td>
+      <td class="r pout">
+        <?php foreach ($r['out'] as $o): ?><span class="ob" title="<?= e($o['label']) ?>"><?= e($o['badge']) ?></span><?php endforeach; ?>
+      </td>
     </tr>
     <?php endforeach; ?>
   </table>

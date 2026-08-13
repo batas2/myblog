@@ -1,4 +1,4 @@
---- not posted yet · paste the permalink here once it is up
+--- not posted yet · when it goes out, put the permalink here AND in the post as **LinkedIn:** <url>
 --- clicks come back as utm_source=linkedin in the Acquisition tab; without the
 --- tag below LinkedIn's lnkd.in wrapper would report them as direct traffic.
 --- plain text on purpose: LinkedIn renders no markdown, so nothing below is

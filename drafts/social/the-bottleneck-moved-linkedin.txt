@@ -1,4 +1,4 @@
---- posted 2026-08-04 · https://www.linkedin.com/feed/update/urn:li:activity:7490475390000545792/
+--- posted 2026-08-04 · https://www.linkedin.com/posts/bartoszfrackowiak_the-bottleneck-moved-bartosz-fr%C4%85ckowiak-share-7490475387974488064-wAM5
 --- clicks come back as utm_source=linkedin in the Acquisition tab; without the
 --- tag below LinkedIn's lnkd.in wrapper would report them as direct traffic.
 

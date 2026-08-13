@@ -48,6 +48,13 @@
       '<div><dt>Comments</dt><dd>' + (p.comments || 'none') + '</dd></div>' +
       '</dl>');
 
+    if (p.out && p.out.length) {
+      out.push('<h4>Already out</h4><div class="pd-acts row">' + p.out.map(function (o) {
+        return '<a class="mini ob-link" href="' + esc(o.url) + '" target="_blank" rel="noopener">' +
+               '<span class="ob">' + esc(o.badge) + '</span> ' + esc(o.label) + ' ↗</a>';
+      }).join('') + '</div>');
+    }
+
     if (p.tags && p.tags.length) {
       out.push('<p class="pd-tags">' + p.tags.map(function (t) { return '<span>' + esc(t) + '</span>'; }).join('') + '</p>');
     }

@@ -1,4 +1,4 @@
---- not posted yet · record the URL here when it goes out
+--- posted 2026-08-10 · https://www.linkedin.com/posts/bartoszfrackowiak_probabilistic-metrics-bartosz-fr%C4%85ckowiak-share-7492563212823994368-jnrN
 --- clicks come back as utm_source=linkedin in the Acquisition tab; without the
 --- tag below LinkedIn's lnkd.in wrapper would report them as direct traffic.
 --- plain text on purpose: LinkedIn renders no markdown, so nothing below is

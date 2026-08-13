@@ -66,5 +66,6 @@ Because that is the actual offer on the table now. The classic excuse for not me
 
 **Medium:** https://medium.com/@bfrackowiak/probabilistic-metrics-bartosz-fr%C4%85ckowiak-5b3098a1fafe
 **DevTo:** https://dev.to/bfrackowiak/probabilistic-metrics-3766
+**LinkedIn:** https://www.linkedin.com/posts/bartoszfrackowiak_probabilistic-metrics-bartosz-fr%C4%85ckowiak-share-7492563212823994368-jnrN
 
 **Tags:** Metrics, Artificial Intelligence, Data-Driven Decision Making, AI Transformation, Engineering Leadership

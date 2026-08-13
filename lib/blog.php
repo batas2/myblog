@@ -21,6 +21,19 @@ const SYNDICATION = [
 ];
 
 /**
+ * Where a post was *shared*, as opposed to republished.
+ *
+ * Deliberately not a SYNDICATION entry. Those become `sameAs` in the article schema and an "also
+ * published on" badge, which asserts the article exists at that address. A LinkedIn post links to
+ * the article; it is not a copy of it, and claiming otherwise in structured data is a lie search
+ * engines are entitled to believe. So this is recorded, never rendered publicly, and exists so the
+ * admin can answer "where has this one been" without opening drafts/ — which never ships.
+ */
+const SHARED_ON = [
+    'LinkedIn' => ['label' => 'LinkedIn', 'badge' => 'in', 'host' => 'linkedin.com'],
+];
+
+/**
  * A syndication URL is only accepted when it is https and on that platform's
  * own host. It ends up in an href and in sameAs, so "whatever the author
  * typed" is not good enough: this refuses javascript: URLs outright and
@@ -177,8 +190,10 @@ function parse_post_file(string $file): ?array
     $meta = ['Status' => null, 'Publish' => null, 'Updated' => null,
              'Scores' => null, 'Scored' => null, 'Tags' => null];
     foreach (array_keys(SYNDICATION) as $platform) $meta[$platform] = null;
+    foreach (array_keys(SHARED_ON) as $platform) $meta[$platform] = null;
     $metaPattern = ['Status' => '[a-zA-Z]+'];
     foreach (array_keys(SYNDICATION) as $platform) $metaPattern[$platform] = 'https?:\/\/\S+';
+    foreach (array_keys(SHARED_ON) as $platform) $metaPattern[$platform] = 'https?:\/\/\S+';
 
     // meta lines are stripped from the body together with any hr that only separated them
     $dropTrailingRule = function () use (&$body): void {
@@ -229,6 +244,17 @@ function parse_post_file(string $file): ?array
         $syndication[$platform] = $url;
     }
 
+    $shared = [];
+    foreach (SHARED_ON as $platform => $spec) {
+        $url = $meta[$platform];
+        if ($url === null) continue;
+        if (!syndication_url_ok($url, $spec['host'])) {
+            blog_warn("{$name}.md: **{$platform}:** must be an https URL on {$spec['host']} — ignored");
+            continue;
+        }
+        $shared[$platform] = $url;
+    }
+
     $publishRaw = $meta['Publish'];
     $updatedRaw = $meta['Updated'];
     $scoresRaw  = $meta['Scores'] ?? '';
@@ -275,6 +301,7 @@ function parse_post_file(string $file): ?array
         'subtitle'    => $subtitle,
         'tags'        => $tags,
         'syndication' => $syndication,
+        'shared' => $shared,
         'status'      => $status,
         'publish_ts'  => $publishTs,
         'publish_iso' => (new DateTimeImmutable('@' . $publishTs))->setTimezone(site_tz())->format('c'),

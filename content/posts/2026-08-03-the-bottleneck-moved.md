@@ -75,6 +75,7 @@ The queue did not shrink. It moved one seat to the right, and it is quieter over
 **Medium:** https://medium.com/@bfrackowiak/the-bottleneck-moved-ccc5089dad38
 
 **DevTo:** https://dev.to/bfrackowiak/the-bottleneck-moved-1iae
+**LinkedIn:** https://www.linkedin.com/posts/bartoszfrackowiak_the-bottleneck-moved-bartosz-fr%C4%85ckowiak-share-7490475387974488064-wAM5
 
 **Scores:** tension=8 originality=7 personal=7 contrarian=7 substance=8 punch=8 trend=9
 **Scored:** 2026-07-27 rubric=v1 model=claude-fable-5

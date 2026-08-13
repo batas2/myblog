@@ -1,4 +1,4 @@
---- not posted yet · record the URL here when it goes out
+--- not posted yet · when it goes out, put the permalink here AND in the post as **LinkedIn:** <url>
 --- pairs with: assets/video/stemma-film-light.mp4 (1m58s, silent) uploaded
 --- natively. LinkedIn does not unfurl og:video, so a link post shows the og
 --- card and the film never plays in the feed.
