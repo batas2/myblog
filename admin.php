@@ -770,7 +770,7 @@ dialog.why::backdrop { background: rgba(10,10,15,.45); }
           'band' => sc_band($r), 'minutes' => $p['minutes'], 'words' => $p['words'],
           'comments' => (int) $p['comments'], 'read' => $rc,
           'thumb' => $h['thumb'] ?? null, 'path' => post_path($p['slug']),
-          'share' => $sh, 'tags' => $p['tags'], 'links' => share_urls($p['slug']),
+          'share' => $sh, 'tags' => $p['tags'], 'links' => array_values(share_urls($p['slug'])),   // keyed by platform, and JSON turns that into an object
           // Why there is no link matters as much as the link: without this the drawer would simply
           // omit the section and leave you wondering whether sharing is broken or switched off.
           'shareOff' => $sh === null ? 'set preview_secret in config.php to enable share links' : null,
