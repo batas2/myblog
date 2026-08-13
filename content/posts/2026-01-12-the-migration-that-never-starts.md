@@ -24,7 +24,7 @@ We track technical debt in backlogs. We track risks in registers. The compoundin
 
 Because while the decision waits, the old platform doesn't wait with it. Every sprint adds new integrations to the thing you intend to leave. Every new feature is another consumer of the legacy contract, another strand in the net that will have to be cut later. The migration doesn't get cheaper while you analyze it. The price of "not yet" is invoiced monthly and itemized never.
 
-There's a human line item too, and it compounds faster than the technical one. The third time a migration is announced and doesn't start, teams stop believing announcements. Engineers who prepared for the move file the experience under "management noise." So the zombie migration does not merely burn analysis budget; it devalues every future commitment leadership makes, including the ones that are real, including the one that finally gets funded two years from now and arrives to a room that has learned not to move until it sees a merged pull request. That currency does not come back at the next all-hands.
+There's a human line item too, and it compounds faster than the technical one. The third time a migration is announced and doesn't start, teams stop believing announcements. Engineers who prepared for the move file the experience under "management noise." So the zombie migration does not only burn analysis budget. It devalues every future promise leadership makes, including the real ones, including the ones with money behind them, and including the one somebody will need people to believe two years from now. Including the one that finally gets funded two years from now, and arrives to a room that has learned not to move until it sees a merged pull request. That currency does not come back at the next all-hands.
 
 ## One-way doors, two-way doors
 
@@ -32,7 +32,7 @@ Amazon popularized a genuinely useful question: is this decision a one-way door 
 
 Now look honestly at a migration. Routing one endpoint through the new service: reversible. Dual-writing to both data stores: reversible by design. Moving one read path, one team, one low-risk workload: two-way doors, all of them. The overwhelming majority of migration *steps* can be undone with a config change and a mildly embarrassing standup update.
 
-Yet the organization treats every step as a bet-the-company moment. Why? Because the migration was framed as one giant decision, "we are moving to X", and *that* framing is a one-way door, socially if not technically. Nobody wants to personally own the giant door, so everybody keeps studying the hinges.
+Yet the organization treats every step as a bet-the-company moment. Why? Because the migration was framed as one giant decision. "We are moving to X." *That* framing is a one-way door, socially if not technically. Nobody wants to personally own the giant door, so everybody keeps studying the hinges.
 
 The trick is almost insultingly simple: stop deciding the migration. Decide the next step. **Decompose until every step is a two-way door, then walk through the first one.**
 
@@ -54,7 +54,7 @@ Don't refresh it this quarter. Pick the smallest reversible step it describes an
 
 ---
 
-**Updated:** 2026-08-01 16:10
+**Updated:** 2026-08-13 10:45
 
 **Scores:** tension=8 originality=7 personal=6 contrarian=7 substance=8 punch=8 trend=4
 **Scored:** 2026-07-27 rubric=v1 model=claude-opus-5

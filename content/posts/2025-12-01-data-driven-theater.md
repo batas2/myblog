@@ -39,15 +39,15 @@ Between those two extremes lives an honest analysis. You'll recognize it by one 
 
 In organizations (I'm deliberately not saying *corporations*, because this has nothing to do with company size) the problem I keep seeing is almost never the inference step. People are genuinely good at drawing conclusions. Give a smart group a dataset and they will reason about it just fine.
 
-The problem sits earlier and deeper: **the method of collecting the data, and the absence of a shared language to describe it.** We argue passionately about what the numbers mean while quietly disagreeing, without knowing it, about what the numbers *are*. Calling that process data-driven doesn't fix it. It just gives the disagreement better slides.
+The problem sits earlier and deeper. **It is how the data was collected, and the missing shared language to describe it.** We argue passionately about what the numbers mean. All the while we disagree, without knowing it, about what the numbers *are*. Calling that process data-driven doesn't fix it. It just gives the disagreement better slides.
 
 ## Unless…
 
 Of course, there is one scenario where none of this matters.
 
-If your actual goal is not a decision but an appearance, walking into the meeting as *the prepared one* and radiating competence from behind a wall of charts, then yes, data helps enormously. A confident slide with big numbers is a wonderful prop.
+Maybe your goal is not a decision at all. Maybe it is walking into the meeting as *the prepared one*, radiating competence from behind a wall of charts. Then yes, data helps enormously. A confident slide with big numbers is a wonderful prop.
 
-But it works under exactly one condition: your audience must not be competent enough to ask about definitions and preprocessing. And trust me, that condition is satisfied more often than we'd like to admit ;) If you're wondering how those audiences end up in those rooms, [The Peter Principle](https://en.wikipedia.org/wiki/Peter_principle) has been explaining it since 1969.
+But it works under exactly one condition: your audience must not be competent enough to ask about definitions and preprocessing. And trust me, that happens more often than we would like to admit ;) If you are wondering how those audiences end up in those rooms, [The Peter Principle](https://en.wikipedia.org/wiki/Peter_principle) has been explaining it since 1969.
 
 ## A small experiment
 
@@ -58,13 +58,13 @@ So here's my suggestion for your next data-driven meeting. Don't challenge the c
 
 Then watch the room.
 
-If the answers come easily, congratulations: you're in one of those rare places where data-driven means something. If what you get is a pause, a nervous smile, and "let's take it offline", then you have learned more in ten seconds than the whole deck was going to teach you, because you now know exactly which layer of this is broken, and it happens to be the cheap one to fix.
+If the answers come easily, congratulations: you're in one of those rare places where data-driven means something. If what you get is a pause, a nervous smile, and "let's take it offline", you have learned more in ten seconds than the whole deck was going to teach you, and you learned it in front of the same people who were a minute away from nodding along. You now know exactly which layer is broken. It happens to be the cheap one to fix.
 
 Definitions are cheaper than dashboards. Write down what "active user" means here, get two departments to put their names on it, and half the charts in the building start meaning the same thing without anyone rebuilding a single query. That's an afternoon. I have never seen an organization finish it in one sitting, and I have never seen one regret starting.
 
 ---
 
-**Updated:** 2026-07-31 14:53
+**Updated:** 2026-08-13 10:45
 
 **Scores:** tension=8 originality=6 personal=4 contrarian=8 substance=6 punch=8 trend=4
 **Scored:** 2026-07-27 rubric=v1 model=claude-opus-5

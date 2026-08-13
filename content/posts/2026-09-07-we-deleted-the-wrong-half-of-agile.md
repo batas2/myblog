@@ -80,11 +80,11 @@ If you want a faster reading, take your last ten merged pull requests and count 
 
 The thing I keep turning over is that I had already built this and could not see it.
 
-The architecture tool I work on at night exists so that editing an element on a canvas produces a Git diff containing that edit and nothing else. No reordering, no reformatting, no comment lost. I built it because [diagrams drift](/blog/the-diagram-that-cannot-lie/) and I wanted one that could not. It took somebody else reading my own essay back to me to name what I had made. Blast radius legibility, the first of the four questions, engineered into a product on purpose.
+The architecture tool I build at night exists so that editing an element on a canvas produces a Git diff containing that edit and nothing else. No reordering. No reformatting. No comment lost. I built it because [diagrams drift](/blog/the-diagram-that-cannot-lie/), and I wanted one that could not. It took somebody reading my own essay back to me to name what I had made. Blast radius legibility, the first of the four questions, built into a product.
 
-The practices were on the shelf the whole time. We labelled them engineering hygiene, which is what a discipline calls the thing it intends to skip, and then twenty years later the one participant who could cover for their absence stopped showing up to the review.
+The practices were on the shelf all along. We labelled them engineering hygiene, which is what a discipline calls the thing it means to skip. Twenty years later the one participant who could cover for their absence stopped showing up to the review.
 
-I am still reading fifteen reports a month. What I look for now is not the ageing queue, which I already know how to find. It is the sentence where somebody explains that they had to go and ask, and then the part where they say who.
+I still read fifteen reports a month. What I look for now is not the ageing queue. I know how to find that. It is the sentence where somebody explains that they had to go and ask. Then the part where they say who.
 
 ---
 

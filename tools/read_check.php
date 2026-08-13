@@ -68,10 +68,43 @@ function rc_syllables(string $w): int
     return max(1, $n);
 }
 
-/** Commas plus subordinators: how many turns the reader has to hold open at once. */
+/**
+ * Abstract nouns, counting each distinct word at most three times.
+ *
+ * A post about decisions says "decision" nineteen times, and that is its subject rather than
+ * nineteen separate abstractions the reader has to unpack. What actually loads a reader is the
+ * *variety* of abstract vocabulary, so a repeated term is charged once for arriving and then
+ * stops counting.
+ */
+function rc_abstract_load(string $t): int
+{
+    preg_match_all(RC_NOMINAL, $t, $m);
+    $seen = [];
+    $total = 0;
+    foreach ($m[0] as $w) {
+        $k = strtolower($w);
+        $seen[$k] = ($seen[$k] ?? 0) + 1;
+        if ($seen[$k] <= 3) $total++;
+    }
+    return $total;
+}
+
+/**
+ * How many turns the reader has to hold open at once: subordinators, plus commas that separate
+ * clauses.
+ *
+ * A series is not a clause. "a, b, c, and d" has three commas and costs the reader one move,
+ * because a list is walked down rather than held open, so each series is charged once and its
+ * remaining commas are refunded. Without that refund a plain enumeration scores as though it were
+ * nested reasoning, which is the opposite of what this is measuring.
+ */
 function rc_load(string $s): int
 {
-    return substr_count($s, ',') + preg_match_all(RC_SUBORD, $s);
+    $commas = substr_count($s, ',');
+    if (preg_match_all('/(?:,[^,;:]{1,70}){2,},\s+(?:and|or)\s/i', $s, $m)) {
+        foreach ($m[0] as $series) $commas -= max(0, substr_count($series, ',') - 1);
+    }
+    return max(0, $commas) + preg_match_all(RC_SUBORD, $s);
 }
 
 function rc_measure(string $file): ?array
@@ -89,7 +122,7 @@ function rc_measure(string $file): ?array
     return [
         'flesch'  => 206.835 - 1.015 * (count($words) / count($sents)) - 84.6 * ($syl / count($words)),
         'commas'  => substr_count($t, ',') / count($sents),
-        'nominal' => 1000 * preg_match_all(RC_NOMINAL, $t) / count($words),
+        'nominal' => 1000 * rc_abstract_load($t) / count($words),
         'heavy1k' => 1000 * count(array_filter($loads, fn($l) => $l >= 4)) / count($words),
         'maxload' => max($loads),
         'sents'   => $sents,

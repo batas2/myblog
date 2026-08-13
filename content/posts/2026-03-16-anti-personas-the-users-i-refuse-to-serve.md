@@ -24,7 +24,7 @@ These are real people with valid needs, and they will happily pay somebody. They
 
 Watch what each rejection buys. Kill round-robin and you never implement availability-merging across calendars, fairness algorithms, or the admin UI to configure them, plus every bug report at the intersection of all three. **One anti-persona kills an entire tree of future edge cases before it sprouts.** The cheapest code review is the one for code that never got written.
 
-And feature triage becomes almost mechanical. Every incoming idea (mine included, at 2 a.m., when everything seems like a good idea) answers one question: *which persona is this for?* If the answer is an anti-persona, it's a clean no. Painlessly. Nothing personal; it's in writing.
+And feature triage becomes almost mechanical. Every incoming idea answers one question. *Which persona is this for?* That includes my own ideas at 2 a.m., when everything seems like a good one. If the answer is an anti-persona, it is a clean no. Painlessly. Nothing personal; it's in writing.
 
 ## The corporate mirror
 
@@ -34,7 +34,7 @@ In [Mathematicians vs. Lawyers](/blog/mathematicians-vs-lawyers/) I described th
 
 A solo project can refuse everyone. That is its superpower: not the tech stack, not the single binary, not the artisanal ADRs. The economics of "no" are simply different. At home, refusing costs nothing; at work, it costs a fight.
 
-Which is exactly why organizations shouldn't dismiss this as hobby-scale wisdom. Two practices copy over directly. First, **anti-personas as first-class strategy artifacts**: written, named, and signed by someone with authority, so that "we don't serve this segment" is a document, not a rumor that dies in the next QBR. Second, **absence-of-feature as a decision with an owner**: an ADR for the thing you deliberately didn't build and why, so the next PM inherits the reasoning instead of innocently reopening the trapdoor.
+Which is exactly why organizations shouldn't dismiss this as hobby-scale wisdom. Two practices copy over directly. First, **anti-personas as first-class strategy artifacts**. Written, named, and signed by someone with authority. Then "we don't serve this segment" is a document, not a rumor that dies in the next QBR. Second, **absence-of-feature as a decision with an owner**: an ADR for the thing you deliberately didn't build and why, so the next PM inherits the reasoning instead of innocently reopening the trapdoor.
 
 I've watched million-euro complexity enter systems through the simple absence of a written "no". The document would have cost an afternoon.
 
@@ -48,7 +48,7 @@ The gym matters because of the transfer: the refusal I practice on a scheduling 
 
 ---
 
-**Updated:** 2026-08-01 16:10
+**Updated:** 2026-08-13 10:45
 
 **Scores:** tension=6 originality=6 personal=8 contrarian=6 substance=7 punch=8 trend=2
 **Scored:** 2026-07-27 rubric=v1 model=claude-opus-5

@@ -2,7 +2,7 @@
 
 *I put an MCP server in front of a production API. The hard parts were tokens and state, not the model.*
 
-A request landed on my desk that sounded like the future: let customers point their AI tools at our data. Claude, Copilot, whatever agent they run. Ask a question in plain language, get an answer back from the platform.
+A request landed on my desk that sounded like the future: let customers point their AI tools at our data. Claude, Copilot, whatever agent they run. Ask a question in plain language. Get an answer back from the platform.
 
 Everyone in the room pictured the model. I did too, for about a minute. Then the only question that actually mattered showed up, and it had nothing to do with AI: how does the robot log in?
 
@@ -12,11 +12,11 @@ The thing I actually shipped is almost aggressively boring. And that was the poi
 
 ## A connector that adds nothing new
 
-The connector is an *MCP server*, an implementation of the [Model Context Protocol](https://modelcontextprotocol.io/), sitting in front of an existing REST API. It translates "answer questions about my data" into calls the API already knows how to serve. No new data path. No new store. It reads, it does not write.
+The connector is an *MCP server*, an implementation of the [Model Context Protocol](https://modelcontextprotocol.io/), sitting in front of an existing REST API. It translates "answer questions about my data" into calls the API already serves. That is all. No new data path. No new store. It reads, it does not write.
 
-If that shape sounds familiar, it should. It is an anti-corruption layer, the [same pattern I keep prescribing to human departments](/blog/the-anti-corruption-layer-is-for-people-too/), pointed at AI clients instead. The core API keeps its model. The connector absorbs the foreign one. The AI gets a clean, narrow surface and never touches the inside.
+If that shape sounds familiar, it should. It is an anti-corruption layer, the [same pattern I keep prescribing to human departments](/blog/the-anti-corruption-layer-is-for-people-too/), pointed at AI clients instead. The core API keeps its model. The connector absorbs the foreign one. The AI gets a clean, narrow surface. It never touches the inside.
 
-Here is the rule I set on day one: **the connector introduces no new way to trust anyone.** The customer already holds credentials for the API. They already exchange those credentials for a token at an endpoint that already exists. The connector does exactly that, on their behalf, and nothing else. No new grant type, no new token broker, no new key store to guard.
+Here is the rule I set on day one: **the connector introduces no new way to trust anyone.** The customer already holds credentials for the API. They already exchange those credentials for a token at an endpoint that already exists. Somebody already wrote the rotation story. An on-call rota already knows whose phone rings. The connector does exactly that, on their behalf, and nothing else. No new grant type, no new token broker, no new key store to guard.
 
 ![The connector as a thin, read-only proxy that reuses the existing edge, identity server, and API.](/assets/img/posts/the-model-is-the-easy-part/container.png)
 
@@ -24,9 +24,9 @@ Here is the rule I set on day one: **the connector introduces no new way to trus
 
 There is one thing that quietly changes, and you have to own it.
 
-Today the customer's own client holds the token. With a hosted connector in the middle, my process holds it. It reads the credentials off the request, exchanges them for a short-lived token, caches that token, calls the API, and refreshes when the API says the token expired.
+Today the customer's own client holds the token. With a hosted connector in the middle, my process holds it. It reads the credentials off the request, exchanges them for a short-lived token, hands that token to the caller for one hop, and forgets it again before the next request arrives. It caches that token and calls the API. When the API says the token expired, it refreshes.
 
-So I treated the cache like it was radioactive. The key is the client id plus a hash of the secret, never the secret itself. The token lives for minutes. And the secret never enters the model's context, not once, because the one thing worse than leaking a credential is leaking it into a transcript that gets replayed to a language model ;) The telemetry layer redacts it too.
+So I treated the cache like it was radioactive. The key is the client id plus a hash of the secret, never the secret itself. The token lives for minutes. And the secret never enters the model's context. Not once. The one thing worse than leaking a credential is leaking it into a transcript that gets replayed to a language model ;) The telemetry layer redacts it too.
 
 None of that is AI work. It is the plumbing you would build for any proxy that borrows someone's identity. The AI just made the stakes legible.
 
@@ -44,23 +44,23 @@ I chose the machine login, the one that invents the least. When security reviewe
 
 Where did the time go? State.
 
-The model is a stateless call and a stream of tokens back. Fine. But those streams are long-lived connections, and long-lived connections don't love being spread across a fleet of identical instances behind a load balancer. The in-process token cache that is so tidy on one node becomes a coordination problem on 20. Sticky sessions, a shared cache, backpressure on open streams: that is the actual engineering, and **none of it has "AI" in the name.**
+The model is a stateless call and a stream of tokens back. Fine. But those streams are long-lived connections, and long-lived connections don't love being spread across a fleet of identical instances behind a load balancer. The in-process token cache that is so tidy on one node becomes a coordination problem on 20. Sticky sessions. A shared cache. Backpressure on open streams. That is the actual engineering, and **none of it has "AI" in the name.**
 
 My resolution followed the same rule as the auth: invent the least. Streams pin to the node that opened them, plain session affinity at the gateway we already run. Tokens stay in each node's own memory, and a cache miss costs one extra exchange against an endpoint that was built for that traffic. I looked hard at a shared token store and said no. New infrastructure, secrets at rest in one more place, one more thing to guard and to explain in a review. Twenty small caches that are each allowed to be wrong beat one big cache that has to be right.
 
-Add the unglamorous edge, reused wholesale instead of rebuilt: the same gateway, the same web firewall, the same per-tenant rate limiting, the same audit trail the rest of the platform already trusts. The connector earns its keep by being **indistinguishable from a normal service**, right up until you ask it a question in English.
+Add the unglamorous edge, reused wholesale instead of rebuilt: the same gateway, the same web firewall, the same per-tenant rate limiting, the same audit trail the rest of the platform already trusts, and the same dashboards somebody already looks at on a Monday morning. The connector earns its keep by being **indistinguishable from a normal service**, right up until you ask it a question in English.
 
 ![The stateless request path scales sideways. Long-lived streams and shared token state are the real work.](/assets/img/posts/the-model-is-the-easy-part/scale.png)
 
 ## Try this
 
-Next time an AI capability lands on your roadmap, write down the auth and the state design before you write a single prompt. If the interesting decisions are all about identity, custody, and connection lifecycle, and the model is a plain call at the end, you're probably building it right.
+Next time an AI capability lands on your roadmap, write down the auth and the state design before you write a single prompt. If every interesting decision is about identity, custody and connection lifecycle, and the model is a plain call at the end, you are probably building it right.
 
-So: what did you have to add to let the AI in? If the answer is a new way to trust something, look at that part again before the demo rather than after, because a working demo is the hardest argument to reverse in any organization I have worked in, and nobody wants to relitigate token custody once 40 people have watched the thing answer a question in English.
+So: what did you have to add to let the AI in? If the answer is a new way to trust something, look at that part again before the demo rather than after. A working demo is the hardest argument to reverse in any organization I have worked in. Nobody wants to reopen token custody once 40 people have watched the thing answer a question in English.
 
 ---
 
-**Updated:** 2026-08-01 16:10
+**Updated:** 2026-08-13 10:45
 
 **Scores:** tension=7 originality=7 personal=8 contrarian=8 substance=9 punch=9 trend=9
 **Scored:** 2026-07-27 rubric=v1 model=claude-opus-5

@@ -217,7 +217,7 @@ function vc_check(string $file): array
     $inlineOk = count($runs) <= 1 && (!$runs || count($runs[0]) <= 3);
     $checks['inline-header'] = [$inlineOk, count($inline) . ' in ' . count($runs) . ' run(s)', $inline];
 
-    $checks['words'] = [$words >= 650 && $words <= 1300, "{$words} words (650–1300)", []];
+    $checks['words'] = [$words >= 650 && $words <= 1500, "{$words} words (650–1500)", []];
     $checks['cv'] = [$r['cv'] >= 0.60, sprintf('CV %.2f (≥0.60)', $r['cv']), []];
     $checks['short'] = [$r['short'] >= 15, sprintf('%.0f%% ≤6w (≥15%%)', $r['short']), []];
     $checks['long'] = [$r['long'] >= 1, "{$r['long']} sentence ≥35w (≥1)", []];

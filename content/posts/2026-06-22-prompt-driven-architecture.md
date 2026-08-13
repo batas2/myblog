@@ -8,7 +8,7 @@ In [From Signals to Blips](/blog/from-signals-to-blips/) I described how an AI s
 
 ## Every workstream carries its prompt
 
-Here is the practice, concretely. A solution design no longer starts in a document editor. It starts in `prompt.md`: the role, the task, the constraints, and pointers to context such as relevant decision records, discovery notes, and the previous design it supersedes. In skeleton form:
+Here is the practice, concretely. A solution design no longer starts in a document editor. It starts in `prompt.md`. The role, the task, the constraints. Then pointers to context: the decision records that apply, the discovery notes, the previous design this one replaces. In skeleton form:
 
 ```
 role:        …
@@ -17,7 +17,7 @@ constraints: …
 context:     decision records · discovery notes · the design this supersedes
 ``` Diagrams have their own prompt file that describes what the drawing must answer and for whom. The weekly signal sweep is a prompt applied to 15 squad reports. Even decision documents start from a prompt that knows which decision framework we use and who holds which role in it.
 
-These prompts are **versioned like code, diffed like code, and re-run like builds**. When the output is wrong, I usually don't edit the output. I fix the prompt or the context and regenerate. The consequence took a while to sink in: the conversation with the model is scaffolding, the generated document is a build artifact, and the thing worth reviewing, improving, and keeping is the prompt plus its context.
+These prompts are **versioned like code, diffed like code, and re-run like builds**. When the output is wrong, I usually don't edit the output. I fix the prompt or the context and regenerate. It took a while to see what follows from that. The conversation with the model is scaffolding. The generated document is a build artifact. The thing worth reviewing, improving and keeping is the prompt plus its context.
 
 The chat is ephemeral. **The prompt is the asset.**
 
@@ -31,9 +31,9 @@ That changed one habit above all: when an agent produces nonsense, my first ques
 
 ## What I delegate, and what I never will
 
-What delegates well, after a year of trying: first drafts of solution designs, sweeps across dozens of documents, diagram generation from a described intent, gap analysis of a design against a question checklist, consistency checks between artifacts that humans stopped cross-reading years ago. The pattern is clear. **AI compresses everything that is reading, restructuring, or drafting.**
+What delegates well, after a year of trying. First drafts of solution designs. Sweeps across dozens of documents. Diagrams drawn from a described intent. Checking a design against a question checklist. Checking artifacts against each other, which humans stopped doing years ago. The pattern is clear. **AI compresses everything that is reading, restructuring, or drafting.**
 
-What never leaves the human: the decision. Our decision framework gives every architecture decision exactly one owner, and that owner is never a model. The agent can rank options, argue trade-offs, even draft the decision record, but the moment of commitment, the one someone must later defend in front of other humans, stays human. And so does the meeting where a design earns trust. People, it turns out, still buy architecture from people.
+What never leaves the human: the decision. Our decision framework gives every architecture decision exactly one owner, and that owner is never a model. The agent can rank options, argue trade-offs, even draft the decision record. The moment of commitment stays human. Somebody has to defend it later in front of other people. And so does the meeting where a design earns trust. People, it turns out, still buy architecture from people.
 
 ## Where it burned me
 
@@ -47,13 +47,13 @@ The countermeasures are unglamorous: every generated claim must cite the source 
 
 In the Legacy Code article I predicted engineers would become Operators: people who express intent, mine their knowledge containers, and judge results instead of typing every line. I just didn't expect the prediction to catch *me* first.
 
-I author less than I used to. I operate a small system of prompts and context that produces first versions of nearly everything, and I spend the recovered hours where they count for more: decisions, conversations, and asking better questions of both humans and machines.
+I author less than I used to. I run a small system of prompts and context that produces first versions of nearly everything. I spend the hours it gives back where they count for more. Decisions, conversations, and better questions of both humans and machines.
 
 So here is my closing challenge. Imagine writing your practice's `prompt.md` tomorrow, the file that would let a machine draft your typical week's work. Could you? Whatever you cannot yet put into that file is the part of your own job you haven't fully understood. That gap is worth more attention than any tool.
 
 ---
 
-**Updated:** 2026-08-01 16:10
+**Updated:** 2026-08-13 10:45
 
 **Scores:** tension=7 originality=6 personal=8 contrarian=6 substance=8 punch=8 trend=9
 **Scored:** 2026-07-27 rubric=v1 model=claude-opus-5

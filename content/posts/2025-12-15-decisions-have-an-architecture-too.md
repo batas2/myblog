@@ -64,11 +64,11 @@ So here's my practical suggestion. Next time an architecture decision stalls, bo
 
 If the answer comes quickly, you'll have a decision within days. If the answer is silence… congratulations, you've found the actual blocker, and it was never the technology.
 
-Start with the oldest one. Every organization is carrying a question that has been circling for a year, gathering forums, and it is circling precisely because no one has ever been named to end it, which also makes it the cheapest thing on your list to unstick.
+Start with the oldest one. Every organization is carrying a question that has been circling for a year, gathering forums. It is circling because no one has ever been named to end it. That also makes it the cheapest thing on your list to unstick.
 
 ---
 
-**Updated:** 2026-08-01 16:10
+**Updated:** 2026-08-13 10:45
 
 **Scores:** tension=6 originality=6 personal=7 contrarian=6 substance=7 punch=8 trend=3
 **Scored:** 2026-07-27 rubric=v1 model=claude-opus-5

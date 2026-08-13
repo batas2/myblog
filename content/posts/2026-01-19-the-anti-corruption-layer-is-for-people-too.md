@@ -10,7 +10,7 @@ A quick refresher for the non-DDD crowd. An [anti-corruption layer](https://lear
 
 The name is the important part. Evans didn't call it "adapter" or "facade". He called it *anti-corruption*, because that is what it prevents. And here is what most teams get wrong: **the layer protects your model's integrity, not your API.** The danger was never that a remote call fails; you have retries for that. The danger is that their `status = 7`, their nullable-everything contract, their subtly different definition of "customer" starts living inside your entities. You import one convenient enum today, and six months later your code speaks two languages, neither of them fluently. Every feature after that pays the tax.
 
-Is the extra hop always worth it? Honestly, no. Translation costs: another mapping class, more tests, and a guaranteed "why this indirection?" comment in code review. If the upstream model is stable, close to yours, and read-only, map it directly and move on. The layer earns its keep when the upstream model is volatile, when its language contradicts yours, or when you catch yourself sprinkling `if (theirType == LEGACY_B)` across your domain logic. That `if` *is* the corruption, already inside. Not a warning of it. The thing.
+Is the extra hop always worth it? Honestly, no. Translation costs: another mapping class, more tests, and a guaranteed "why this indirection?" comment in code review. If the upstream model is stable, close to yours, and read-only, map it directly and move on. The layer earns its keep in three cases, and they are worth naming separately because teams usually notice the third one long after it has already cost them a quarter of rework. The upstream model keeps changing. Its language contradicts yours. Or you catch yourself sprinkling `if (theirType == LEGACY_B)` across your domain logic. That `if` *is* the corruption, already inside. Not a warning of it. The thing.
 
 ## Semantic corruption, human edition
 
@@ -40,11 +40,11 @@ A small exercise for your next quiet Friday. Pick the three most central words o
 
 If the answer to the last question is "nobody", congratulations. You have just located the exact spot where your model is importing someone else's bugs, free of charge, on a daily schedule.
 
-I stopped asking teams to align. Now I ask who translates, which is a smaller question and a much easier one to answer honestly, because it has a name in it and alignment never does; the person who says "that's our word, not theirs" is doing architecture whether or not the title says so. Every domain word has an accent. The useful part is knowing whose.
+I stopped asking teams to align. Now I ask who translates. That is a smaller question and a much easier one to answer honestly, because the answer has a name in it and alignment never does. The person who says "that's our word, not theirs" is doing architecture, whatever their title says. Every domain word has an accent. The useful part is knowing whose.
 
 ---
 
-**Updated:** 2026-08-01 16:10
+**Updated:** 2026-08-13 10:45
 
 **Scores:** tension=6 originality=7 personal=4 contrarian=7 substance=8 punch=7 trend=3
 **Scored:** 2026-07-27 rubric=v1 model=claude-opus-5

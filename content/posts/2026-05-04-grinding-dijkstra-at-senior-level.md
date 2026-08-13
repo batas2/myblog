@@ -6,7 +6,7 @@ Somewhere on my disk, between a SaaS I operate and an architecture tool I'm buil
 
 Yes. Twelve-plus years in, carrying the title *Solution Architect*, and I was grinding shortest-path algorithms in the evenings like a third-year student before finals.
 
-I'm writing this down because almost nobody at my seniority level admits to it, and the silence creates a myth: that past some invisible line, you're beyond being tested. You're not. And the test, it turns out, is one of the most instructive systems I've ever put myself through, just not for the reasons the recruiters advertise.
+I'm writing this down because almost nobody at my seniority level admits to it, and the silence creates a myth: that past some invisible line you are beyond being tested, beyond being bad at things, and beyond having to sit down and practise something badly for a while. You're not. And the test, it turns out, is one of the most instructive systems I've ever put myself through, just not for the reasons the recruiters advertise.
 
 ## The humbling
 
@@ -22,9 +22,9 @@ I once wrote about the identity split this role produces ([Technical Leader — 
 
 Now the part where I stop feeling and start doing my actual job, which is looking at the system.
 
-Big-tech hiring is not designed to measure your worth. It is designed to **manage their risk at scale**. A loop that processes tens of thousands of candidates optimizes ruthlessly against false positives (the bad hire who gets in) and accepts false negatives, the great engineer who gets rejected, as a tolerable loss. There are always more candidates. Rational for them. Brutal for you. Once you see that, a rejection stops being a verdict about your competence and becomes what it actually is: an artifact of someone else's risk function.
+Big-tech hiring is not designed to measure your worth. It is designed to **manage their risk at scale**. A loop that processes tens of thousands of candidates optimizes ruthlessly against one thing: the bad hire who gets in. The great engineer who gets rejected is a loss it accepts. There are always more candidates. Rational for them. Brutal for you. Once you see that, a rejection stops being a verdict about your competence and becomes what it actually is: an artifact of someone else's risk function.
 
-There's theater in it too, and everyone involved knows it. Candidates perform "thinking out loud" because the rubric rewards it. Interviewers calibrate against what a "strong hire" is supposed to sound like. Algorithms won as the measurement proxy not because anyone believes they're the job, but because *experience*, the thing that actually matters, cannot be assessed in an hour. Experience only shows over months. So the industry measures what fits in the slot, and quietly agrees not to mention that it's a proxy. And even the best-calibrated funnel delivers you into the same building where [the Peter Principle](https://en.wikipedia.org/wiki/Peter_principle) is patiently waiting upstairs anyway ;)
+There's theater in it too, and everyone involved knows it. Candidates perform "thinking out loud" because the rubric rewards it. Interviewers calibrate against what a "strong hire" is supposed to sound like. Algorithms won as the proxy, and not because anyone believes they are the job. *Experience* is the thing that matters, and you cannot assess it in an hour. Experience only shows over months. So the industry measures what fits in the slot, and quietly agrees not to mention that it's a proxy. And even the best-calibrated funnel delivers you into the same building where [the Peter Principle](https://en.wikipedia.org/wiki/Peter_principle) is patiently waiting upstairs anyway ;)
 
 I don't say this with bitterness. I say it with the professional respect of one systems designer examining another's trade-offs. I'd probably design it similarly, and it would be similarly brutal.
 
@@ -36,7 +36,7 @@ The part nobody tells you: the grind pays dividends completely unrelated to the 
 
 **I became a different interviewer.** I've sat on the hiring side of the table for years. After feeling the pressure from the candidate's chair again (the blank second where a thing you know simply won't come out), I redesigned my own interviews. Less performance, more collaboration. Pressure reveals nerves; it does not reveal competence.
 
-**Market calibration changed how I behave at work, in the calm way.** Knowing what you're worth outside your company removes a quiet fear from every disagreement inside it. Architecture debates stop being existential. You argue on merits, concede gracefully, and push hard when it matters, because your security no longer depends on winning the room.
+**Market calibration changed how I behave at work, in the calm way.** Knowing what you're worth outside your company removes a quiet fear from every disagreement inside it. Architecture debates stop being existential. You argue on merits, concede gracefully, and push hard when it counts. Your security no longer depends on winning the room.
 
 ## The mirror
 
@@ -44,7 +44,7 @@ So here's my genuinely private opinion, the one this whole post was building tow
 
 Not for the offer. For the mirror.
 
-Seniority inside one organization slowly replaces feedback with comfort, and it does it so gradually that you never notice the swap: people stop challenging you because challenging you got expensive, context does half your thinking before you walk into the room, and your reputation answers questions your skills should be answering. The loop is the one mirror nobody has adjusted to flatter you.
+Seniority inside one organization slowly replaces feedback with comfort. It happens so gradually that you never notice the swap. People stop challenging you, because challenging you got expensive. Context does half your thinking before you walk into the room. Your reputation answers questions your skills should be answering. The loop is the one mirror nobody has adjusted to flatter you.
 
 One question to leave you with: when was the last time your competence was tested by someone who had no reason to be polite to you?
 
@@ -52,7 +52,7 @@ If you have to think back more than a few years, that repo full of graph algorit
 
 ---
 
-**Updated:** 2026-08-01 16:10
+**Updated:** 2026-08-13 10:45
 
 **Scores:** tension=8 originality=6 personal=9 contrarian=8 substance=6 punch=8 trend=2
 **Scored:** 2026-07-27 rubric=v1 model=claude-opus-5

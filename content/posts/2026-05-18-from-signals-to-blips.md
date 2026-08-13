@@ -6,15 +6,15 @@ For the past months, as a Solution Architect, I've been an active participant in
 
 And one painfully practical problem: **how do you drive change at that scale?**
 
-You can't attend every standup. You can't review every experiment. You can't personally convince three hundred people that a new way of working is worth their time. Whatever instrument you pick, it has to scale better than you do, and it has to survive contact with a real organization, where attention is scarce and opinions are loud.
+You can't attend every standup. You can't review every experiment. You can't personally convince three hundred people that a new way of working is worth their time. Whatever instrument you pick, it has to scale better than you do, keep working while you are on holiday, stay readable to somebody opening it for the first time, and it has to survive contact with a real organization, where attention is scarce and opinions are loud.
 
-My answer turned out to be a classic: **a tech radar.** Not the [industry-wide kind](https://www.thoughtworks.com/radar) you read once a year and forget, but an internal, living one: refreshed in editions, fed by real squad data. It scales beautifully, and it shows the state of the transformation in several dimensions at once. The *ring* tells you how much we trust something (Adopt, Trial, Assess, Hold), the *quadrant* tells you what kind of thing it is, the *movement* tells you where it's heading, and the *evidence* tells you who actually proved it. A radar is opinionated data. It doesn't just list what exists; it shows what we, as an organization, decided to do about it.
+My answer turned out to be a classic: **a tech radar.** Not the [industry-wide kind](https://www.thoughtworks.com/radar) you read once a year and forget, but an internal, living one: refreshed in editions, fed by real squad data. It scales beautifully, and it shows the state of the transformation in several dimensions at once. The *ring* tells you how much we trust something: Adopt, Trial, Assess, Hold. The *quadrant* tells you what kind of thing it is. The *movement* tells you where it is heading. The *evidence* tells you who proved it. A radar is opinionated data. It doesn't just list what exists; it shows what we, as an organization, decided to do about it.
 
 *This is the first post in a short series about driving an AI transformation with tools that scale. We start with the engine room: how raw signals become blips.*
 
 ## From reports to a score
 
-Every week, each squad files a structured report: adoption numbers, workflows integrated, wins, learnings, blockers, a maturity self-assessment. Fifteen files. Roughly two dozen distinct concerns surface every single week.
+Every week, each squad files a structured report. Adoption numbers, workflows integrated, wins, blockers, and how mature they think they are. Fifteen files. Roughly two dozen distinct concerns surface every single week.
 
 The old me would try to read everything and keep the picture in his head. The current me sends an AI agent through all of it with a very strict contract.
 
@@ -45,7 +45,7 @@ One thing the score is *not*: a verdict on truth. It is not effort-weighted, not
 
 One part I consider non-negotiable: **the AI never touches the radar.**
 
-The sweep produces a candidate list. Each candidate is matched against the existing radar and typed: a new blip, a ring move, a confirmation of something already there, or, my favorite, a contradiction, where the field evidence says an adopted practice is breaking in production.
+The sweep produces a candidate list. Each candidate is matched against the existing radar and typed. A new blip. A ring move. A confirmation of something already there. Or my favourite, a contradiction: the field says an adopted practice is breaking in production.
 
 Validation is human. Candidates go to a stakeholder meeting with a checkbox next to every decision. Ticked means it merges into the next radar edition, and every change lands in a changelog so trends across editions stay honest. The radar grew from 42 blips to over 50 this way. Every single addition can be traced back to the squad report that started it.
 
@@ -57,7 +57,7 @@ Until then, one question. You've just seen my tool for driving change across sev
 
 ---
 
-**Updated:** 2026-08-01 16:10
+**Updated:** 2026-08-13 10:45
 
 **Scores:** tension=5 originality=7 personal=7 contrarian=5 substance=9 punch=7 trend=8
 **Scored:** 2026-07-27 rubric=v1 model=claude-opus-5
