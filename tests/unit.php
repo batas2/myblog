@@ -48,6 +48,43 @@ t_contains('<pre><code>', $html, 'code fence opens');
 t_contains('**not bold**', $html, 'no markdown inside fence');
 t_contains('&quot;', $html, 'fence content escaped');
 
+/* Pipe tables. A run of pipe-prefixed lines is only a table if the second line is a delimiter,
+   which is what lets a stray pipe in prose render oddly instead of disappearing. */
+section('md_to_html tables');
+$html = md_to_html(['| A | B |', '|---|---|', '| 1 | 2 |']);
+t_contains('<th>A</th><th>B</th>', $html, 'header cells render');
+t_contains('<td>1</td><td>2</td>', $html, 'body cells render');
+t_contains('class="table-wrap"', $html, 'the table is wrapped so a wide one scrolls inside itself');
+t_not_contains('|', $html, 'no pipes survive into the output');
+
+$html = md_to_html(['| L | C | R |', '|:---|:---:|---:|', '| a | b | c |']);
+t_contains('<th style="text-align:center">C</th>', $html, 'centre alignment comes off the delimiter');
+t_contains('<td style="text-align:right">c</td>', $html, 'right alignment reaches the body cells');
+t_not_contains('<th style="text-align:left"', $html, 'left is the default and needs no style');
+
+$html = md_to_html(['| **b** | `c` |', '|---|---|', '| [x](/y/) | a \| b |']);
+t_contains('<strong>b</strong>', $html, 'inline markdown works inside cells');
+t_contains('<a href="/y/">x</a>', $html, 'links work inside cells');
+t_contains('<td>a | b</td>', $html, 'an escaped pipe is a literal pipe, not a cell break');
+
+$html = md_to_html(['| A | B | C |', '|---|---|---|', '| 1 |', '| 1 | 2 | 3 | 4 |']);
+t_contains('<td>1</td><td></td><td></td>', $html, 'a short row is padded to the header width');
+t_not_contains('<td>4</td>', $html, 'a long row is truncated to the header width');
+
+$html = md_to_html(['| <script>alert(1)</script> |', '|---|', '| x |']);
+t_contains('&lt;script&gt;', $html, 'cell content is escaped');
+
+$html = md_to_html(['| not a table, no delimiter under it']);
+t_contains('<p>| not a table', $html, 'a lone pipe line falls back to prose rather than vanishing');
+t_not_contains('<table>', $html, 'and does not open a table');
+
+$html = md_to_html(['Prose.', '', '| A |', '|---|', '| 1 |', '', 'After.']);
+t_contains('<p>Prose.</p>', $html, 'a paragraph before a table closes cleanly');
+t_contains('<p>After.</p>', $html, 'a paragraph after a table opens cleanly');
+
+$html = md_to_html(['```', '| A | B |', '|---|---|', '```']);
+t_not_contains('<table>', $html, 'pipes inside a code fence stay text');
+
 /* Theme-paired figures. A draw.io export is a transparent PNG and reads on either background, but
    a diagram captured out of a running app carries that app's canvas, so it needs a twin. The pair
    is opt-in by filename: -light with a -dark sibling on disk, and nothing else changes. */
@@ -597,6 +634,20 @@ t_eq(null, hero_meta('no-such-post-xyz'), 'missing hero returns null');
 $fig = hero_figure($h, 'Alt Title');
 t_contains('alt="Alt Title"', $fig, 'hero figure carries alt');
 t_contains('width="', $fig, 'hero figure carries dimensions');
+t_contains('Photo', $fig, 'a photographic hero is credited as one');
+
+/* A hero rendered from a model is a drawing: no photographer, no licence, and calling it a photo
+   is simply false. It also keeps its own proportions, because covering a diagram into the photo
+   band cuts half of it off. */
+$png = hero_meta('turn-the-sequence-diagram-on-its-side');
+if ($png !== null) {
+    t_contains('.png', $png['src'], 'a png hero is preferred over a photograph');
+    $pf = hero_figure($png, 'Drawn');
+    t_not_contains('>Photo<', $pf, 'a rendered hero is never credited as a photo');
+    t_not_contains('<figcaption>', $pf, 'an uncredited drawing gets no caption line');
+    t_contains('<img', $pf, 'the figure still renders its image');
+}
+t_contains('img[src$=".png"]', file_get_contents(APP_ROOT . '/assets/site.css'), 'png heroes are exempted from the photo crop');
 
 /* ---------------- render_md ---------------- */
 section('render_md');

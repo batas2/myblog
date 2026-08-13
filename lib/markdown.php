@@ -1,7 +1,7 @@
 <?php
 /**
  * lib/markdown.php — minimal markdown renderer for the post corpus.
- * Supports: h2, paragraphs, ul/ol, blockquotes, hr, code fences,
+ * Supports: h2, paragraphs, ul/ol, blockquotes, hr, code fences, pipe tables,
  * inline bold/italic/links/code, with HTML escaping throughout.
  */
 
@@ -83,12 +83,38 @@ function md_inline(string $s): string
     return preg_replace_callback('/\x1A(\d+)\x1A/', fn($m) => $codes[(int) $m[1]], $s);
 }
 
+/**
+ * The cells of one pipe-table row.
+ *
+ * The outer pipes are optional in GFM, so they are stripped before splitting: keeping them would
+ * invent an empty cell at each end. `\|` is a literal pipe inside a cell, so the split only breaks
+ * on unescaped ones and the escape is unwrapped afterwards, before md_inline sees it.
+ */
+function md_table_cells(string $row): array
+{
+    $row = trim($row);
+    if (str_starts_with($row, '|')) $row = substr($row, 1);
+    if (str_ends_with($row, '|') && !str_ends_with($row, '\\|')) $row = substr($row, 0, -1);
+
+    return array_map(
+        fn(string $c): string => str_replace('\\|', '|', trim($c)),
+        preg_split('/(?<!\\\\)\|/', $row)
+    );
+}
+
+/** `---` / `:---` / `---:` / `:---:` in every cell: the row that turns the line above into a header. */
+function md_is_table_delimiter(string $row): bool
+{
+    return (bool) preg_match('/^\s*\|?(\s*:?-+:?\s*\|)*\s*:?-+:?\s*\|?\s*$/', $row);
+}
+
 function md_to_html(array $lines): string
 {
     $html = '';
     $para = [];
     $list = null;      // 'ul' | 'ol' | null
     $quote = [];
+    $table = [];
     $inCode = false;
 
     $flushPara = function () use (&$para, &$html) {
@@ -106,10 +132,49 @@ function md_to_html(array $lines): string
             $quote = [];
         }
     };
+    /**
+     * A run of pipe-prefixed lines becomes a table only if the second one is a delimiter. Anything
+     * else was never a table, so it goes back out as prose: a body line that happens to start with
+     * a pipe should render oddly, not disappear.
+     *
+     * The header row fixes the column count. Short rows get empty cells and long ones are truncated,
+     * which is what GFM does and what keeps a miscounted row from breaking the grid.
+     */
+    $flushTable = function () use (&$table, &$html, &$para) {
+        if (!$table) return;
+        $rows = $table;
+        $table = [];
+
+        if (count($rows) < 2 || !md_is_table_delimiter($rows[1])) {
+            foreach ($rows as $r) $para[] = $r;
+            return;
+        }
+
+        $align = array_map(function (string $c): string {
+            $left = str_starts_with($c, ':');
+            $right = str_ends_with($c, ':');
+            if ($left && $right) return ' style="text-align:center"';
+            return $right ? ' style="text-align:right"' : '';
+        }, md_table_cells($rows[1]));
+
+        $head = md_table_cells($rows[0]);
+        $cols = count($head);
+
+        $html .= "<div class=\"table-wrap\">\n<table>\n<thead>\n<tr>";
+        foreach ($head as $i => $c) $html .= '<th' . ($align[$i] ?? '') . '>' . md_inline($c) . '</th>';
+        $html .= "</tr>\n</thead>\n<tbody>\n";
+        foreach (array_slice($rows, 2) as $row) {
+            $cells = md_table_cells($row);
+            $html .= '<tr>';
+            for ($i = 0; $i < $cols; $i++) $html .= '<td' . ($align[$i] ?? '') . '>' . md_inline($cells[$i] ?? '') . '</td>';
+            $html .= "</tr>\n";
+        }
+        $html .= "</tbody>\n</table>\n</div>\n";
+    };
 
     foreach ($lines as $line) {
         if (preg_match('/^```/', $line)) {
-            $flushPara(); $flushList(); $flushQuote();
+            $flushTable(); $flushPara(); $flushList(); $flushQuote();
             $html .= $inCode ? "</code></pre>\n" : '<pre><code>';
             $inCode = !$inCode;
             continue;
@@ -121,9 +186,17 @@ function md_to_html(array $lines): string
 
         $t = rtrim($line);
 
-        if ($t === '') { $flushPara(); $flushList(); $flushQuote(); continue; }
-        if (preg_match('/^!\[([^\]]*)\]\(([^)\s]+)\)\s*$/', $t, $m)) {
+        // A table row, collected until the run ends: whether these lines are a table at all is
+        // decided by the second one, which has not been read yet.
+        if (str_starts_with($t, '|')) {
             $flushPara(); $flushList(); $flushQuote();
+            $table[] = $t;
+            continue;
+        }
+
+        if ($t === '') { $flushTable(); $flushPara(); $flushList(); $flushQuote(); continue; }
+        if (preg_match('/^!\[([^\]]*)\]\(([^)\s]+)\)\s*$/', $t, $m)) {
+            $flushTable(); $flushPara(); $flushList(); $flushQuote();
             $src = htmlspecialchars($m[2], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
             $cap = md_inline($m[1]);
             $alt = htmlspecialchars($m[1], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
@@ -133,35 +206,36 @@ function md_to_html(array $lines): string
             continue;
         }
         if (preg_match('/^#{2}\s+(.*)$/', $t, $m)) {
-            $flushPara(); $flushList(); $flushQuote();
+            $flushTable(); $flushPara(); $flushList(); $flushQuote();
             $html .= '<h2>' . md_inline($m[1]) . "</h2>\n";
             continue;
         }
         if (preg_match('/^>\s?(.*)$/', $t, $m)) {
-            $flushPara(); $flushList();
+            $flushTable(); $flushPara(); $flushList();
             $quote[] = $m[1];
             continue;
         }
         if (preg_match('/^- (.*)$/', $t, $m)) {
-            $flushPara(); $flushQuote();
+            $flushTable(); $flushPara(); $flushQuote();
             if ($list !== 'ul') { $flushList(); $html .= "<ul>\n"; $list = 'ul'; }
             $html .= '<li>' . md_inline($m[1]) . "</li>\n";
             continue;
         }
         if (preg_match('/^\d+\.\s+(.*)$/', $t, $m)) {
-            $flushPara(); $flushQuote();
+            $flushTable(); $flushPara(); $flushQuote();
             if ($list !== 'ol') { $flushList(); $html .= "<ol>\n"; $list = 'ol'; }
             $html .= '<li>' . md_inline($m[1]) . "</li>\n";
             continue;
         }
         if (preg_match('/^(---+|\*\*\*+)$/', $t)) {
-            $flushPara(); $flushList(); $flushQuote();
+            $flushTable(); $flushPara(); $flushList(); $flushQuote();
             $html .= "<hr>\n";
             continue;
         }
+        $flushTable();
         $para[] = $t;
     }
     if ($inCode) $html .= "</code></pre>\n";   // unclosed fence must not swallow the rest of the page
-    $flushPara(); $flushList(); $flushQuote();
+    $flushTable(); $flushPara(); $flushList(); $flushQuote();
     return $html;
 }

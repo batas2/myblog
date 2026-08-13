@@ -534,6 +534,16 @@ textarea:focus-visible, select:focus-visible {
   width: 100%; aspect-ratio: 21 / 9; object-fit: cover;
   border-radius: 16px; border: 1px solid var(--line);
 }
+/* A rendered figure is not a photograph. A photo has unimportant edges and survives being cropped
+   into the band; a drawing does not, and `object-fit: cover` was quietly cutting half of one off.
+   (The 21/9 above never applied anyway: the width/height attributes map to a used height, so the
+   aspect-ratio was dead and the band was really 1176 by whatever the file happened to be.)
+   So a png keeps its own proportions, and loses the frame, which on a transparent figure is a
+   border drawn around nothing. */
+.post-hero img[src$=".png"] {
+  aspect-ratio: auto; height: auto; object-fit: contain;
+  border: none; border-radius: 0;
+}
 .post-hero figcaption {
   margin-top: 0.55rem; text-align: right;
   font-family: 'JetBrains Mono', monospace; font-size: 0.66rem;
@@ -632,6 +642,23 @@ textarea:focus-visible, select:focus-visible {
 }
 .prose pre code { background: none; border: none; padding: 0; color: var(--ink); font-size: 0.88rem; }
 .prose hr { border: none; height: 1px; background: var(--line); margin: 2.5rem 0; }
+
+/* tables — rules, not boxes. The wrapper scrolls so a wide table never makes the page scroll. */
+.prose .table-wrap { overflow-x: auto; margin: 0 0 1.6rem; }
+.prose table { border-collapse: collapse; width: 100%; font-size: 0.95rem; line-height: 1.5; }
+.prose thead th {
+  font-weight: 600; color: var(--ink); text-align: left;
+  padding: 0 0.9rem 0.6rem; border-bottom: 1px solid var(--line);
+}
+.prose tbody td {
+  padding: 0.6rem 0.9rem; border-bottom: 1px solid var(--line);
+  color: var(--body); vertical-align: top;
+}
+.prose tbody tr:last-child td { border-bottom: none; }
+.prose th:first-child, .prose td:first-child { padding-left: 0; }
+.prose th:last-child, .prose td:last-child { padding-right: 0; }
+.prose td strong { color: var(--ink); }
+@media (max-width: 560px) { .prose table { font-size: 0.88rem; } }
 
 /* hashtags — plain mono text links, no pills */
 .tag-row { max-width: var(--prose); margin: 2.4rem auto 0; padding-inline: 24px; display: flex; flex-wrap: wrap; gap: 0.4rem 1.1rem; }

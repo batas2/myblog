@@ -58,6 +58,9 @@ function hero_figure(array $h, string $alt): string
     }
     // no creator/license recorded: fall back to the stored caption (e.g. "Image from the Medium original")
     if ($credit === 'Photo' && $h['caption'] !== '') $credit = e($h['caption']);
+    // A figure rendered from a model has no photographer and no licence to name, so crediting it
+    // as "Photo" is simply false. An uncredited drawing gets no caption at all.
+    if ($credit === 'Photo' && str_ends_with($h['src'], '.png')) $credit = '';
     // nofollow is for the stock-photo host at the other end of a licence credit. A figure drawn
     // here credits a page on this site, and telling search engines not to follow your own link
     // is a self-inflicted wound.
@@ -66,8 +69,9 @@ function hero_figure(array $h, string $alt): string
     $rel = $internal ? '' : ' rel="noopener nofollow"';
     $label = $internal ? 'how' : 'source';
     $link = $h['source'] !== '' ? ' · <a href="' . e($h['source']) . '"' . $rel . '>' . $label . '</a>' : '';
+    $caption = $credit === '' && $link === '' ? '' : '<figcaption>' . $credit . $link . '</figcaption>';
     return '<figure class="post-hero">' . img_eager($h['src'], $alt, $h['w'], $h['h'])
-         . '<figcaption>' . $credit . $link . '</figcaption></figure>';
+         . $caption . '</figure>';
 }
 
 /** "Also published on Medium" badge under the hero. */
