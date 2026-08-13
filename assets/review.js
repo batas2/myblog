@@ -183,9 +183,23 @@
     return el;
   }
 
+  /** An empty margin has to say what a margin is for, in whichever mode you are standing in. */
+  function railEmpty() {
+    var box = document.createElement('div');
+    box.className = 'rv-empty';
+    box.innerHTML = REVIEW
+      ? '<b>No notes yet</b>Select any sentence in the post and a Note button appears. ' +
+        'Whatever you write here is what an agent works from later.'
+      : '<b>Nothing marked up</b>Switch to comment and edit to mark up sentences and correct ' +
+        'small things in place.<a class="rv-cta-go" href="?slug=' + encodeURIComponent(DATA.slug) +
+        '&mode=review">✎ Comment &amp; edit</a>';
+    rail.appendChild(box);
+  }
+
   function renderRail() {
     if (!rail) return;
     rail.textContent = '';
+    if (!comments.filter(function (c) { return c.__at; }).length) { railEmpty(); }
     var railTop = rail.getBoundingClientRect().top + window.scrollY;
     var placed = [];
     comments.filter(function (c) { return c.__at; })

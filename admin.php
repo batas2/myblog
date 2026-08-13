@@ -763,11 +763,13 @@ dialog.why::backdrop { background: rgba(10,10,15,.45); }
              title="read it in the real layout without publishing"><?= e($p['title']) ?></a>
           <?= $p['status'] === 'published' && !$p['built'] ? ' <span class="dim">· not built yet</span>' : '' ?>
         <?php endif; ?>
-          <?php /* the margin-note surface: read it, mark up sentences, correct small things in place */
+          <?php /* the margin-note surface. Reads as an action, not as another label in the row:
+                   the two disclosures underneath already look like this, and a door has to look
+                   different from a sign. */
                 $rvc = rv_counts($p['slug']); ?>
-          <a class="rv-link" href="/review.php?slug=<?= e($p['slug']) ?>&amp;mode=review"
-             title="comment on it and fix small things in place">review<?php
-             if ($rvc['open']) echo ' <b>' . (int) $rvc['open'] . '</b>'; ?></a>
+          <a class="rv-link<?= $rvc['open'] ? ' has-open' : '' ?>" href="/review.php?slug=<?= e($p['slug']) ?>"
+             title="read it, mark up sentences, fix small things in place">✎ review<?php
+             if ($rvc['open']) echo '<b>' . (int) $rvc['open'] . '</b>'; ?></a>
         </span>
         <span class="post-sub"><?= e($p['subtitle']) ?></span>
         <?php /* every cross-post host hides the referrer, so an untagged link comes back as 'direct' */ ?>

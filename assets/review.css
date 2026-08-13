@@ -27,19 +27,41 @@
 
 .rv-modes { margin-left: auto; display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
 .rv-mode {
-  padding: 0.32rem 0.85rem; font-size: 0.82rem; text-decoration: none;
-  color: var(--muted); background: var(--surface);
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  padding: 0.34rem 0.9rem; font-size: 0.82rem; font-weight: 500; text-decoration: none;
+  color: var(--muted); background: var(--surface); white-space: nowrap;
 }
+.rv-mode:hover { color: var(--ink); background: var(--wash); }
+.rv-mode.is-on:hover { color: #fff; background: var(--accent); }
 .rv-mode + .rv-mode { border-left: 1px solid var(--line); }
 .rv-mode.is-on { background: var(--accent); color: #fff; }
 .rv-count { font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: var(--muted); }
 .rv-save { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--faint); min-width: 7ch; }
 .rv-save.is-err { color: #c0392b; }
 
+/* The instruction bar, and the thing that has to be unmissable in preview: a door out of a page
+   whose whole job is to change nothing. */
 .rv-hint {
-  padding: 0.55rem 1.4rem; font-size: 0.8rem; color: var(--muted);
+  display: flex; gap: 1.6rem; flex-wrap: wrap; align-items: center;
+  padding: 0.6rem 1.4rem; font-size: 0.82rem; color: var(--muted);
   background: var(--wash); border-bottom: 1px solid var(--line);
 }
+.rv-hint b { color: var(--ink); font-weight: 600; }
+.rv-hint-k { margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; color: var(--faint); }
+
+.rv-cta {
+  display: flex; gap: 1.2rem; align-items: center; flex-wrap: wrap;
+  padding: 0.7rem 1.4rem; font-size: 0.86rem; color: var(--muted);
+  background: var(--wash); border-bottom: 1px solid var(--line);
+}
+.rv-cta b { color: var(--ink); font-weight: 600; margin-right: 0.4rem; }
+.rv-cta-go {
+  margin-left: auto; display: inline-flex; align-items: center; gap: 0.4rem;
+  background: var(--accent); color: #fff; text-decoration: none;
+  font-size: 0.86rem; font-weight: 600; padding: 0.42rem 1.05rem; border-radius: 999px;
+  transition: background .12s;
+}
+.rv-cta-go:hover { background: var(--accent-deep); }
 
 /* ---- layout ---- */
 .rv-main {
@@ -61,8 +83,15 @@
 .rv-b > :last-child { margin-bottom: 0; }
 .rv-b[data-type="h2"] { margin-top: 2.6rem; }
 .rv-b[data-type="figure"] { margin-block: 1.8rem; }
-.rv-b.is-editable { outline: 1px solid transparent; transition: outline-color .12s, background .12s; }
-.rv-b.is-editable:hover { outline-color: var(--line); }
+/* At rest an editable block carries a faint left rule, so the document reads as "these parts are
+   yours to change" without every paragraph shouting. The outline only arrives on hover. */
+.rv-b.is-editable {
+  outline: 1px solid transparent; transition: outline-color .12s, background .12s;
+  padding-left: 0.85rem; margin-left: -0.85rem;
+  border-left: 2px solid color-mix(in srgb, var(--accent) 18%, transparent);
+}
+.rv-b.is-editable:hover { outline-color: var(--line); border-left-color: color-mix(in srgb, var(--accent) 45%, transparent); cursor: text; }
+.rv-b.is-editable:focus { border-left-color: var(--accent); }
 .rv-b.is-editable:focus {
   outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
   outline-offset: 4px; background: var(--surface);
@@ -126,3 +155,11 @@
 
 /* Read mode keeps the document inert: no outlines, no cursors that suggest an edit. */
 .rv-body[data-mode="read"] .rv-b { outline: none !important; background: none !important; }
+
+/* ---- rail empty states ---- */
+.rv-empty {
+  border: 1px dashed var(--line); border-radius: 10px; padding: 0.9rem 1rem;
+  font-size: 0.82rem; color: var(--muted); line-height: 1.55;
+}
+.rv-empty b { display: block; color: var(--ink); font-size: 0.86rem; margin-bottom: 0.3rem; }
+.rv-empty .rv-cta-go { margin: 0.7rem 0 0; font-size: 0.78rem; padding: 0.3rem 0.8rem; }

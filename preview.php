@@ -108,6 +108,9 @@ $barCss = '<style>'
      . '.pvbar .tag{font-family:ui-monospace,monospace;font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;'
      . 'border:1px solid #ffffff66;border-radius:999px;padding:.15rem .55rem}'
      . '.pvbar .sp{margin-left:auto}.pvbar a{color:#fff;text-decoration:underline}'
+     . '.pvbar a.go{text-decoration:none;border:1px solid #ffffff88;border-radius:999px;'
+     . 'padding:.2rem .7rem;white-space:nowrap;transition:background .12s}'
+     . '.pvbar a.go:hover{background:#ffffff26}'
      . '</style>';
 
 /* The guest banner carries no editorial internals. Word count and status are
@@ -121,7 +124,8 @@ $bar = $barCss . '<div class="pvbar">'
         : '<span>' . e($post['status']) . ' · ' . e($when) . '</span>'
           . '<span>' . number_format($post['words']) . ' words · ' . $post['minutes'] . ' min'
           . ' · reach ' . ($reach !== null ? number_format($reach, 1) : 'unscored') . '</span>'
-          . '<span class="sp"><a href="/admin.php#pipeline">back to admin</a></span>')
+          . '<span class="sp"><a class="go" href="/review.php?slug=' . e($slug) . '">✎ Comment &amp; edit</a></span>'
+          . '<span><a href="/admin.php#pipeline">back to admin</a></span>')
      . '</div>';
 
 // one <body> in the shell (lib/page.php); substr_replace avoids regex backrefs

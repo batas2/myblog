@@ -134,9 +134,13 @@ $csrf = admin_csrf_token();
   <span class="rv-title"><?= e($post['title']) ?></span>
   <span class="rv-chip rv-chip-<?= e($post['status']) ?>"><?= e($statusLabel) ?></span>
 
+  <?php /* Named for what each one lets you do. "Read / Review" told you nothing about which was
+           which, and the whole point of the split is that you opt into changing the thing. */ ?>
   <div class="rv-modes" role="group" aria-label="Mode">
-    <a class="rv-mode<?= $mode === 'read' ? ' is-on' : '' ?>" href="?slug=<?= e($slug) ?>&amp;mode=read">Read</a>
-    <a class="rv-mode<?= $mode === 'review' ? ' is-on' : '' ?>" href="?slug=<?= e($slug) ?>&amp;mode=review">Review</a>
+    <a class="rv-mode<?= $mode === 'read' ? ' is-on' : '' ?>" href="?slug=<?= e($slug) ?>&amp;mode=read">
+      <span aria-hidden="true">◱</span> Preview</a>
+    <a class="rv-mode<?= $mode === 'review' ? ' is-on' : '' ?>" href="?slug=<?= e($slug) ?>&amp;mode=review">
+      <span aria-hidden="true">✎</span> Comment &amp; edit</a>
   </div>
 
   <span class="rv-count" id="rv-count"><?= $open ?> open</span>
@@ -147,8 +151,20 @@ $csrf = admin_csrf_token();
 </header>
 
 <?php if ($mode === 'review'): ?>
-<div class="rv-hint" id="rv-hint">
-  Select any text to leave a note. Click a paragraph to correct it; edits save on their own.
+<div class="rv-hint">
+  <span><b>Select any text</b> to leave a note in the margin.</span>
+  <span><b>Click a paragraph</b> to correct it. Edits save on their own.</span>
+  <span class="rv-hint-k">⌘B bold · ⌘I italic · Esc to leave a block</span>
+</div>
+<?php else: ?>
+<?php /* Preview is the default and does nothing but show the post, so it has to say out loud where
+         the other half is. Landing here with no way forward is exactly how this got lost before. */ ?>
+<div class="rv-cta">
+  <div>
+    <b>You are reading it.</b>
+    <span>Nothing here can be changed by accident<?= $open ? ", and {$open} note" . ($open === 1 ? '' : 's') . " are waiting" : '' ?>.</span>
+  </div>
+  <a class="rv-cta-go" href="?slug=<?= e($slug) ?>&amp;mode=review">✎ Comment &amp; edit</a>
 </div>
 <?php endif; ?>
 
