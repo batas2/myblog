@@ -156,6 +156,10 @@ function rc_checks(array $r): array
 
 /* ---------------- run ---------------- */
 
+// Included rather than executed: admin.php reuses rc_measure() so the list and the gate grade a
+// post the same way. Only a direct CLI invocation walks the corpus.
+if (PHP_SAPI !== 'cli' || realpath($_SERVER['SCRIPT_FILENAME'] ?? '') !== realpath(__FILE__)) return;
+
 $rest = array_slice($_SERVER['argv'], 1);
 $detail = in_array('--detail', $rest, true);
 $only = array_values(array_filter($rest, fn($a) => !str_starts_with($a, '--')));

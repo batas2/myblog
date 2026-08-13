@@ -40,6 +40,7 @@ require_once __DIR__ . '/lib/analytics.php';
 require_once __DIR__ . '/lib/newsletter.php';
 require_once __DIR__ . '/lib/admin.php';
 require_once __DIR__ . '/lib/review_store.php';
+require_once __DIR__ . '/tools/read_check.php';   // rc_measure(): the list grades readability the way the gate does
 
 header('Cache-Control: no-store');
 header('X-Robots-Tag: noindex, nofollow');
@@ -744,118 +745,78 @@ dialog.why::backdrop { background: rgba(10,10,15,.45); }
     </p>
   <?php endif; ?>
 
-  <table>
-    <tr><th>Status</th><th>Goes live</th><th>Post</th><th class="r">Actions</th></tr>
+  <?php
+  /* The list is for scanning and the drawer is for deciding. Everything a row used to carry in
+     seven columns now lives one click away, so what stays on the row is only what you sort by with
+     your eyes: is it out, when, what is it called, and does it read well. */
+  $rows = [];
+  foreach ($pipeline as $p) {
+      $h = hero_meta($p['slug']);
+      $rc = null;
+      $f = post_source_file($p['slug']);
+      if ($f !== null && ($m = rc_measure($f)) !== null) {
+          $ck = rc_checks($m);
+          $rc = array_filter($ck, fn($x) => $x[0] === 'fail') ? 'hard'
+              : (array_filter($ck, fn($x) => $x[0] === 'warn') ? 'ok' : 'easy');
+      }
+      $sh = preview_share_url($p['slug']);
+      $rows[$p['slug']] = [
+          'slug' => $p['slug'], 'title' => $p['title'], 'subtitle' => $p['subtitle'],
+          'status' => $p['status'], 'built' => (bool) $p['built'],
+          'when' => $p['status'] === 'draft' ? '' : date('Y-m-d H:i', $p['publish_ts']),
+          'countdown' => $p['status'] === 'scheduled' ? admin_countdown($p['publish_ts']) : '',
+          'dt' => date('Y-m-d\TH:i', max($p['publish_ts'], time())),
+          'reach' => ($r = sc_reach($p['scores'])) !== null ? number_format($r, 1) : null,
+          'band' => sc_band($r), 'minutes' => $p['minutes'], 'words' => $p['words'],
+          'comments' => (int) $p['comments'], 'read' => $rc,
+          'thumb' => $h['thumb'] ?? null, 'path' => post_path($p['slug']),
+          'share' => $sh, 'tags' => $p['tags'], 'links' => share_urls($p['slug']),
+          // Why there is no link matters as much as the link: without this the drawer would simply
+          // omit the section and leave you wondering whether sharing is broken or switched off.
+          'shareOff' => $sh === null ? 'set preview_secret in config.php to enable share links' : null,
+      ];
+  }
+  ?>
+  <table class="plist">
+    <tr><th></th><th>Status</th><th>Post</th><th class="r">Goes live</th><th class="r">Reads</th></tr>
     <?php $seenPublished = false; ?>
-    <?php foreach ($pipeline as $p): ?>
-    <?php /* One divider between the posts that still need a decision and the ones that are done.
-             Without it 27 settled posts carry the same visual weight as the four that do not. */
-      if (!$seenPublished && $p['status'] === 'published'):
-        $seenPublished = true; ?>
-      <tr class="r-split"><td colspan="4"><span>Published</span></td></tr>
+    <?php foreach ($rows as $r): ?>
+    <?php if (!$seenPublished && $r['status'] === 'published'): $seenPublished = true; ?>
+      <tr class="r-split"><td colspan="5"><span>Published</span></td></tr>
     <?php endif; ?>
-    <tr class="r-<?= e($p['status']) ?>">
-      <td><span class="badge b-<?= e($p['status']) ?>"><?= e($p['status']) ?></span></td>
-      <td class="when">
-        <?= $p['status'] === 'draft' ? '—' : date('Y-m-d H:i', $p['publish_ts']) ?>
-        <?php if ($p['status'] === 'scheduled'): ?><br><span class="countdown"><?= e(admin_countdown($p['publish_ts'])) ?></span><?php endif; ?>
+    <tr class="prow r-<?= e($r['status']) ?>" data-slug="<?= e($r['slug']) ?>" tabindex="0" role="button"
+        aria-label="<?= e($r['title']) ?>">
+      <td class="pthumbcell">
+        <?php if ($r['thumb']): ?><img src="<?= e($r['thumb']) ?>" alt="" loading="lazy">
+        <?php else: ?><span class="nothumb" aria-hidden="true">◱</span><?php endif; ?>
       </td>
+      <td><span class="badge b-<?= e($r['status']) ?>"><?= e($r['status']) ?></span></td>
       <td>
-        <span class="post-t">
-        <?php if ($p['status'] === 'published' && $p['built']): ?>
-          <a href="<?= e(post_path($p['slug'])) ?>" target="_blank" rel="noopener"><?= e($p['title']) ?></a>
-        <?php else: ?>
-          <?php /* no page exists on disk for these, so send them to the on-demand preview */ ?>
-          <a href="/preview.php?slug=<?= e($p['slug']) ?>" target="_blank" rel="noopener"
-             title="read it in the real layout without publishing"><?= e($p['title']) ?></a>
-          <?= $p['status'] === 'published' && !$p['built'] ? ' <span class="dim">· not built yet</span>' : '' ?>
-        <?php endif; ?>
-          <?php /* the margin-note surface. Reads as an action, not as another label in the row:
-                   the two disclosures underneath already look like this, and a door has to look
-                   different from a sign. */
-                $rvc = rv_counts($p['slug']); ?>
-          <a class="rv-link<?= $rvc['open'] ? ' has-open' : '' ?>" href="/review.php?slug=<?= e($p['slug']) ?>"
-             title="read it, mark up sentences, fix small things in place">✎ review<?php
-             if ($rvc['open']) echo '<b>' . (int) $rvc['open'] . '</b>'; ?></a>
-        </span>
-        <span class="post-sub"><?= e($p['subtitle']) ?></span>
-        <?php /* Three narrow columns became one line. They are reference numbers, not things you
-                 scan a table by, and as columns they cost more width than they returned. */
-          $r = sc_reach($p['scores']); ?>
-        <span class="post-meta">
-          <a class="plink badge b-<?= e(sc_band($r)) ?>" href="#scores" title="editorial reach score, rubric <?= e(SC_RUBRIC) ?>"><?= $r !== null ? number_format($r, 1) : 'unscored' ?></a>
-          <span><?= $p['minutes'] ?> min</span>
-          <?php if ($p['comments']): ?><span><?= (int) $p['comments'] ?> comment<?= $p['comments'] === 1 ? '' : 's' ?></span><?php endif; ?>
-        </span>
+        <span class="post-t"><?= e($r['title']) ?></span>
+        <span class="post-sub"><?= e($r['subtitle']) ?></span>
       </td>
-      <td class="r">
-        <div class="acts">
-        <?php /* every cross-post host hides the referrer, so an untagged link comes back as 'direct' */ ?>
-        <details class="share">
-          <summary>tagged links</summary>
-          <div class="share-row">
-            <?php foreach (share_urls($p['slug']) as $sh): ?>
-              <?php /* the title is the no-clipboard fallback: the URL stays readable and selectable */ ?>
-              <button type="button" class="mini cp" data-url="<?= e($sh['url']) ?>" title="<?= e($sh['url']) ?>"><?= e($sh['label']) ?></button>
-            <?php endforeach; ?>
-            <span class="dim">copy · post these instead of the bare URL and Acquisition can tell them apart</span>
-          </div>
-        </details>
-        <?php /* an unpublished essay has no public URL, so the only way to let somebody read it
-                 is the token link. Refused to crawlers and unfurlers, so pasting it in a chat
-                 shows a bare URL and puts nothing in anyone's cache. */ ?>
-        <?php if ($p['status'] !== 'published'): $shareUrl = preview_share_url($p['slug']); ?>
-        <details class="share">
-          <summary>share this draft</summary>
-          <div class="share-row">
-            <?php if ($shareUrl !== null): ?>
-              <button type="button" class="mini cp" data-url="<?= e($shareUrl) ?>" title="<?= e($shareUrl) ?>">copy read link</button>
-              <span class="dim">anyone with this link can read it · no session needed · bots get a 404 · rotate <code>preview_secret</code> to kill every link</span>
-            <?php else: ?>
-              <span class="dim">set <code>preview_secret</code> in config.php to enable share links</span>
-            <?php endif; ?>
-          </div>
-        </details>
-        <?php endif; ?>
-          <?php /* The publishing controls were on every row, which meant 27 "publish now" buttons
-                   for posts that are already published. They fold away now; the row's primary
-                   action is the one you actually reach for. */ ?>
-          <details class="statusbox">
-            <summary>change status</summary>
-            <div class="acts-in">
-          <?php if ($p['status'] !== 'published'): ?>
-          <form method="POST" action="/admin.php">
-            <input type="hidden" name="action" value="setstatus">
-            <input type="hidden" name="csrf" value="<?= $csrf ?>">
-            <input type="hidden" name="slug" value="<?= e($p['slug']) ?>">
-            <input type="hidden" name="status_action" value="publish">
-            <button class="mini go" type="submit">▶ publish now</button>
-          </form>
-          <?php endif; ?>
-          <?php if ($p['status'] !== 'draft'): ?>
-          <form method="POST" action="/admin.php">
-            <input type="hidden" name="action" value="setstatus">
-            <input type="hidden" name="csrf" value="<?= $csrf ?>">
-            <input type="hidden" name="slug" value="<?= e($p['slug']) ?>">
-            <input type="hidden" name="status_action" value="draft">
-            <button class="mini hold" type="submit">⏸ to draft</button>
-          </form>
-          <?php endif; ?>
-          <form method="POST" action="/admin.php">
-            <input type="hidden" name="action" value="setstatus">
-            <input type="hidden" name="csrf" value="<?= $csrf ?>">
-            <input type="hidden" name="slug" value="<?= e($p['slug']) ?>">
-            <input type="hidden" name="status_action" value="schedule">
-            <input class="dt" type="datetime-local" name="when" required value="<?= date('Y-m-d\TH:i', max($p['publish_ts'], time())) ?>">
-            <button class="mini" type="submit">⏱ schedule</button>
-          </form>
-            </div>
-          </details>
-        </div>
+      <td class="r when">
+        <?= $r['when'] !== '' ? e($r['when']) : '<span class="dim">not scheduled</span>' ?>
+        <?php if ($r['countdown']): ?><br><span class="countdown"><?= e($r['countdown']) ?></span><?php endif; ?>
       </td>
+      <td class="r"><?php if ($r['read']): ?><span class="rd rd-<?= e($r['read']) ?>"><?= e($r['read']) ?></span><?php endif; ?></td>
     </tr>
     <?php endforeach; ?>
   </table>
+
+  <?php /* The drawer is one element reused for every row: 31 copies of this markup would be 31
+           copies of the same four forms, and only one can ever be open. */ ?>
+  <div class="pdrawer" id="pdrawer" hidden aria-hidden="true">
+    <div class="pdrawer-scrim" data-close></div>
+    <aside class="pdrawer-panel" role="dialog" aria-modal="true" aria-labelledby="pd-title">
+      <button type="button" class="pd-x" data-close aria-label="Close">✕</button>
+      <div id="pd-body"></div>
+    </aside>
+  </div>
+  <script id="pdata" type="application/json"><?= json_encode($rows, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP) ?></script>
+  <script>window.PD_CSRF = <?= json_encode($csrf) ?>;</script>
+  <script src="/assets/admin-drawer.js" defer></script>
+
   <p class="note">Statuses live in the markdown itself (<code>**Status:** draft</code> / <code>**Publish:** YYYY-MM-DD HH:MM</code>) —
     the buttons rewrite the source file and rebuild, so a change here is immediately real.
     On the server, remember the next deploy re-syncs <code>content/posts/</code> from your machine: mirror any status change locally before deploying.</p>

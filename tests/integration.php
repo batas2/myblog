@@ -994,7 +994,7 @@ t_contains('Disallow: /preview.php', (string) file_get_contents($SANDBOX . '/rob
 
 // and the pipeline hands the author a link to copy
 [, $body] = $asAdmin('GET', "$BASE/admin.php");
-t_contains('copy read link', $body, 'pipeline offers a share link for a draft');
+t_contains('"share":"http', $body, 'pipeline carries a share link for a draft');
 t_contains($shareTok, $body, 'and it is the real token');
 
 /* Fail closed. An install with no secret must switch sharing off, not fall back
@@ -1009,7 +1009,7 @@ foreach (['' => 'an empty secret', 'CHANGE-ME-openssl-rand-hex-24' => 'the shipp
     [$code] = $shareGet("slug=itest-draft-post&k={$shareTok}");
     t_eq(404, $code, "a previously valid link stops working under {$what}");
     [, $pBody] = $asAdmin('GET', "$BASE/admin.php");
-    t_contains('set <code>preview_secret</code>', $pBody, "the pipeline says sharing is off under {$what}");
+    t_contains('set preview_secret in config.php', $pBody, "the pipeline says sharing is off under {$what}");
 }
 $sbxConfig(['preview_secret' => 'itest-preview-secret']);
 [$code] = $shareGet("slug=itest-draft-post&k={$shareTok}");
