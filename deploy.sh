@@ -1,25 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# deploy.sh — build, back up the remote, push bfrackowiak.pl to MyDevil.
+# deploy.sh — move the site, and the writing round trip, between here and the server.
 #
-# Usage:
-#   ./deploy.sh             refresh geoip + build + backup remote + rsync
-#                           (additive, no deletions)
-#   ./deploy.sh --clean     same, but also delete remote files that no longer
-#                           exist locally (runtime data stays protected)
-#   ./deploy.sh --dry-run   show what would be transferred, touch nothing
-#   ./deploy.sh --no-geoip  skip the geoip refresh (offline deploys: the
-#                           updater would otherwise wait out its own timeout)
-#   ./deploy.sh --verbose   stream every command's raw output (-v works too).
-#                           Without it the deploy prints one line per step and
-#                           a summary; a failing step still dumps its full log.
-#   ./deploy.sh --pull      bring post sources and review notes home, then
-#                           write the briefs an agent works from
-#   ./deploy.sh --force     push even when the server is ahead (last resort)
-#   ./deploy.sh --pull-logs pull the live site's runtime data into
-#                           _remote-logs/<timestamp>/ and exit without
-#                           deploying anything. Read-only on the server.
+#   ./deploy.sh help        the full reference. Start there.
+#
+# Four commands: push (the default), pull, data, status. Everything else is a modifier.
 #
 # Runtime data on the server is NEVER overwritten or deleted:
 # content/comments/*.json, content/analytics.db, content/analytics.seed,
@@ -72,21 +58,95 @@ DELETE_FLAG=()
 RSYNC_MODE=()
 SKIP_GEOIP=0
 VERBOSE=0
-PULL_LOGS=0
-PULL_REVIEW=0
 FORCE_PUSH=0
+CMD=""
+
+usage() {
+  cat <<'HELPTEXT'
+deploy.sh — move the site, and the writing round trip, between here and the server.
+
+USAGE
+  ./deploy.sh [command] [options]
+
+COMMANDS
+  push        Build the site and send it up. This is what runs when you name no
+              command, so plain ./deploy.sh still means "deploy".
+  pull        Bring post sources and review notes home, then write the briefs in
+              drafts/review/. Run this after marking a post up on the site, and
+              before the next push.
+  data        Bring the live site's runtime data home: analytics, subscribers,
+              the scores mirror, comment threads, and the newsletter log. Reads
+              the server, changes nothing on it.
+  status      Say whether both sides hold the same post sources and notes. Reads
+              only; useful when you cannot remember whether you pulled.
+  help        This.
+
+OPTIONS
+  -n, --dry-run     Say what would happen and write nothing, on either side.
+  -v, --verbose     Stream every command instead of one line per step. A failing
+                    step dumps its whole log either way.
+      --delete      push only. Remove remote files that no longer exist here.
+                    Runtime data stays protected regardless.
+      --no-geoip    push only. Skip the geoip refresh, which otherwise waits out
+                    its own timeout when you are offline.
+      --force       push only. Push even when the server holds changes this
+                    machine does not. Overwrites them. Last resort.
+  -h, --help        This.
+
+THE WRITING ROUND TRIP
+  Both sides can write content/posts now: review.php edits post sources in place
+  and stores margin notes beside them. So every pull and every successful push
+  records what the two sides agreed on, and a push stops when the server has
+  moved on since. The loop is:
+
+      read the post on the site, leave notes, fix small things
+      ./deploy.sh pull            posts and notes come home, briefs are written
+      claude code                 works from drafts/review/, resolves each note
+      ./deploy.sh                 the result and the history go back up
+
+WHAT IS NEVER TOUCHED ON THE SERVER
+  content/comments/*.json, content/analytics.db, content/analytics.seed,
+  content/newsletter.db, content/scores.db, content/.sessions/
+
+EXAMPLES
+  ./deploy.sh                     build and deploy
+  ./deploy.sh -n                  rehearse the deploy, write nothing
+  ./deploy.sh --delete            deploy and prune files gone from this machine
+  ./deploy.sh pull -n             see what a pull would bring home
+  ./deploy.sh status              are the two sides in step?
+HELPTEXT
+}
+
+# A command is the first bare word; everything starting with a dash is a modifier, in any order.
+# The old flag spellings still work, because muscle memory is a real cost.
 for arg in "$@"; do
   case "$arg" in
-    --clean)    DELETE_FLAG=(--delete) ;;
-    --dry-run)  RSYNC_MODE=(--dry-run) ;;
-    --no-geoip) SKIP_GEOIP=1 ;;
-    --verbose|-v) VERBOSE=1 ;;
-    --pull-logs) PULL_LOGS=1 ;;
-    --pull)     PULL_REVIEW=1 ;;
-    --force)    FORCE_PUSH=1 ;;
-    *) die "Unknown option: ${arg}" ;;
+    push|pull|data|status|help)
+      [ -z "${CMD}" ] || die "Two commands given (${CMD}, ${arg}) — pick one."
+      CMD="${arg}" ;;
+    --pull)       CMD="pull";   echo "note: --pull is now 'deploy.sh pull'" >&2 ;;
+    --pull-logs)  CMD="data";   echo "note: --pull-logs is now 'deploy.sh data'" >&2 ;;
+    --clean)      DELETE_FLAG=(--delete); echo "note: --clean is now --delete" >&2 ;;
+    --delete)     DELETE_FLAG=(--delete) ;;
+    -n|--dry-run) RSYNC_MODE=(--dry-run) ;;
+    --no-geoip)   SKIP_GEOIP=1 ;;
+    -v|--verbose) VERBOSE=1 ;;
+    --force)      FORCE_PUSH=1 ;;
+    -h|--help)    CMD="help" ;;
+    *) echo "Unknown argument: ${arg}" >&2; echo "Run ./deploy.sh help for the reference." >&2; exit 2 ;;
   esac
 done
+[ -n "${CMD}" ] || CMD="push"
+
+if [ "${CMD}" = "help" ]; then usage; exit 0; fi
+
+# Modifiers that only mean something to a push, named where they were given rather than ignored in
+# silence: a flag that quietly does nothing is how you end up trusting one that never applied.
+if [ "${CMD}" != "push" ]; then
+  [ ${#DELETE_FLAG[@]} -eq 0 ] || die "--delete applies to push, not to ${CMD}."
+  [ "${SKIP_GEOIP}" -eq 0 ]    || die "--no-geoip applies to push, not to ${CMD}."
+  [ "${FORCE_PUSH}" -eq 0 ]    || die "--force applies to push, not to ${CMD}."
+fi
 
 # --- quiet-by-default plumbing ---
 # Every noisy command runs through run(): verbose streams it, quiet captures it.
@@ -149,13 +209,71 @@ sync_hashes_remote() {
 }
 sync_state_write() { sync_hashes_local > "${SYNC_STATE}" 2>/dev/null || true; }
 
+# --- status: which side is ahead, and nothing else ---------------------------
+# The guard below answers this question in order to refuse a push. Asking it on its own is cheaper
+# than remembering whether you pulled after the last reading session.
+if [ "${CMD}" = "status" ]; then
+  echo -e "${BOLD}Comparing post sources and review notes${NC}"
+  echo -e "  here:   ${LOCAL_DIR}"
+  echo -e "  server: ${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}"
+  echo
+
+  REMOTE_H="$(sync_hashes_remote)"
+  LOCAL_H="$(sync_hashes_local)"
+  [ -n "${REMOTE_H}" ] || warn "the server returned nothing — check SSH and REMOTE_DIR"
+
+  SAME=0; AHEAD_LOCAL=0; AHEAD_REMOTE=0; ONLY_LOCAL=0
+  AHEAD_REMOTE_LIST=""; AHEAD_LOCAL_LIST=""; ONLY_LOCAL_LIST=""
+
+  while IFS= read -r line; do
+    [ -n "${line}" ] || continue
+    RHASH="${line%% *}"; RPATH="${line#* }"; RPATH="${RPATH# }"
+    LHASH="$(printf '%s\n' "${LOCAL_H}" | awk -v p="${RPATH}" '$2==p {print $1; exit}')"
+    if [ "${RHASH}" = "${LHASH}" ]; then SAME=$((SAME + 1)); continue; fi
+    KHASH=""
+    [ ! -f "${SYNC_STATE}" ] || KHASH="$(awk -v p="${RPATH}" '$2==p {print $1; exit}' "${SYNC_STATE}")"
+    if [ "${RHASH}" = "${KHASH}" ]; then
+      AHEAD_LOCAL=$((AHEAD_LOCAL + 1)); AHEAD_LOCAL_LIST="${AHEAD_LOCAL_LIST}  ${RPATH}\n"
+    else
+      AHEAD_REMOTE=$((AHEAD_REMOTE + 1)); AHEAD_REMOTE_LIST="${AHEAD_REMOTE_LIST}  ${RPATH}\n"
+    fi
+  done <<< "${REMOTE_H}"
+
+  while IFS= read -r line; do
+    [ -n "${line}" ] || continue
+    LPATH="${line#* }"; LPATH="${LPATH# }"
+    printf '%s\n' "${REMOTE_H}" | awk -v p="${LPATH}" '$2==p {found=1} END {exit !found}' && continue
+    ONLY_LOCAL=$((ONLY_LOCAL + 1)); ONLY_LOCAL_LIST="${ONLY_LOCAL_LIST}  ${LPATH}\n"
+  done <<< "${LOCAL_H}"
+
+  echo -e "  ${GREEN}${SAME}${NC} identical"
+  if [ "${AHEAD_LOCAL}" -gt 0 ]; then
+    echo -e "  ${AHEAD_LOCAL} newer here (a push will send them):"; echo -en "${AHEAD_LOCAL_LIST}"
+  fi
+  if [ "${ONLY_LOCAL}" -gt 0 ]; then
+    echo -e "  ${ONLY_LOCAL} here only (a push will create them):"; echo -en "${ONLY_LOCAL_LIST}"
+  fi
+  if [ "${AHEAD_REMOTE}" -gt 0 ]; then
+    echo
+    echo -e "  ${YELLOW}${AHEAD_REMOTE} changed on the server since the last sync:${NC}"
+    echo -en "${AHEAD_REMOTE_LIST}"
+    echo
+    echo -e "  ${BOLD}Run ./deploy.sh pull before the next push.${NC}"
+    exit 1
+  fi
+  echo
+  [ ! -f "${SYNC_STATE}" ] && warn "no sync marker yet — the first pull or push writes it" || true
+  echo -e "${GREEN}${BOLD}In step.${NC} A push would not overwrite anything on the server."
+  exit 0
+fi
+
 # --- --pull: bring the writing round trip home, then stop ---
 # review.php edits post sources in place and stores margin notes next to them, so after a reading
 # session the server holds the newer copy of both. This is the only thing that brings them back, and
 # it must run before the next deploy or the push guard below will (correctly) refuse to start.
 #
 # Everything here is a plain file copy: no snapshot, no database, nothing on the server changes.
-if [ "${PULL_REVIEW}" -eq 1 ]; then
+if [ "${CMD}" = "pull" ]; then
   STEP_TOTAL=2
   DRY=0
   [ ${#RSYNC_MODE[@]} -eq 0 ] || DRY=1
@@ -211,7 +329,7 @@ fi
 #
 # Nothing on the server is modified. Set REMOTE_LOG_DIR in deploy.env to pull
 # the host's own access/error logs alongside it.
-if [ "${PULL_LOGS}" -eq 1 ]; then
+if [ "${CMD}" = "data" ]; then
   STEP_TOTAL=2
   [ -z "${REMOTE_LOG_DIR:-}" ] || STEP_TOTAL=3
   DRY=0

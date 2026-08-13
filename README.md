@@ -216,10 +216,25 @@ prints the queue after every deploy so nothing waits unnoticed.
 **backs up the remote docroot to a local `_remote-backup/<timestamp>.tar.gz`**,
 then rsyncs. Runtime data on the server (comments, analytics, subscribers,
 scores mirror) is excluded in both directions and can never be overwritten.
-`--dry-run` previews, `--clean` also removes remotely deleted files,
-`--no-geoip` skips the refresh.
+`./deploy.sh help` is the reference. Four commands: `push` (the default, so a
+bare `./deploy.sh` still deploys), `pull`, `data` and `status`. Modifiers:
+`-n/--dry-run` previews, `--delete` also removes remotely deleted files,
+`--no-geoip` skips the refresh, `-v/--verbose` streams every command. The old
+`--clean` and `--pull-logs` spellings still work and say what replaced them.
 
-`./deploy.sh --pull-logs` goes the other way and deploys nothing: it downloads
+Since `review.php` lets the server edit post sources too, both sides can write
+`content/posts/`. Every pull and successful push records what the two agreed on,
+and a push **stops** rather than overwriting a server that has changed since:
+
+    read the post on the site, leave notes, fix small things
+    ./deploy.sh pull            posts and notes come home, briefs are written
+    claude code                 works from drafts/review/, resolves each note
+    ./deploy.sh                 the result and the history go back up
+
+`./deploy.sh status` answers "did I pull?" without changing anything, and exits
+non-zero when the server is ahead. `--force` overrides the guard.
+
+`./deploy.sh data` goes the other way and deploys nothing: it downloads
 the live site's runtime data into `_remote-logs/<timestamp>/`, mirroring the
 server's layout — `analytics.db` (every visit ever recorded; nothing is pruned
 or rotated), `newsletter.db`, `scores.db`, `content/comments/*.json` and the
