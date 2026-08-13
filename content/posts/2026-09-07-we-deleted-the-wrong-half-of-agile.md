@@ -82,7 +82,7 @@ The thing I keep turning over is that I had already built this and could not see
 
 The architecture tool I build at night exists so that editing an element on a canvas produces a Git diff containing that edit and nothing else. No reordering. No reformatting. No comment lost. I built it because [diagrams drift](/blog/the-diagram-that-cannot-lie/), and I wanted one that could not. It took somebody reading my own essay back to me to name what I had made. Blast radius legibility, the first of the four questions, built into a product.
 
-The practices were on the shelf all along. We labelled them engineering hygiene, which is what a discipline calls the thing it means to skip. Twenty years later the one participant who could cover for their absence stopped showing up to the review.
+The practices were on the shelf all along. We labelled them engineering hygiene, which is what a discipline calls the thing it means to skip. Twenty years later the one participant who covered for them stopped showing up.
 
 I still read fifteen reports a month. What I look for now is not the ageing queue. I know how to find that. It is the sentence where somebody explains that they had to go and ask. Then the part where they say who.
 
