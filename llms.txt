@@ -25,6 +25,7 @@ For LLM ingestion: the complete blog content in one plain-text file is at https:
 
 Selected posts:
 
+- Count Your Rejections: https://bfrackowiak.pl/blog/count-your-rejections/
 - Adoption Is the Deliverable: https://bfrackowiak.pl/blog/adoption-is-the-deliverable/
 - The Bottleneck Moved: https://bfrackowiak.pl/blog/the-bottleneck-moved/
 - A Feature Is Not a Service: https://bfrackowiak.pl/blog/a-feature-is-not-a-service/

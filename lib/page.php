@@ -16,6 +16,14 @@ function page_head(string $title, string $desc, string $canonical, string $extra
     // article pages inject their own og:type via $extra — only default the rest;
     // same for robots: a page that says noindex (404, token pages) must not also say index
     $ogType = str_contains($extra, 'og:type') ? '' : '<meta property="og:type" content="website">' . "\n";
+    // The default card is a known 1200×630; a page that passes its own image (an essay hero,
+    // the About portrait) already declares that image's dimensions in $extra, so do not guess
+    // for it and do not emit the pair twice.
+    $ogDims = ($ogImage === '' && !str_contains($extra, 'og:image:width'))
+        ? '<meta property="og:image:width" content="1200">' . "\n"
+        . '<meta property="og:image:height" content="630">' . "\n"
+        . '<meta property="og:image:alt" content="Field Notes: essays on software architecture, the people around it, and the machine they form together">' . "\n"
+        : '';
     $robots = str_contains($extra, 'name="robots"') ? '' : '<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">' . "\n";
     return <<<HTML
 <!DOCTYPE html>
@@ -33,7 +41,7 @@ function page_head(string $title, string $desc, string $canonical, string $extra
 <meta property="og:site_name" content="{$siteName}">
 <meta property="og:locale" content="en_US">
 <meta property="og:image" content="{$og}">
-<meta name="twitter:card" content="summary_large_image">
+{$ogDims}<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">

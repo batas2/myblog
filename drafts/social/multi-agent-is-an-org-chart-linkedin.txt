@@ -1,0 +1,49 @@
+--- ON HOLD (decyzja 2026-08-20): nie publikować na razie. Copy gotowe, czeka.
+--- not posted yet · when it goes out, put the permalink here AND in the post as **LinkedIn:** <url>
+--- clicks come back as utm_source=linkedin in the Acquisition tab; without the
+--- tag below LinkedIn's lnkd.in wrapper would report them as direct traffic.
+--- plain text on purpose: LinkedIn renders no markdown, so nothing below is
+--- formatted. Copy from the first line of the body to the last hashtag.
+---
+--- Why this one, 2026-08-20: highest reach score in the corpus (8.0), trend 9,
+--- already earned its keep on Medium and DEV, and LinkedIn has never seen it.
+--- Three named failure modes give a reader a one-word reply, which is the
+--- cheapest path to a comment that is not "great post".
+--- Opener is the laugh at the third diagram: not reused from the two posts that
+--- ran (squad reports / the numbers that steer). Closer is deliberately NOT
+--- "I would rather hear that than be agreed with" , that shipped on
+--- The Bottleneck Moved and is queued on two more drafts.
+
+Somewhere around the third version of the target-architecture diagram, I started laughing.
+
+Boxes with narrow responsibilities. A coordinator on top. Formal handoffs. Escalation paths for the cases nobody can handle.
+
+I had seen this diagram before. In every HR tool I have ever been onboarded into.
+
+I was not designing a system. I was designing an organization.
+
+The primitives are identical because the problem is identical: coordinating limited intelligences with partial context toward a shared goal. For people the limit is attention and working memory. For agents it is the context window. Same constraint, different units.
+
+So the failure modes transfer as well, and they arrive in the order you would expect.
+
+The bottleneck. Route every interaction through one supervisor and you have serialised your parallelism. One overloaded node, everybody else idle. Any resemblance to a manager whose calendar is the company's critical path is fully intended.
+
+The telephone game. Each relay compresses. The specialist's rich answer becomes the supervisor's summary, which becomes a summary of a summary. In orgs we call that communication overhead. In agents we call it context loss. It is the same tax.
+
+Empire building. Give a supervisor loose instructions and it starts doing the work instead of routing it, badly, because delegating feels riskier than acting. I have met this middle manager. Several times. Some of them were prompts.
+
+The fixes are org-design fixes, translated. Push decisions down to the specialists. Allow direct channels between agents that collaborate often, so not everything has to go up. Define escalation criteria instead of escalation habits.
+
+Then there is the part I cannot put down.
+
+When you design coordination from scratch, with no politics and no history to respect, you would never include a layer whose only function is summarising upward. You would never route every handoff through one node. You would never let two roles both vaguely own the same outcome.
+
+Then you look at your real org chart.
+
+Multi-agent design is org design with a compiler. For the first time our coordination theories produce stack traces instead of opinions.
+
+If you are building one of these right now: which of the three showed up first for you, the bottleneck, the telephone game, or the empire builder? Those are the only ones I have had to design around so far.
+
+https://bfrackowiak.pl/blog/multi-agent-is-an-org-chart/?utm_source=linkedin&utm_medium=social&utm_campaign=multi-agent-is-an-org-chart
+
+#MultiAgentSystems #SoftwareArchitecture #AIAgents #EngineeringLeadership
