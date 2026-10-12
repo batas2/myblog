@@ -1655,12 +1655,19 @@ section('one story about the author on three pages');
 $homeX = render_index($posts);
 $startX = render_start_page($posts);
 $aboutSrc = (string) file_get_contents(APP_ROOT . '/about/index.php');
-foreach (['12+ years', 'PhD', 'Top 3% on Toptal', 'global SaaS', 'people left'] as $fact) {
+foreach (['15+ years', 'PhD', 'Top 3% on Toptal', 'global SaaS', 'people left'] as $fact) {
     t_contains($fact, $homeX, "homepage tells: {$fact}");
     t_contains($fact, $startX, "start page tells: {$fact}");
     t_contains($fact, $aboutSrc, "about page tells: {$fact}");
 }
-t_not_contains('Fifteen years', $homeX, 'no competing years count on the homepage');
+// one number everywhere, matching LinkedIn: 15+
+foreach (['12+', 'welve'] as $old) {
+    t_not_contains($old, $homeX, "homepage has no old years count ({$old})");
+    t_not_contains($old, $startX, "start page has no old years count ({$old})");
+    t_not_contains($old, $aboutSrc, "about page has no old years count ({$old})");
+    t_not_contains($old, (string) file_get_contents(APP_ROOT . '/llms.txt'), "llms.txt has no old years count ({$old})");
+    t_not_contains($old, (string) file_get_contents(APP_ROOT . '/services/index.php'), "services page has no old years count ({$old})");
+}
 t_not_contains(' — ', substr($startX, strpos($startX, 'start-intro'), 1500), 'start intro has no spaced em dash');
 
 section('doors carry a picture of what they are');

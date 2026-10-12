@@ -24,7 +24,7 @@ $form_message = $form['message'];
 
 $person = schema_person() + [
     'alternateName' => ['bfrackowiak', 'Bartosz Frackowiak'],
-    'description' => 'Solution architect with 12+ years of experience in distributed systems, domain-driven design, and AI-native engineering. Writes weekly about architecture, people, and organizational systems.',
+    'description' => 'Solution architect with 15+ years of experience in distributed systems, domain-driven design, and AI-native engineering. Writes weekly about architecture, people, and organizational systems.',
     'alumniOf' => [
         ['@type' => 'CollegeOrUniversity', 'name' => 'University of Warsaw'],
         ['@type' => 'CollegeOrUniversity', 'name' => 'Nicolaus Copernicus University'],
@@ -54,7 +54,7 @@ $extra .= '<meta property="og:image:width" content="460">' . "\n"
 
 echo page_head(
     'About · Bartosz Frąckowiak',
-    'Bartosz Frąckowiak, solution architect in Warsaw. Twelve-plus years of distributed systems, doctoral research on architecture validation, and an AI transformation across several hundred developers. How I got here, and how to reach me.',
+    'Bartosz Frąckowiak, solution architect in Warsaw. Fifteen-plus years of distributed systems, doctoral research on architecture validation, and an AI transformation across several hundred developers. How I got here, and how to reach me.',
     cfg('site_url') . '/about/',
     $extra,
     cfg('site_url') . '/myself.jpeg'
@@ -72,7 +72,7 @@ echo page_head(
         <span class="eyebrow rise"><span class="blip"></span>Solution Architect · Warsaw, Poland</span>
         <h1 class="rise">Software architecture, <em>with the people left&nbsp;in.</em></h1>
         <p class="lede rise-2">
-          I'm <strong>Bartosz Frąckowiak</strong>. For twelve-plus years I've been building distributed
+          I'm <strong>Bartosz Frąckowiak</strong>. For fifteen-plus years I've been building distributed
           systems in production, and studying the humans and org charts that shape them. I write about
           both here, most Mondays, because thinking in public is how I find out whether an idea holds.
         </p>
@@ -81,7 +81,7 @@ echo page_head(
           <a href="/">the essays</a>.
         </p>
         <p class="proof rise-3">
-          <span>12+ years in distributed systems</span>
+          <span>15+ years in distributed systems</span>
           <span>PhD research, University of Warsaw</span>
           <span>Top 3% on Toptal</span>
           <span>Architect at a global SaaS platform</span>

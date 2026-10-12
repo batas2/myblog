@@ -115,7 +115,7 @@ echo site_nav();
             <li><span>60-minute review call, recorded</span></li>
             <li><span>As-is architecture diagram</span></li>
           </ul>
-          <div class="proof-row"><span class="proof">12+ yrs of production systems behind it</span><span class="len">1 week</span></div>
+          <div class="proof-row"><span class="proof">15+ yrs of production systems behind it</span><span class="len">1 week</span></div>
         </article>
 
         <article class="card">

@@ -133,13 +133,13 @@ function render_index(array $posts): string
     $header .= '<p class="hero-id"><img class="home-face" src="/myself.jpeg" alt="Bartosz Frąckowiak" width="56" height="56" decoding="async">'
              . '<span>' . eyebrow('Field Notes', true) . '<span class="hero-by">by <a href="/about/">Bartosz Frąckowiak</a>, solution architect</span></span></p>';
     $header .= '<h1 style="font-size:clamp(2.2rem,5vw,3.2rem)">Field Notes</h1>';
-    $header .= '<p class="home-lede">Software architecture, with the people left in. An architect\'s notebook from twelve-plus years of distributed systems in production: the decisions behind the boxes and arrows, who owns a boundary, why a migration never starts, and what changes when agents write the code.</p>';
+    $header .= '<p class="home-lede">Software architecture, with the people left in. An architect\'s notebook from fifteen-plus years of distributed systems in production: the decisions behind the boxes and arrows, who owns a boundary, why a migration never starts, and what changes when agents write the code.</p>';
     $header .= '<p class="hero-actions">'
              . '<a class="btn btn-primary" href="/blog/start/">Start here ' . arrow_icon() . '</a>'
              . '<a class="btn btn-ghost" href="#newsletter">Subscribe by email</a>'
              . '<a class="btn btn-ghost" href="/about/#contact">Contact me</a></p>';
     // the same four facts as /about/ and /blog/start/, in the shortest wording that fits a 2×2 grid
-    $header .= '<p class="proof"><span>12+ years in production</span><span>PhD, Univ. of Warsaw</span>'
+    $header .= '<p class="proof"><span>15+ years in production</span><span>PhD, Univ. of Warsaw</span>'
              . '<span>Top 3% on Toptal</span><span>Architect, global SaaS</span></p>';
     $header .= '</div>';
     $header .= '<aside class="hero-side">';
@@ -314,8 +314,8 @@ function render_start_page(array $posts): string
     $html .= '<img class="start-face" src="/myself.jpeg" alt="Bartosz Frąckowiak" width="76" height="76" loading="lazy" decoding="async">';
     $html .= eyebrow('Start here', true);
     $html .= '<h1 style="font-size:clamp(2.1rem,4.6vw,3rem)">' . $n . ' essays in. Here is the map.</h1>';
-    $html .= '<p>I\'m <strong>Bartosz Frąckowiak</strong>, a solution architect in Warsaw: software architecture, with the people left in. Twelve-plus years of distributed systems in production, a PhD on whether architecture can be proven, and these days an AI transformation across several hundred engineers, which I co-lead. Every essay here is about what sits between a system and the people around it. This page is the shortest path in.</p>';
-    $html .= '<p class="proof" style="margin-top:1.1rem"><span>12+ years in distributed systems</span><span>PhD research, University of Warsaw</span><span>Top 3% on Toptal</span><span>Architect at a global SaaS platform</span></p>';
+    $html .= '<p>I\'m <strong>Bartosz Frąckowiak</strong>, a solution architect in Warsaw: software architecture, with the people left in. Fifteen-plus years of distributed systems in production, a PhD on whether architecture can be proven, and these days an AI transformation across several hundred engineers, which I co-lead. Every essay here is about what sits between a system and the people around it. This page is the shortest path in.</p>';
+    $html .= '<p class="proof" style="margin-top:1.1rem"><span>15+ years in distributed systems</span><span>PhD research, University of Warsaw</span><span>Top 3% on Toptal</span><span>Architect at a global SaaS platform</span></p>';
     $html .= '</div>';
 
     // ---- the hook: if you read only one

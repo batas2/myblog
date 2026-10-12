@@ -1,6 +1,6 @@
 # Bartosz Frąckowiak
 
-> Solution Architect with 12+ years of experience in distributed systems, domain-driven design, and AI-native engineering. Leads an AI transformation across several hundred developers. Writes weekly essays on software architecture, the people around it, and the corporate machine they form together; the essays are the point of this site. Also takes architecture consulting and training work. Based in Poland, available worldwide.
+> Solution Architect with 15+ years of experience in distributed systems, domain-driven design, and AI-native engineering. Co-leads an AI transformation across several hundred developers. Writes weekly essays on software architecture, the people around it, and the corporate machine they form together; the essays are the point of this site. Also takes architecture consulting and training work. Based in Poland, available worldwide.
 
 Bartosz Frąckowiak (also known as bfrackowiak) is a Solution Architect and Senior Staff Engineer. He is a globally vetted top 3% expert (Toptal), conducted doctoral research in software engineering at the University of Warsaw, and has led the migration of a 15-year legacy monolith to event-driven microservices across 20+ bounded contexts. Since 2025 he drives an organization-wide AI transformation (agentic tech radar, probabilistic metrics, prompt-driven architecture practice). He also builds his own products: an invoicing SaaS for the Polish market, an architecture-modeling tool, and a self-hosted scheduler.
 
@@ -125,7 +125,7 @@ Contact form: https://bfrackowiak.pl/about/#contact or LinkedIn: https://www.lin
 ## Frequently Asked Questions
 
 **Who is Bartosz Frąckowiak?**
-A Solution Architect with 12+ years of experience and doctoral research in software engineering behind him, based in Poland. He designs distributed systems, leads an AI transformation across several hundred developers, writes weekly essays at https://bfrackowiak.pl/, and offers consulting and training worldwide.
+A Solution Architect with 15+ years of experience and doctoral research in software engineering behind him, based in Poland. He designs distributed systems, co-leads an AI transformation across several hundred developers, writes weekly essays at https://bfrackowiak.pl/, and offers consulting and training worldwide.
 
 **What does he write about?**
 Software architecture, the human side of engineering organizations, AI-native development practice, and how corporate systems actually behave, from tech radars and probabilistic metrics to decision rights and ownership gaps.
