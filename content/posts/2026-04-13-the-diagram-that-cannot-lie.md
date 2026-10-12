@@ -18,7 +18,7 @@ Run this audit in your own team: find the diagram labeled "current state" and as
 
 ## The code is the model
 
-My answer is a side project called **Verso**, so consider this both a design essay and a confession of bias ;)
+My answer is a side project I now call **[Stemma](/stemma/)**. It was Verso when this essay first went out. The name changed, the bet below did not. So consider this both a design essay and a confession of bias ;)
 
 The core bet: there is no database. None. The architecture model is stored as plain C# records in Git. Bounded contexts, containers, data flows, ownership, risks, decisions. When you open a workspace, the model lives in memory. Then you edit something on the canvas. Rename a container, redraw a dependency, re-parent a module. The tool rewrites the actual `.cs` files using [Roslyn](https://github.com/dotnet/roslyn). Not code generation. Code *editing*.
 
@@ -26,7 +26,7 @@ And one rule overrides everything else in the project: **round-trip fidelity.** 
 
 Layout lives in a small committed sidecar file, separate from the model: positions, colours, which elements each view shows, and the zoom somebody left it at. Content and presentation, finally divorced: the separation we've preached for documents for thirty years and somehow never applied to diagrams.
 
-The name comes from bookbinding. Nothing cleverer. The *verso* is the reverse side of a page. The canvas is the verso of the code: same content, different face. A diagram cannot drift from the code when the diagram **is** the code.
+The first name came from bookbinding: the *verso* is the reverse side of a page, and the canvas was the verso of the code. The name it carries now comes from philology. A *stemma codicum* is the family tree scholars draw for a manuscript, every surviving copy traced back to one archetype, and that is the shape of the thing: two committed files, every view descended from them. Either way, a diagram cannot drift from the code when the diagram **is** the code.
 
 ## Architecture review becomes a pull request
 
@@ -38,7 +38,7 @@ The model also outlives tools, licenses, and reorgs, because it is just source f
 
 Then the effect I did not expect to care about most. One long-living model, projected into audience-specific views: the executive gets capabilities, the team gets containers and flows. Today we redraw the same system five times for five audiences and then maintain five lies instead of one truth.
 
-And agents, which matters more every month. They read and write the same single truth as humans, with no export/import ceremony and no stale copy for the bot. I argued in [Stop Calling It Legacy Code](https://medium.com/@bfrackowiak/stop-calling-it-legacy-code-02308db28cb2) that a codebase is a knowledge container; Verso just extends the container to hold the architecture itself.
+And agents, which matters more every month. They read and write the same single truth as humans, with no export/import ceremony and no stale copy for the bot. I argued in [Stop Calling It Legacy Code](https://medium.com/@bfrackowiak/stop-calling-it-legacy-code-02308db28cb2) that a codebase is a knowledge container; Stemma just extends the container to hold the architecture itself.
 
 When people ask why I'd spend evenings on this, I give them one sentence: **a diagram you can't diff is a rumor with better fonts.**
 
@@ -50,13 +50,13 @@ After enough years of watching beautiful models rot, I simply stopped believing 
 
 The useful ones, it turns out, are the ones whose wrongness you can still measure. That disbelief nagged me long enough to become a side project. The side project slowly became the tool I wanted as an architect: one long-living model, projected into audience-specific views, versioned like the code it describes. Because it *is* code.
 
-I don't know yet whether Verso becomes a real product or stays my favorite workshop experiment. I do know the question it asks is the right one.
+I don't know yet whether Stemma becomes a real product or stays my favorite workshop experiment. I do know the question it asks is the right one.
 
 So let me pass it on: how old is your "current state" diagram, and would you bet a production incident on it?
 
 ---
 
-**Updated:** 2026-08-13 10:45
+**Updated:** 2026-09-12 16:50
 
 **Scores:** tension=8 originality=8 personal=8 contrarian=7 substance=8 punch=9 trend=6
 **Scored:** 2026-07-27 rubric=v1 model=claude-opus-5

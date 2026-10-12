@@ -164,11 +164,25 @@ prints the queue after every deploy so nothing waits unnoticed.
   reading time, source groups (search / social / AI / news / campaigns),
   referrers, countries (offline GeoIP), browsers/OS/devices/screens, languages,
   timezones, UTM campaigns, and a recent-visits feed. Every table narrows to a
-  single page via the path drilldown. Password login: `admin_password_hash` in
-  config (`php -r "echo password_hash('pw', PASSWORD_DEFAULT), PHP_EOL;"`).
-  Sessions are cookie-hardened; login is rate-limited; actions are CSRF-protected.
+  single page via the path drilldown. Sign-in: `admin_user` + `admin_password_hash`
+  in config (`php -r "echo password_hash('pw', PASSWORD_DEFAULT), PHP_EOL;"`), then
+  a one-time code when `admin_totp_secret` holds a TOTP secret for an authenticator
+  app (`php tools/admin_totp.php --new` makes one; without `--new` it prints the
+  code valid right now — the way back in when the phone is gone). Sessions are
+  cookie-hardened, pinned to the network they were opened from, and end after
+  2 h idle; actions are CSRF-protected.
   Analytics-only access without the password: `/stats.php?key=<stats_key>` mints
   a read-only stats session and redirects into the analytics tabs.
+- Who gets to the login form, from where: `admin_allow_countries` (e.g. `['PL']`)
+  closes the admin to every other country, judged by the offline GeoIP database on
+  every request, so a session cookie carried abroad stops working. Five wrong
+  attempts lock an address for 15 min, four times longer on each repeat; thirty
+  failures from anywhere inside ten minutes freeze the form for everyone for
+  15 min (your own networks from `admin_trusted_ips` excepted — from those the
+  password alone signs in, the code is asked everywhere else). Turnstile
+  guards the form when configured. Every attempt lands in `content/auth.log`
+  (listed under **Admin → System**, pulled home by `deploy.sh data`), and every
+  sign-in or lockout mails `smtp.to` (`admin_alerts`).
 - Self-exclusion: logging into `/admin.php` (or presenting the stats key) plants a
   1-year `bfx` cookie that keeps that browser out of the analytics — refreshed
   on every admin visit. Manual toggle per device: `/a.php?me=off` / `/a.php?me=on`.
@@ -183,7 +197,7 @@ prints the queue after every deploy so nothing waits unnoticed.
 - What does not count: crawlers naming themselves are dropped at the door, but
   headless browsers ship a stock user agent and do run the beacon. Those are
   written and marked instead — a browser reporting plain `UTC` is running on a
-  server, since every real device reports a region zone. Marked rows stay in the
+  server, since every real device reports a region zone. A desktop OS on a phone-sized screen is an emulated viewport and is marked the same way. Marked rows stay in the
   table and out of every total, visible in **Recent visits** with the verdict, so
   the rule can be tuned rather than trusted blindly.
   `php tools/analytics_prune.php --list` shows the split; `--rescan` re-judges

@@ -38,9 +38,32 @@ return [
 
     'stats_key' => 'CHANGE-ME-openssl-rand-hex-24',
 
-    // admin.php password as a PHP password hash; empty = admin disabled
+    // admin.php sign-in: a login name and the password as a PHP password hash;
+    // either one empty = admin disabled
     // generate: php -r "echo password_hash('your-password', PASSWORD_DEFAULT), PHP_EOL;"
+    'admin_user'          => '',
     'admin_password_hash' => '',
+
+    // second factor: a base32 TOTP secret shared with an authenticator app
+    // (Google Authenticator, Aegis, 1Password…). '' = password only.
+    //   php tools/admin_totp.php --new    a fresh secret + its enrolment URI
+    //   php tools/admin_totp.php          the code valid right now — the way
+    //                                     back in when the phone is gone
+    'admin_totp_secret'   => '',
+
+    // where the admin is open from: ISO 3166-1 alpha-2 codes, judged by the
+    // offline GeoIP database (content/geoip.dat) on every request, not just at
+    // sign-in. [] = anywhere. Private addresses (local dev) always pass.
+    'admin_allow_countries' => [],
+
+    // mail smtp.to about every sign-in and every lockout (needs the smtp block)
+    'admin_alerts'        => true,
+
+    // your own networks — plain addresses or CIDR blocks, v4 and v6. From here
+    // the password alone signs in (the one-time code is asked everywhere else),
+    // and a burst of failed logins elsewhere never freezes you out. A static
+    // home address belongs here; a café does not. [] = the code everywhere.
+    'admin_trusted_ips'   => [],
 
     // your own connection, never counted in analytics. Plain addresses or CIDR
     // blocks, IPv4 and IPv6: ['203.0.113.7', '2001:db8:1234::/48', '10.0.0.0/8'].

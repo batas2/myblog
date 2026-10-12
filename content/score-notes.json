@@ -271,5 +271,41 @@
   "trend": "8 — explicitly inside trend-list items 7 and 8 (measuring productivity when AI writes the code; where the human boundary sits) and takes a position most posts do not: 'Whoever sends the change is the counterparty for it.'",
   "_reach": "7.2 — publish normally band (6.0-7.4). Lowest axis is originality at 6; lifting it means finding a claim the XP-and-AI posts have not already made.",
   "_scored": "2026-08-07, rubric v1, model claude-opus-5"
+ },
+ "every-approval-is-a-missing-rule": {
+  "tension": "7 — names what architects would rather not admit: 'There is no column for the architect.' The cost is concrete in the homework numbers.",
+  "originality": "6 — guides/sensors and fitness functions exist (Böckeler, Ford); the extension is 'Whoever writes the template that everyone copies is the architect now'. Reference blogs searched: no equivalent framing.",
+  "personal": "8 — a scene with a decision and an owned mistake: 'this is partly my own homework coming back marked', '1,628 of its 1,650 commits from one person'.",
+  "contrarian": "7 — against the operating model's consensus of architect-as-approver, defended with ETH Zurich and Zalando data: 'An architect who still reviews routine changes is a sign that a rule is missing.'",
+  "substance": "7 — a model (guides vs sensors), a failure condition left open ('I don't know yet how to scale the writing of those guides'), and a Monday exercise ('log every approval you give').",
+  "punch": "7 — 'A guardrail without a direction only tells you which ditch you are in.'",
+  "trend": "8 — inside agentic workflows, governance and the human boundary: 'when agents write most of the code'."
+ },
+ "nobody-resisted": {
+  "tension": "7 — puts the change-management playbook on trial: 'I had prepared for a wall. There was no wall.' Costs are counted.",
+  "originality": "7 — sprawl-not-resistance with own numbers; nothing equivalent found on the reference blogs: 'Nobody was blocking. Everybody was forking.'",
+  "personal": "8 — the skeptic chapter 'I rehearsed them in the car' and the owned reversal 'The part I got wrong at first was the order.'",
+  "contrarian": "7 — contradicts the norm of planning for resistance and of counting AI PRs, defended with counts and SkillsBench/ETH data: 'Count forks instead.'",
+  "substance": "7 — a reusable metric with its failure condition: 'A falling fork count says the company learned to share. It says nothing about whether the shared bot is any good.'",
+  "punch": "7 — 'Seven review bots.' and 'Cite it or it did not happen.'",
+  "trend": "8 — platform engineering and measuring productivity when AI writes code: '1,372 skill files in eleven weeks'."
+ },
+ "the-model-grades-its-own-homework": {
+  "tension": "7 — 'the agent decides whether a human looks at the agent's work'; both failure outcomes named: 'Both outcomes kill the model. The first one kills it silently.'",
+  "originality": "6 — deterministic floors exist at Zalando and Meta; the extension is the Ship/Show/Ask bridge: 'Move the author to an agent and the person is gone. The choice has to move somewhere too.'",
+  "personal": "7 — the Tuesday evening, the sentence, the objection received: 'A reviewer at my company called that gaming.'",
+  "contrarian": "7 — against the draft and against LLM risk classifiers, with the objections answered in text: 'path rules match on file names, not on what the change means. True.'",
+  "substance": "8 — a mechanism, its limit and an artifact: 'The script decides the minimum', 'The floor script for our stack is about forty lines'.",
+  "punch": "7 — 'A gate fed by its own subject is not a gate.'",
+  "trend": "8 — governance and the human-in-the-loop boundary: 'For R1 and R2 with high confidence, the proposal stands.'"
+ },
+ "four-levels-three-cliffs": {
+  "tension": "6 — real costs named (Replit, context files as executable text) and resolved comfortably: 'What worked for us is boring.'",
+  "originality": "5 — maturity ladders are a crowded genre and the essay says so; the extension is the transitions and the uneven company: 'None of them says what breaks when you take the next step.'",
+  "personal": "7 — health-check numbers, CTO conversations and the prototype hand-over: 'Their verdict in the review was \"rewrite it\".'",
+  "contrarian": "6 — a minority reading of the autonomy push, defended with survey data: 'Level four is where most people say they do not want to be yet. I think they are reading the cliff correctly.'",
+  "substance": "8 — a table, one concrete risk list per cliff, and actions per cliff: 'access limits for the first, review of context files for the second, a risk floor and a cost cap for the third'.",
+  "punch": "6 — table-heavy; the lines that survive: 'Access is.' and 'The transition is the project. The level is just the address.'",
+  "trend": "8 — agentic workflows, governance, human boundary: 'the confirmation prompt that is supposed to catch it gets switched off in the first week'."
  }
 }

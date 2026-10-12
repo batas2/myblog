@@ -455,7 +455,9 @@ SNAPSHOT_PHP
   if [ -n "${REMOTE_LOG_DIR:-}" ]; then
     step "Downloading server logs from ${REMOTE_LOG_DIR}"
     [ "${DRY}" -eq 1 ] || mkdir -p "${LOGS_STAGE}/server-logs"
-    if run "${LOG_DIR}/pullsrv.log" rsync -az "${RSYNC_PROGRESS[@]}" "${RSYNC_MODE[@]}" \
+    # -L: on MyDevil ~/domains/<domain>/logs/access is a symlink into the host's
+    # log tree; follow it, or the pull brings a dangling link instead of the logs
+    if run "${LOG_DIR}/pullsrv.log" rsync -azL "${RSYNC_PROGRESS[@]}" "${RSYNC_MODE[@]}" \
       -e "ssh -p ${SSH_PORT}" \
       "${SSH_USER}@${SSH_HOST}:${REMOTE_LOG_DIR}/" \
       "${LOGS_STAGE}/server-logs/"; then
@@ -658,6 +660,8 @@ run "${RSYNC_LOG}" rsync -az "${RSYNC_PROGRESS[@]}" --stats --itemize-changes "$
   --exclude='.gitignore' \
   --exclude='.claude/' \
   --exclude='deploy.sh' \
+  --exclude='deploy.env' \
+  --exclude='deploy.env.example' \
   --exclude='docs/' \
   --exclude='drafts/' \
   --exclude='Refernce/' \
@@ -670,6 +674,7 @@ run "${RSYNC_LOG}" rsync -az "${RSYNC_PROGRESS[@]}" --stats --itemize-changes "$
   --exclude='_remote-backup/' \
   --exclude='content/comments/' \
   --exclude='content/.sessions/' \
+  --exclude='content/.ratelimit/' \
   --exclude='content/.buildlock' \
   --exclude='Dockerfile' \
   --exclude='docker-compose.yml' \

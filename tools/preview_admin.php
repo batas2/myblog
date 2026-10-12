@@ -54,6 +54,7 @@ if (!$keep) {
     if (!is_file($box . '/config.php')) {
         $cfg = require $root . '/config.example.php';
         file_put_contents($box . '/config.php', '<?php return ' . var_export(array_merge($cfg, [
+            'admin_user'          => 'preview',
             'admin_password_hash' => password_hash(PREVIEW_PW, PASSWORD_DEFAULT),
             'stats_key'           => 'preview',
             'php_bin'             => PHP_BINARY,
@@ -72,7 +73,7 @@ if (!$keep) {
         require_once __DIR__ . '/lib/config.php';
         require_once __DIR__ . '/lib/helpers.php';
         require_once __DIR__ . '/lib/admin.php';
-        admin_login('__PW__', '127.0.0.1');
+        admin_login('preview', '__PW__', '127.0.0.1');
     }
     return false;   // hand the request back to the built-in server
     PHP;
@@ -153,7 +154,7 @@ if (!$keep && !$seeded) {
     echo "seeded {$rows} synthetic hits across " . count($posts) . " posts\n";
 }
 
-echo "\n  admin:  http://127.0.0.1:{$port}/admin.php   password: " . PREVIEW_PW . "\n";
+echo "\n  admin:  http://127.0.0.1:{$port}/admin.php   login: preview   password: " . PREVIEW_PW . "\n";
 echo "  scores: http://127.0.0.1:{$port}/admin.php?days=30&sort=date#scores\n";
 echo "  site:   http://127.0.0.1:{$port}/\n\n";
 // opcache off for the same reason the integration suite disables it: edits to

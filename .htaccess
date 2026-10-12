@@ -22,7 +22,9 @@ ErrorDocument 404 /404.php
 RedirectMatch 404 ^/(lib|tools|tests|docs|drafts|content|vendor|_archive|_remote-backup|\.git)(/|$)
 
 # sensitive root files → 404
-<FilesMatch "^(config\.php|config\.example\.php|deploy\.sh|\.gitignore|\.htaccess)$">
+# deploy.env(.example), Dockerfile, docker-compose.yml and run.sh added 2026-10-11:
+# the access log showed /deploy.env answering 200 (it carries the SSH target).
+<FilesMatch "^(config\.php|config\.example\.php|deploy\.sh|deploy\.env|deploy\.env\.example|Dockerfile|docker-compose\.yml|run\.sh|\.gitignore|\.htaccess)$">
   Require all denied
 </FilesMatch>
 
@@ -55,6 +57,8 @@ RedirectMatch 404 ^/(lib|tools|tests|docs|drafts|content|vendor|_archive|_remote
   ExpiresByType image/jpeg "access plus 30 days"
   ExpiresByType image/png "access plus 30 days"
   ExpiresByType image/svg+xml "access plus 30 days"
+  ExpiresByType image/x-icon "access plus 30 days"
+  ExpiresByType image/vnd.microsoft.icon "access plus 30 days"
   ExpiresByType text/css "access plus 7 days"
   ExpiresByType application/javascript "access plus 7 days"
   ExpiresByType application/rss+xml "access plus 1 hour"

@@ -8,7 +8,7 @@ He had read [The Bottleneck Moved](/blog/the-bottleneck-moved/), the one about r
 
 Then he added the sentence I have not stopped chewing on. Agent SDLC should bring new concepts or resurrect XP practices, he wrote, and put "the true agile" in brackets.
 
-He was right about the burial. These are notes from inside one transformation, mine, with all the sampling problems that implies, but the arithmetic was hard to argue with: I had spent eleven hundred words describing a queue, and exactly one sentence on the only part of it I can design.
+He was right about the burial. The arithmetic was hard to argue with: I had spent eleven hundred words describing a queue, and exactly one sentence on the only part of it I can design.
 
 ## What the property is, exactly
 
@@ -16,7 +16,7 @@ Start with what a reviewer does. Not the ritual. The actual cognitive act.
 
 You open a diff and a question forms. Then a second one. Historically each question had a destination: the person who wrote it, three desks away, still holding the answer in their head. Review felt like a technical act because the social half was invisible and fast.
 
-Take the author away and the questions do not disappear. They just have nowhere to go.
+Take the author away and the questions don't disappear. They just have nowhere to go.
 
 So here is the definition I have been using since that message. **A system is reviewable to the degree that a reviewer's questions have destinations that are not a person.** Four questions cover most of what I have watched people actually ask, across fifteen squad reports a month and my own miserable weekends as a one-person review queue:
 
@@ -26,7 +26,7 @@ Every one of those has an artifact-shaped answer available. Blast radius is answ
 
 ![The four questions a reviewer actually asks, each pointing at the artifact that has to answer it once the author is gone.](/assets/img/posts/we-deleted-the-wrong-half-of-agile/where-the-question-goes-light.png)
 
-None of that is exotic. That is the uncomfortable part.
+None of that is exotic. That's the uncomfortable part.
 
 ## The half we made optional
 
@@ -40,9 +40,9 @@ Scrum industrialised the first job. It has no engineering practices at all, by d
 
 Then the author stopped existing.
 
-Every practice in the first group assumes a counterparty who can still be asked. You cannot pair with a session that closed. Collective ownership of code that nobody wrote is a sentence missing its subject. The half of agile that survived twenty years of process consulting is the half that needs a human on the other end of the question. **And the half we were allowed to skip is the one that had been carrying the arrangement all along.**
+Every practice in the first group assumes a counterparty who can still be asked. You can't pair with a session that closed. Nobody can. Collective ownership of code that nobody wrote is a sentence missing its subject. The half of agile that survived twenty years of process consulting is the half that needs a human on the other end of the question. **And the half we were allowed to skip is the one that had been carrying the arrangement all along.**
 
-That is not an argument for going back. Most of XP's first group is still how humans work well together, and I would not run a team without it. It is an argument about which practices are load-bearing now rather than merely good. We spent two decades filing the load-bearing ones under optional, because a human in the room could always cover for them.
+That's not an argument for going back. Most of XP's first group is still how humans work well together, and I would not run a team without it. It is an argument about which practices are load-bearing now rather than merely good. We spent two decades filing the load-bearing ones under optional, because a human in the room could always cover for them.
 
 ## The practice everybody mocked came back with a filename
 
@@ -52,33 +52,33 @@ System metaphor was XP's weakest practice. The one Beck had the hardest time exp
 
 It has a path now. `CLAUDE.md`, `AGENTS.md`, whatever your tool calls its rules file. We started writing them because a model needed orientation before it could touch anything. What came out was a document describing what the system is, and where the bodies are buried. Then the new joiner reads it on day one and gets more from it than from the wiki.
 
-We needed a non-human reader before we would write down the thing we had refused to write down for twenty years. I find that funny in a way that does not fully sit well.
+We needed a non-human reader before we would write down the thing we had refused to write down for twenty years. I find that funny in a way that doesn't fully sit well.
 
 ## The objection I keep running into
 
 Pair with the agent. Review at write time, watch each change land, and the authorless diff never forms in the first place.
 
-This is the strongest counterargument and it is partly right. Pairing with an agent does move review earlier, and earlier review is cheaper review; that has been true since long before any of this. So far, so good.
+This is the strongest counterargument and it's partly right. Pairing with an agent does move review earlier, and earlier review is cheaper review; that has been true since long before any of this. So far, so good.
 
 But it only holds while a human stays the counterparty. If the person who ran the prompt can still answer for the diff on Thursday then the practice survives intact and the theory has somewhere to live, and if they are meeting the output at the same moment the reviewer is, then nothing was paired at any point. Something was generated and forwarded.
 
-Which gives one standard worth adopting tomorrow, and it costs nothing: **"I just ran the agent" is not an acceptable answer in a review.** Whoever sends the change is the counterparty for it. That is not a process change, and no tool enforces it. It is a thing a team either expects of each other or does not.
+Which gives one standard worth adopting tomorrow, and it costs nothing: **"I just ran the agent" is not an acceptable answer in a review.** Whoever sends the change is the counterparty for it. That's not a process change, and no tool enforces it. It's a thing a team either expects of each other or doesn't.
 
-I do not know where the ceiling on this sits. Some questions may simply have no artifact-shaped answer, and the honest response to those is to not merge. Which is a far less comfortable conclusion than the one about tooling.
+I don't know where the ceiling on this sits. Some questions may simply have no artifact-shaped answer, and the honest response to those is to not merge. Which is a far less comfortable conclusion than the one about tooling.
 
 ## You have been measuring it for years
 
-Here is the part that made me stop treating this as a coding-standards problem.
+This is what made me stop treating it as a coding-standards problem.
 
 A new joiner is a reviewer with no context. Everything that makes a system hard to review makes it hard to join, for exactly the same reason. The questions have no destination, so they route to whoever has been there longest, and that person becomes the bottleneck by seniority rather than by design. **Reviewability and onboardability are the same property, looked at from two ends.**
 
-Which means the metric already exists and you have been collecting it. Time to a new joiner's first merged change is a reviewability number, and it has been sitting in an HR dashboard being read as a statement about the person.
+Which means the metric already exists. You have been collecting it. Time to a new joiner's first merged change is a reviewability number, and it has been sitting in an HR dashboard being read as a statement about the person.
 
-If you want a faster reading, take your last ten merged pull requests and count the times somebody had to ask a human something the repository could have answered. Divide by ten. That is roughly what each authorless diff is about to cost you. Most numbers in this area take a quarter to produce; this one takes an afternoon. And if it comes back zero while your review queue is still three days deep, my argument is wrong, and I would rather hear that than be agreed with.
+If you want a faster reading, take your last ten merged pull requests and count the times somebody had to ask a human something the repository could have answered. Divide by ten. That is roughly what each authorless diff is about to cost you. Most numbers in this area take a quarter to produce; this one takes an afternoon. And if it comes back zero while your review queue is still three days deep, my argument is wrong.
 
 ## What I did not see until he named it
 
-The thing I keep turning over is that I had already built this and could not see it.
+The thing I keep turning over is that I had already built this and couldn't see it.
 
 The architecture tool I build at night exists so that editing an element on a canvas produces a Git diff containing that edit and nothing else. No reordering. No reformatting. No comment lost. I built it because [diagrams drift](/blog/the-diagram-that-cannot-lie/), and I wanted one that could not. It took somebody reading my own essay back to me to name what I had made. Blast radius legibility, the first of the four questions, built into a product.
 
@@ -92,5 +92,6 @@ I still read fifteen reports a month. What I look for now is not the ageing queu
 **Scored:** 2026-08-07 rubric=v1 model=claude-opus-5
 
 **Publish:** 2026-09-07 09:00
+**Updated:** 2026-09-12 16:50
 
 **Tags:** Software Architecture, Engineering Leadership, AI Transformation, Organizational Culture, Systems Thinking

@@ -5,7 +5,23 @@
 --- formatted, and there is no bold anywhere by design. Copy from the first line
 --- of the body to the last hashtag.
 ---
---- Third pass, 2026-08-20. The message is the two worlds, not the transgression.
+--- Fourth pass, 2026-09-12. Same argument, a different first three lines.
+---
+--- WHY THE OPENER CHANGED. The two LinkedIn posts that ran split ten to one: The
+---   Bottleneck Moved (a scene and a number in line one, the whole argument in the
+---   feed) reached 506 people and 27 readers at 196 s; Probabilistic Metrics (an
+---   abstract first line, built as a teaser) reached 46. The third pass opened on
+---   "Two kinds of agents live in a company", an abstract line. It now opens on the
+---   essay's own scene: two services, one a lump, four teams chose the lump. A number
+---   in the first three lines, nobody blamed, and it is the sentence only he can
+---   write. The two worlds of agents follow as the same split seen a second time.
+--- WHAT WAS CUT. "One transformation, one architect watching it. Notes, not data."
+---   The ritual disclaimer now sits in four texts (HUMAN-VOICE-PLAN, iteration 2,
+---   item 1); the LinkedIn copies drop it first. Also "Freedom is not the absence of
+---   governance here. It is how you find out what is worth governing", a contrast
+---   reframe by the POST-PROMPT definition.
+---
+--- Third pass, 2026-08-20 (its notes still hold for everything below the opener).
 ---
 --- WHAT THE POST SAYS. An organization running agents needs two of them. One world
 ---   is stamped: an owner, an on-call rota, a narrow door, because the thing touches
@@ -43,29 +59,31 @@
 ---   reported 0 link clicks on that post, so the site's Acquisition tab is the source
 ---   of truth here, not LinkedIn's counter. Length was never the problem. Reach was.
 
-Two kinds of agents live in a company, and the mistake is treating them as one thing.
+Two services on one platform solved almost the same problem. One was built properly: clean boundaries, a published contract, a model you could read on the first pass. The other one was a lump. Vague naming, a schema that had recorded somebody's Tuesday, no versioning story worth the name.
 
-One kind carries a stamp. It touches customer data, or spends money, or speaks for the company, so somebody owns it and somebody is on call for it. That one goes through the door marked governance, and that door should be narrow.
+Four teams integrated with the lump.
 
-The other kind is somebody's own. A skill, a prompt file, a small agent written on a Tuesday for their own corner of the work, useful to one person, reviewed by nobody. Once the tooling reached people, these appeared everywhere.
+For a while I told myself that was the organization's failure. It wasn't. The lump sat closer to what people needed on the day they needed it, and no design review was going to close that gap.
+
+The same split is back, with agents.
+
+One kind of agent carries a stamp. It touches customer data, or spends money, or speaks for the company, so somebody owns it and somebody is on call for it. That one goes through the door marked governance, and that door should be narrow.
+
+The other kind is somebody's own. A skill, a prompt file, a small agent written for one corner of the work, reviewed by nobody. Once the tooling reached people, these appeared everywhere.
 
 My instinct was to bring both under the same door. That instinct was mine, and it was wrong.
 
-The second world is where adoption starts. Somebody writes a thing for themselves. A colleague with the same problem asks for a copy, then a third person does, and none of it was on anybody's roadmap. What you are looking at by then is the only honest demand signal an organization ever gets, and it cost nothing to produce.
+The second world is where adoption starts. Somebody writes a thing for themselves. A colleague with the same problem asks for a copy, then a third person does, and none of it was on anybody's roadmap. By then you are looking at the only honest demand signal an organization ever gets. It cost nothing.
 
 That is pull, the engine nobody can schedule, which is exactly why programme managers get nervous around it. They are right to be.
-
-One transformation, one architect watching it. Notes, not data.
 
 So here is the measure I use now. An architecture is worth what other teams are willing to depend on. Not what it could support one day. What is plugged in this week.
 
 Which means the stamp belongs downstream of that, not upstream of it. The thing that already travelled between three teams has earned the review, the owner and the on-call rota. The thing nobody has asked for yet has earned a smaller conversation.
 
-Freedom is not the absence of governance here. It is how you find out what is worth governing.
+None of which retires push. Somebody still has to decide that everyone will use a thing, and push is the only engine that meets a date. It also spends roadmap slots in other people's teams, goodwill that comes back slowly, and the patience of everybody who has to stop and move.
 
-None of which retires push. Somebody still has to decide that everyone will use a thing, and push is the only engine that meets a date. It also spends something you cannot print more of: roadmap slots in other people's teams, goodwill that takes a long time to come back, and the patience of everybody who has to stop and move.
-
-The window where that is worth paying for is narrower than most programmes assume. Too early and a mandate buys compliance without adoption, plus a tail of adapters written by irritated people. I have written some of those. More than once. Too late and it is unnecessary, because nobody mandates the thing everyone already calls.
+Too early and a mandate buys compliance without adoption, plus a tail of adapters written by irritated people. I have written some of those. More than once. Too late and it is unnecessary: nobody mandates the thing everyone already calls.
 
 I cannot compute where that window closes. What I have instead is the feeling of being past it: another quarter of programme management, four teams left, none of them moving. It arrives well before any spreadsheet does, and it leaves just enough room to stop pushing and go make the thing worth calling.
 

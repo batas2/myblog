@@ -739,6 +739,11 @@ t_assert(an_looks_automated(['tz' => '', 'screen' => '', 'lang' => '']), 'no cli
 t_assert(!an_looks_automated(['tz' => 'Europe/Warsaw', 'screen' => 'phone', 'lang' => 'pl']), 'a region zone is a real device');
 t_assert(!an_looks_automated(['tz' => 'Europe/London', 'screen' => 'laptop', 'lang' => 'en']), 'London is not UTC, whatever the offset says');
 t_assert(!an_looks_automated(['tz' => '', 'screen' => 'phone', 'lang' => 'en']), 'a missing timezone alone is not enough');
+t_assert(an_looks_automated(['tz' => 'Asia/Shanghai', 'screen' => 'phone', 'os' => 'macOS', 'lang' => 'en']), 'a Mac with a phone-sized screen is an emulated viewport');
+t_assert(an_looks_automated(['tz' => 'Europe/Berlin', 'screen' => 'phone', 'os' => 'Windows', 'lang' => 'de']), 'so is Windows on a phone screen');
+t_assert(!an_looks_automated(['tz' => 'Europe/Warsaw', 'screen' => 'tablet', 'os' => 'macOS', 'lang' => 'pl']), 'an iPad presents as macOS on a tablet screen and stays counted');
+t_assert(!an_looks_automated(['tz' => 'Europe/Warsaw', 'screen' => 'phone', 'os' => 'Android', 'lang' => 'pl']), 'a phone OS on a phone screen is a phone');
+t_assert(!an_looks_automated(['tz' => 'Europe/Warsaw', 'screen' => 'laptop', 'os' => 'Linux', 'lang' => 'pl']), 'a desktop OS on a desktop screen is a desktop');
 
 // campaign tags map back to the platform that hid its own referrer
 t_eq('blogs', an_utm_group('medium'), 'utm medium tag = blogs');
@@ -844,11 +849,12 @@ $xrec = fn(array $o) => an_record($xdb, array_merge([
 $xrec([]);                                                        // a reader
 $xrec(['visitor' => 'h1', 'tz' => 'UTC', 'lang' => 'en']);        // headless, judged on the way in
 $xrec(['visitor' => 'h2', 'tz' => 'UTC', 'lang' => 'en']);
+$xrec(['visitor' => 'h3', 'os' => 'macOS', 'screen' => 'phone', 'tz' => 'Asia/Shanghai', 'lang' => 'en']);   // emulated phone under a desktop UA
 t_eq(1, an_summary($xdb, $since)['pv'], 'automation is written but never counted');
-t_eq(3, (int) $xdb->query('SELECT COUNT(*) FROM hits')->fetchColumn(), 'and is still on disk to look at');
-t_eq(3, count(an_recent($xdb, 30)), 'recent activity shows the filtered rows');
+t_eq(4, (int) $xdb->query('SELECT COUNT(*) FROM hits')->fetchColumn(), 'and is still on disk to look at');
+t_eq(4, count(an_recent($xdb, 30)), 'recent activity shows the filtered rows');
 $xCounts = an_excl_counts($xdb, $since);
-t_eq([AN_COUNTED => 1, AN_AUTOMATED => 2, AN_OWNER => 0], $xCounts, 'verdict split reported for the System pane');
+t_eq([AN_COUNTED => 1, AN_AUTOMATED => 3, AN_OWNER => 0], $xCounts, 'verdict split reported for the System pane');
 
 // marking the author's own past browsing: dry by default, exact-match filtered
 $dims = ['tz' => 'Europe/Warsaw', 'os' => 'Linux'];
@@ -862,12 +868,25 @@ t_eq(0, count(an_top_pages($xdb, $since)), 'and out of the page table');
 // a rescan re-decides automation but never overrules the human verdict
 t_eq(0, an_reclassify($xdb), 'a settled table has nothing to change');
 $xdb->exec('UPDATE hits SET excl = 0');
-t_eq(2, an_reclassify($xdb), 'rescan re-flags the automated rows');
+t_eq(3, an_reclassify($xdb), 'rescan re-flags the automated rows');
 t_eq(AN_COUNTED, (int) $xdb->query("SELECT excl FROM hits WHERE visitor = 'r1'")->fetchColumn(), 'a cleared owner verdict is not re-invented');
 an_mark($xdb, $today, $today, $dims, AN_OWNER, true);
 $xdb->exec("UPDATE hits SET tz = 'Europe/Warsaw', lang = 'pl' WHERE visitor = 'h1'");
 an_reclassify($xdb);
 t_eq(AN_COUNTED, (int) $xdb->query("SELECT excl FROM hits WHERE visitor = 'h1'")->fetchColumn(), 'relaxing the rule gives traffic back');
+$xdb->exec("UPDATE hits SET screen = 'tablet' WHERE visitor = 'h3'");
+an_reclassify($xdb);
+t_eq(AN_COUNTED, (int) $xdb->query("SELECT excl FROM hits WHERE visitor = 'h3'")->fetchColumn(), 'a tablet-sized screen on a Mac UA is an iPad, counted again');
+
+// the activity list follows the dashboard range: an old row is history, not "recent"
+$xrec(['visitor' => 'old', 'day' => '2020-01-01', 'ts' => 1577836800]);
+t_eq(5, count(an_recent($xdb, 30)), 'no range: every row, every verdict');
+t_eq(4, count(an_recent($xdb, 30, '', $today)), 'a range hides the older rows');
+t_eq(4, an_recent_total($xdb, $today), 'and the total says how many the range holds');
+t_eq(5, an_recent_total($xdb), 'no range: the whole table counts');
+t_eq(2, count(an_recent($xdb, 2, '', $today)), 'the cap holds inside the range');
+t_eq(0, an_recent_total($xdb, $today, '/blog/other/'), 'the page filter still applies');
+t_eq('2020-01-01', (string) $xdb->query("SELECT day FROM hits WHERE visitor = 'old'")->fetchColumn(), 'the old row is really there');
 t_eq(AN_OWNER, (int) $xdb->query("SELECT excl FROM hits WHERE visitor = 'r1'")->fetchColumn(), 'and leaves the owner verdict alone');
 $xdb = null;
 @unlink($exDb);
@@ -906,6 +925,20 @@ t_eq('AU', geoip_country('::ffff:1.0.0.1', $gdb), 'v4-mapped v6 normalized');
 t_eq('', geoip_country('192.168.1.1', $gdb), 'private v4 never resolves');
 t_eq('', geoip_country('nonsense', $gdb), 'garbage ip is empty');
 t_eq('', geoip_country('1.0.0.1', $gdb . '.missing'), 'missing db is empty, no error');
+
+/* the admin's country rule, judged on the same tiny database */
+section('admin country rule');
+t_assert(admin_geo_allowed('83.9.1.2', ['PL'], $gdb), 'a Polish address gets in');
+t_assert(!admin_geo_allowed('1.0.0.1', ['PL'], $gdb), 'an Australian one does not');
+t_assert(admin_geo_allowed('1.0.0.1', [], $gdb), 'no rule, no wall');
+t_assert(admin_geo_allowed('83.9.1.2', ['pl'], $gdb), 'codes are case-insensitive');
+t_assert(admin_geo_allowed('192.168.1.1', ['PL'], $gdb), 'a LAN address passes: it cannot come from the internet');
+t_assert(admin_geo_allowed('127.0.0.1', ['PL'], $gdb), 'loopback passes (tests, local dev)');
+t_assert(!admin_geo_allowed('9.9.9.9', ['PL'], $gdb), 'a public address the database does not know fails closed');
+t_assert(!admin_geo_allowed('83.9.1.2', ['PL'], $gdb . '.missing'), 'no database, no entry');
+t_assert(!admin_geo_allowed('not-an-ip', ['PL'], $gdb), 'garbage fails closed');
+t_assert(admin_geo_allowed('::ffff:83.9.1.2', ['PL'], $gdb), 'a v4-mapped v6 peer is judged as its v4 address');
+t_assert(!admin_geo_allowed('::ffff:1.0.0.1', ['PL'], $gdb), 'and does not slip through as "reserved"');
 unlink($csv);
 unlink($gdb);
 
@@ -925,14 +958,101 @@ t_assert(str_ends_with(c_store_path('some-post'), '/content/comments/some-post.j
 $c1 = ['date' => '2026-01-01 10:00', 'email' => 'a@x.com', 'text' => 'first'];
 t_eq(admin_comment_key($c1), admin_comment_key($c1), 'comment key stable');
 t_assert(admin_comment_key($c1) !== admin_comment_key(['date' => '2026-01-01 10:00', 'email' => 'a@x.com', 'text' => 'second']), 'comment key differs by content');
+$h = password_hash('right-pw', PASSWORD_DEFAULT);
+t_assert(admin_credentials_ok('bob', 'right-pw', 'bob', $h), 'right name + right password');
+t_assert(!admin_credentials_ok('bob', 'wrong', 'bob', $h), 'wrong password');
+t_assert(!admin_credentials_ok('alice', 'right-pw', 'bob', $h), 'right password under the wrong name');
+t_assert(!admin_credentials_ok('BOB', 'right-pw', 'bob', $h), 'the name is exact');
+t_assert(!admin_credentials_ok('', 'right-pw', '', $h), 'an unconfigured name matches nothing, not even nothing');
+t_assert(!admin_credentials_ok('bob', '', 'bob', ''), 'an empty hash verifies nothing');
+
+t_eq('203.0.113.7', admin_net_key('203.0.113.7'), 'a v4 session is pinned to its address');
+t_eq(admin_net_key('2001:db8:1:2:aaaa::1'), admin_net_key('2001:db8:1:2:bbbb::2'), 'a v6 session survives a rotating host half');
+t_assert(admin_net_key('2001:db8:1:2::1') !== admin_net_key('2001:db8:1:3::1'), 'but not a different /64');
+
+/* per-address lockout: a ladder that a success, or a quiet day, resets */
 $fakeIp = '203.0.113.77';
 @unlink(admin_rl_file($fakeIp));
 t_eq(0, admin_lockout_remaining($fakeIp), 'fresh ip not locked');
-for ($i = 0; $i < ADMIN_MAX_FAILS; $i++) admin_note_login($fakeIp, false);
-t_assert(admin_lockout_remaining($fakeIp) > 0, 'ip locked after max fails');
+$locks = [];
+for ($i = 0; $i < ADMIN_MAX_FAILS; $i++) { $l = admin_note_login($fakeIp, false); if ($l) $locks[] = $l; }
+t_eq([ADMIN_LOCK_SECS], $locks, 'the fifth miss locks for 15 minutes, the first four lock nothing');
+t_assert(admin_lockout_remaining($fakeIp) > 0 && admin_lockout_remaining($fakeIp) <= ADMIN_LOCK_SECS, 'ip locked after max fails');
+for ($i = 0; $i < ADMIN_MAX_FAILS; $i++) $l = admin_note_login($fakeIp, false);
+t_eq(ADMIN_LOCK_SECS * 4, $l, 'the second lock is four times longer');
+for ($i = 0; $i < ADMIN_MAX_FAILS; $i++) $l = admin_note_login($fakeIp, false);
+t_eq(ADMIN_LOCK_SECS * 16, $l, 'the third, sixteen');
+for ($r = 0; $r < 3; $r++) for ($i = 0; $i < ADMIN_MAX_FAILS; $i++) $l = admin_note_login($fakeIp, false);
+t_eq(ADMIN_LOCK_MAX, $l, 'and never more than a day');
 admin_note_login($fakeIp, true);
 t_eq(0, admin_lockout_remaining($fakeIp), 'successful login clears the lock');
+t_eq(0, admin_note_login($fakeIp, false), 'and the history with it: one miss after a success locks nothing');
+file_put_contents(admin_rl_file($fakeIp), json_encode(['fails' => 0, 'locks' => 4, 'last' => time() - ADMIN_RESET_SECS - 1]));
+for ($i = 0; $i < ADMIN_MAX_FAILS; $i++) $l = admin_note_login($fakeIp, false);
+t_eq(ADMIN_LOCK_SECS, $l, 'a day of quiet starts the ladder over');
 @unlink(admin_rl_file($fakeIp));
+
+/* site-wide freeze: the real marker is put back afterwards, this is the live content dir */
+$floodBak = is_file(admin_flood_file()) ? file_get_contents(admin_flood_file()) : null;
+@unlink(admin_flood_file());
+t_eq(0, admin_flood_remaining(), 'no freeze on a quiet site');
+for ($i = 0; $i < ADMIN_FLOOD_MAX - 1; $i++) admin_note_flood();
+t_eq(0, admin_flood_remaining(), 'one short of the limit is still open');
+t_eq(ADMIN_FLOOD_LOCK, admin_note_flood(), 'the limit closes the sign-in');
+t_assert(admin_flood_remaining() > 0, 'freeze in force');
+t_assert(admin_closed_for($fakeIp) > 0, 'an unknown address sits out the freeze');
+$own = (array) cfg('admin_trusted_ips', []);
+if ($own && is_string($own[0]) && !str_contains($own[0], '/')) {
+    t_eq(0, admin_closed_for($own[0]), 'a trusted network (admin_trusted_ips) never sits out the freeze');
+}
+t_assert(admin_trusted_ip('203.0.113.7', ['203.0.113.7']), 'a listed address is trusted');
+t_assert(admin_trusted_ip('203.0.113.99', ['203.0.113.0/24']), 'a listed block is trusted');
+t_assert(!admin_trusted_ip('203.0.114.7', ['203.0.113.0/24']), 'the next block over is not');
+t_assert(!admin_trusted_ip('', ['203.0.113.7']), 'no address, no trust');
+t_assert(!admin_trusted_ip('203.0.113.7', []), 'an empty list trusts no one');
+t_assert(!admin_trusted_ip('203.0.113.7', ['garbage', 7]), 'junk entries trust no one');
+file_put_contents(admin_flood_file(), json_encode(['t' => array_fill(0, ADMIN_FLOOD_MAX - 1, time() - ADMIN_FLOOD_WINDOW - 5)]));
+t_eq(0, admin_note_flood(), 'failures older than the window do not count');
+@unlink(admin_flood_file());
+if ($floodBak !== null) file_put_contents(admin_flood_file(), $floodBak);
+
+/* sign-in log */
+$alog = tempnam(sys_get_temp_dir(), 'alog');
+admin_auth_log('fail', '203.0.113.7', ['lock' => 900], $alog);
+admin_auth_log('ok', '203.0.113.8', [], $alog);
+$rec = admin_auth_recent(10, $alog);
+t_eq(2, count($rec), 'two entries logged');
+t_eq('ok', $rec[0]['ev'], 'newest first');
+t_eq(900, $rec[1]['lock'], 'extra fields kept');
+t_eq('203.0.113.7', $rec[1]['ip'], 'the address is kept in the clear');
+t_eq('wrong login or password', admin_auth_label('fail'), 'events carry a human label');
+unlink($alog);
+
+/* ---------------- one-time codes ---------------- */
+section('totp');
+$rfc = totp_base32_encode('12345678901234567890');
+t_eq('GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ', $rfc, 'base32 encodes the RFC 6238 secret');
+t_eq('12345678901234567890', totp_base32_decode('gezd gnbv gy3t qojq gezd gnbv gy3t qojq'), 'base32 decodes, case and spaces forgiven');
+t_eq('', totp_base32_decode('not base32 !'), 'garbage is not a secret');
+foreach ([59 => '287082', 1111111109 => '081804', 1234567890 => '005924', 20000000000 => '353130'] as $t => $want) {
+    t_eq($want, totp_code($rfc, $t), "RFC 6238 vector at T={$t}");
+}
+t_eq(1, totp_verify($rfc, '287082', 59), 'code verifies in its own step');
+t_eq(1, totp_verify($rfc, '287082', 59 + 30), 'and one step later (clock drift)');
+t_eq(null, totp_verify($rfc, '287082', 59 + 61), 'but not two steps later');
+t_eq(null, totp_verify($rfc, '287083', 59), 'wrong digits fail');
+t_eq(null, totp_verify($rfc, '28708', 59), 'five digits fail');
+t_eq(1, totp_verify($rfc, ' 287 082 ', 59), 'spaces in a typed code are forgiven');
+t_eq(null, totp_verify('', '287082', 59), 'no secret, no code');
+t_assert(preg_match('/^[A-Z2-7]{32}$/', totp_secret()) === 1, 'fresh secrets are 32 base32 characters');
+t_contains('otpauth://totp/bfrackowiak.pl:admin?secret=X&issuer=bfrackowiak.pl', totp_uri('X', 'admin', 'bfrackowiak.pl'), 'enrolment uri shape');
+$tl = tempnam(sys_get_temp_dir(), 'tlast');
+unlink($tl);
+t_assert(admin_totp_fresh(100, $tl), 'a step is accepted the first time');
+t_assert(!admin_totp_fresh(100, $tl), 'and never again');
+t_assert(!admin_totp_fresh(99, $tl), 'nor an older one');
+t_assert(admin_totp_fresh(101, $tl), 'a newer step is fine');
+unlink($tl);
 
 /* ---------------- comments: pure functions ---------------- */
 section('comments');
@@ -1400,5 +1520,16 @@ t_eq([], rv_load($rvSlug)['comments'], 'the thread is empty again');
 // review.php must never answer to a visitor
 t_contains('admin_session_active', file_get_contents(APP_ROOT . '/review.php'), 'review.php gates on an admin session');
 t_contains('admin_csrf_check', file_get_contents(APP_ROOT . '/review.php'), 'every review write checks CSRF');
+
+/* ---------------- root favicon ---------------- */
+/* Browsers, bookmark tools and crawlers ask for /favicon.ico whatever the head
+   says; 199 of the last 90 days' 404s were exactly that, each one rendering the
+   branded 404 page for nothing. The file is built from favicon-32.png:
+   magick favicon-32.png -define icon:auto-resize=32,16 favicon.ico */
+section('root favicon');
+$ico = APP_ROOT . '/favicon.ico';
+t_assert(is_file($ico), 'favicon.ico exists at the site root');
+t_eq("\x00\x00\x01\x00", (string) substr((string) @file_get_contents($ico), 0, 4), 'and is a real ICO container');
+t_contains('image/x-icon', (string) file_get_contents(APP_ROOT . '/.htaccess'), 'and is cached like the other images');
 
 if (basename($_SERVER['SCRIPT_NAME'] ?? '') === 'unit.php') exit(t_summary());

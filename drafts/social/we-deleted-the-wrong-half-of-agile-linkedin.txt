@@ -1,0 +1,43 @@
+--- not posted yet · when it goes out, put the permalink here AND in the post as **LinkedIn:** <url>
+--- clicks come back as utm_source=linkedin in the Acquisition tab; without the
+--- tag below LinkedIn's lnkd.in wrapper would report them as direct traffic.
+--- plain text on purpose: LinkedIn renders no markdown, so nothing below is
+--- formatted. Copy from the first line of the body to the last hashtag.
+---
+--- First cut, 2026-09-12. Built the way The Bottleneck Moved was built, because that
+---   is the only LinkedIn post that has worked here (506 reached, 27 readers at 196 s)
+---   and this essay is its sequel: a scene and a number in line one, the manager's
+---   words verbatim, the whole argument in the feed rather than a teaser.
+--- OPENER. "At 11:45 my manager told me…", not reused: the two posts that ran opened
+---   on the squad reports and on the numbers that steer.
+--- CLOSER. A flat statement, not an ask and not "I would rather hear that than be
+---   agreed with": that line shipped on The Bottleneck Moved and sat in this essay
+---   until today's edit; a third public use would make it a template.
+--- EVERYTHING BELOW IS FROM THE ESSAY. Nothing was added that the post does not say.
+--- Tuesday evening, per the one data point there is (the Bottleneck post went out
+---   Tuesday 20:34; the Monday 19:00 post reached a tenth of the people).
+
+At 11:45 my manager told me I had buried the point of my own essay.
+
+He had read The Bottleneck Moved, the one about review queues filling with code no human wrote. His verdict, in the channel, unedited: the bottleneck is just context in my view. Then he added the sentence I have not stopped chewing on: agent SDLC should bring new concepts or resurrect XP practices, with "the true agile" in brackets.
+
+He was right. Eleven hundred words about a queue, one sentence about the only part of it I can design.
+
+So here is the definition I use now. A system is reviewable to the degree that a reviewer's questions have destinations that are not a person. What breaks if this is wrong? Why this way and not the simpler way? Does it do what it claims? What did it not touch?
+
+Kent Beck put twelve practices in Extreme Programming Explained in 1999. Read the list with agents in your peripheral vision and it splits in two. One half keeps the author reachable: pairing, on-site customer, collective ownership, the stand-up. The other half makes the artifact answer for itself: TDD, continuous integration, small releases, simple design, refactoring, coding standards.
+
+Scrum industrialised the first half. The second half we filed under engineering hygiene, which is what a discipline calls the thing it means to skip. A human in the room could always cover for it.
+
+Then the author stopped existing. You cannot pair with a session that closed.
+
+The practice everybody mocked came back with a filename. System metaphor, the XP idea teams dropped first, is CLAUDE.md now. We needed a non-human reader before we would write down what the system is.
+
+One standard costs nothing and I'd adopt it tomorrow: "I just ran the agent" is not an acceptable answer in a review. Whoever sends the change is the counterparty for it.
+
+And the metric already exists. Time to a new joiner's first merged change is a reviewability number. It has been sitting in an HR dashboard, read as a statement about the person.
+
+Full argument, with both diagrams:
+https://bfrackowiak.pl/blog/we-deleted-the-wrong-half-of-agile/?utm_source=linkedin&utm_medium=social&utm_campaign=we-deleted-the-wrong-half-of-agile
+
+#SoftwareArchitecture #ExtremeProgramming #AITransformation #EngineeringLeadership

@@ -2,12 +2,13 @@
 /**
  * admin.php — the one private dashboard: control room + first-party analytics.
  *
- * Login: password checked against config 'admin_password_hash'
- * (php -r "echo password_hash('your-password', PASSWORD_DEFAULT), PHP_EOL;").
- * Empty hash = admin disabled, this page only shows setup instructions.
+ * Login: name + password (config 'admin_user' / 'admin_password_hash'), then
+ * a one-time code when 'admin_totp_secret' is set. The lockouts, the country
+ * rule, the sign-in log and the alert mails behind it live in lib/admin.php.
+ * Either credential empty = admin disabled, this page only shows setup instructions.
  *
  * Access tiers:
- *  - admin session (password login) → every tab
+ *  - admin session (name + password, + code) → every tab
  *  - stats session (stats key presented once at /stats.php?key=…, which
  *    redirects here) → the analytics tabs only, read-only, no admin data
  *
@@ -39,6 +40,7 @@ require_once __DIR__ . '/lib/blog.php';
 require_once __DIR__ . '/lib/analytics.php';
 require_once __DIR__ . '/lib/newsletter.php';
 require_once __DIR__ . '/lib/admin.php';
+require_once __DIR__ . '/lib/captcha.php';
 require_once __DIR__ . '/lib/review_store.php';
 require_once __DIR__ . '/tools/read_check.php';   // rc_measure(): the list grades readability the way the gate does
 
@@ -47,19 +49,43 @@ header('X-Robots-Tag: noindex, nofollow');
 header('X-Frame-Options: DENY');
 header('X-Content-Type-Options: nosniff');
 
-$ip = (string) ($_SERVER['REMOTE_ADDR'] ?? '');
+$ip = admin_client_ip();
+$geoOk = admin_geo_allowed($ip);   // the country rule, judged once here and again inside every session check
 
 /* ---------------- actions (PRG: every POST redirects) ---------------- */
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && admin_enabled()) {
-    admin_session_start();
     $action = (string) ($_POST['action'] ?? '');
+    if (!$geoOk) {
+        if ($action === 'login') admin_auth_log('geo', $ip);
+        http_response_code(403);
+        exit('Forbidden');
+    }
+    admin_session_start();
 
     if ($action === 'login') {
-        $ok = admin_login((string) ($_POST['password'] ?? ''), $ip);
-        // the owner's browser never counts itself: set the exclusion cookie on login
+        // cheapest refusals first: a locked address never reaches the spam check
+        // (an outbound call) and never reaches the password (a bcrypt round)
+        $err = '';
+        if (admin_closed_for($ip) > 0) {
+            admin_auth_log('locked', $ip);
+            $err = 'login';
+        } elseif (turnstile_enabled() && !turnstile_verify_post()) {
+            admin_record($ip, false, 'captcha');
+            $err = 'captcha';
+        } elseif (!admin_login((string) ($_POST['user'] ?? ''), (string) ($_POST['password'] ?? ''), $ip)) {
+            $err = 'login';
+        }
+        // the owner's browser never counts itself: the exclusion cookie is set
+        // once the sign-in is complete (with a code still owed, at that step)
+        if ($err === '' && !admin_totp_pending()) an_optout_cookie(true);
+        header('Location: /admin.php' . ($err !== '' ? "?err={$err}" : ''));
+        exit;
+    }
+    if ($action === 'totp') {
+        $ok = admin_csrf_check($_POST['csrf'] ?? null) && admin_totp_login((string) ($_POST['code'] ?? ''), $ip);
         if ($ok) an_optout_cookie(true);
-        header('Location: /admin.php' . ($ok ? '' : '?err=login'));
+        header('Location: /admin.php' . ($ok ? '' : '?err=totp'));
         exit;
     }
 
@@ -69,6 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && admin_enabled()) {
     }
 
     if ($action === 'logout') {
+        admin_auth_log('logout', $ip);
         admin_logout();
         header('Location: /admin.php');
         exit;
@@ -158,7 +185,8 @@ if ($isAdmin) {
         $nl = ['stats' => nl_stats($ndb), 'weekly' => nl_weekly($ndb), 'subs' => nl_all($ndb), 'sends' => nl_sends($ndb)];
     } catch (Throwable) { $nl = null; }   // store unreadable: the pane says so, the rest of admin still works
 }
-$lockout = admin_lockout_remaining($ip);
+$closed = admin_closed_for($ip);                  // seconds before this address may try to sign in
+$totpPending = !$isDash && admin_totp_pending();  // password accepted, code still owed
 
 /* ---------------- analytics data (any dashboard session) ---------------- */
 
@@ -189,7 +217,9 @@ if ($isDash) {
             'destPrev' => $path === '' && $days > 0
                 ? an_paths($adb, gmdate('Y-m-d', time() - 2 * $days * 86400), array_keys(AN_DESTINATIONS), $since)
                 : [],
-            'recent'  => an_recent($adb, 30, $path),
+            // the activity list is the range, not "the last 30": 7d shows a week, all shows everything up to the cap
+            'recent'  => an_recent($adb, AN_RECENT_CAP, $path, $since),
+            'recentTotal' => an_recent_total($adb, $since, $path),
             'sources' => an_source_groups($adb, $since, $path),
             'dims'    => $dims,
             // exits: where readers go when they leave, scoped by ?path= like everything else
@@ -486,9 +516,10 @@ pre.buildout { background: var(--surface); border: 1px solid var(--line); border
 @media (max-width: 1100px) { .two-zone { grid-template-columns: 1fr; } }
 /* iOS zooms the page for any field under 16px and never zooms back; the
    schedule input is the one place in here you type into on a phone */
-@media (pointer: coarse) { input.dt, .login input[type=password] { font-size: 16px; } }
+@media (pointer: coarse) { input.dt, .login input[type=password], .login input[type=text] { font-size: 16px; } }
 .login { max-width: 400px; margin: 12vh auto; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 1.8rem; }
-.login input[type=password] { width: 100%; font: inherit; padding: .65rem .9rem; margin: .8rem 0; border: 1px solid var(--line); border-radius: 10px; background: transparent; color: var(--ink); }
+.login input[type=password], .login input[type=text] { width: 100%; font: inherit; padding: .65rem .9rem; margin: .4rem 0 .9rem; border: 1px solid var(--line); border-radius: 10px; background: transparent; color: var(--ink); }
+.login label { display: block; margin-top: .4rem; }
 .form-err { color: #b91c1c; font-size: .85rem; margin: .4rem 0; }
 .note { font-size: .8rem; color: var(--muted); margin: .6rem 0 0; line-height: 1.55; }
 .cmt-text { overflow-wrap: anywhere; }
@@ -638,23 +669,65 @@ dialog.why::backdrop { background: rgba(10,10,15,.45); }
   <div class="login">
     <?= eyebrow('Admin') ?>
     <h1 style="margin:.6rem 0">Not configured</h1>
-    <p class="note">Set <code>admin_password_hash</code> in <code>config.php</code>:</p>
+    <p class="note">Set <code>admin_user</code> and <code>admin_password_hash</code> in <code>config.php</code>:</p>
     <p class="note"><code>php -r "echo password_hash('your-password', PASSWORD_DEFAULT), PHP_EOL;"</code></p>
+  </div>
+
+<?php elseif (!$isDash && !$geoOk): ?>
+  <?php http_response_code(403); ?>
+  <div class="login">
+    <?= eyebrow('Admin', true) ?>
+    <h1 style="margin:.6rem 0">bfrackowiak.pl</h1>
+    <p class="form-err">Sign-in is not available from this network.</p>
+    <?php if (geoip_db_age_days() === null): ?>
+      <p class="note">The GeoIP database is missing, so no address can be placed: run <code>php tools/geoip_update.php</code>.</p>
+    <?php endif; ?>
+  </div>
+
+<?php elseif ($totpPending): ?>
+  <div class="login">
+    <?= eyebrow('Admin', true) ?>
+    <h1 style="margin:.6rem 0">One more step</h1>
+    <?php if (($_GET['err'] ?? '') === 'totp'): ?>
+      <p class="form-err"><?= $closed > 0 ? 'Too many attempts. Try again in ' . (int) ceil($closed / 60) . ' min.' : 'Wrong code.' ?></p>
+    <?php endif; ?>
+    <form method="POST" action="/admin.php">
+      <input type="hidden" name="action" value="totp">
+      <input type="hidden" name="csrf" value="<?= e(admin_csrf_token()) ?>">
+      <label for="code" class="note">The six digits from your authenticator app</label>
+      <input type="text" id="code" name="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autofocus autocomplete="one-time-code" <?= $closed > 0 ? 'disabled' : '' ?>>
+      <button class="act" type="submit" <?= $closed > 0 ? 'disabled' : '' ?>>Sign in</button>
+    </form>
   </div>
 
 <?php elseif (!$isDash): ?>
   <div class="login">
     <?= eyebrow('Admin', true) ?>
     <h1 style="margin:.6rem 0">bfrackowiak.pl</h1>
-    <?php if (($_GET['err'] ?? '') === 'login'): ?>
-      <p class="form-err"><?= $lockout > 0 ? 'Too many attempts. Locked for ' . (int) ceil($lockout / 60) . ' min.' : 'Wrong password.' ?></p>
+    <?php $err = (string) ($_GET['err'] ?? ''); ?>
+    <?php if ($closed > 0): ?>
+      <p class="form-err"><?= admin_lockout_remaining($ip) > 0
+          ? 'Too many attempts. Try again in ' . (int) ceil($closed / 60) . ' min.'
+          : 'Sign-in is closed for everyone for the next ' . (int) ceil($closed / 60) . ' min after a burst of failed attempts.' ?></p>
+    <?php elseif ($err === 'login'): ?>
+      <p class="form-err">Wrong login or password.</p>
+    <?php elseif ($err === 'totp'): ?>
+      <p class="form-err">Wrong code too many times, or too slow. Start again with your password.</p>
+    <?php elseif ($err === 'captcha'): ?>
+      <p class="form-err">The spam check did not pass. Try again.</p>
     <?php endif; ?>
     <form method="POST" action="/admin.php">
       <input type="hidden" name="action" value="login">
+      <label for="user" class="note">Login</label>
+      <input type="text" id="user" name="user" autofocus autocomplete="username" autocapitalize="none" spellcheck="false" <?= $closed > 0 ? 'disabled' : '' ?>>
       <label for="pw" class="note">Password</label>
-      <input type="password" id="pw" name="password" autofocus autocomplete="current-password" <?= $lockout > 0 ? 'disabled' : '' ?>>
-      <button class="act" type="submit" <?= $lockout > 0 ? 'disabled' : '' ?>>Sign in</button>
+      <input type="password" id="pw" name="password" autocomplete="current-password" <?= $closed > 0 ? 'disabled' : '' ?>>
+      <?php if (turnstile_enabled()): ?>
+        <div style="margin:.4rem 0 .9rem"><?= turnstile_widget('login') ?></div>
+      <?php endif; ?>
+      <button class="act" type="submit" <?= $closed > 0 ? 'disabled' : '' ?>>Sign in</button>
     </form>
+    <?php if (turnstile_enabled()) echo turnstile_script(); ?>
   </div>
 
 <?php else: ?>
@@ -1415,8 +1488,9 @@ dialog.why::backdrop { background: rgba(10,10,15,.45); }
   </div><!-- /audience -->
 
   <div class="pane wide recent" id="activity">
-    <h2>Recent visits <span class="dim">— last <?= count($an['recent']) ?>, filtered ones included</span></h2>
-    <p class="note">The only view that shows hits the totals leave out: a filter you cannot watch working is a filter you cannot tune. Timezone is the tell — a browser reporting plain UTC is running on a server.</p>
+    <?php $rTotal = (int) $an['recentTotal']; $rShown = count($an['recent']); ?>
+    <h2>Recent visits <span class="dim">— <?= number_format($rTotal) ?> in <?= e($rangeLabel) ?><?= $rShown < $rTotal ? ', newest ' . $rShown . ' shown' : '' ?>, filtered ones included</span></h2>
+    <p class="note">The only view that shows hits the totals leave out: a filter you cannot watch working is a filter you cannot tune. Two tells: a browser reporting plain UTC is running on a server, and a desktop OS on a phone-sized screen is an emulated viewport.</p>
     <table><tr><th>When</th><th></th><th>Path</th><th>From</th><th>Client</th><th>Timezone</th><th class="r">Read</th></tr>
     <?php foreach ($an['recent'] as $r): $ex = (int) $r['excl']; ?>
       <tr<?= $ex ? ' class="excluded"' : '' ?>>
@@ -1430,7 +1504,7 @@ dialog.why::backdrop { background: rgba(10,10,15,.45); }
         <td class="r n"><?= an_fmt_secs((int) $r['duration']) ?></td>
       </tr>
     <?php endforeach; ?>
-    <?php if (!$an['recent']): ?><tr><td colspan="7" class="dim">nothing yet</td></tr><?php endif; ?>
+    <?php if (!$an['recent']): ?><tr><td colspan="7" class="dim">nothing in <?= e($rangeLabel) ?></td></tr><?php endif; ?>
     </table>
   </div><!-- /activity -->
   <?php endif; ?>
@@ -1446,7 +1520,10 @@ dialog.why::backdrop { background: rgba(10,10,15,.45); }
         <?php $ipExcluded = an_is_excluded_ip($ip); ?>
         <tr><td>Your connection<br><span class="dim" style="font-size:.78rem">add it to <code>analytics_exclude_ips</code> in config.php to stop counting this line</span></td>
           <td class="n r"><code><?= e($ip !== '' ? $ip : 'unknown') ?></code><br>
-            <span class="badge b-<?= $ipExcluded ? 'published' : 'draft' ?>"><?= $ipExcluded ? 'excluded by IP' : 'counted' ?></span></td></tr>
+            <span class="badge b-<?= $ipExcluded ? 'published' : 'draft' ?>"><?= $ipExcluded ? 'excluded by IP' : 'counted' ?></span>
+            <?php if (admin_totp_enabled()): $tr = admin_trusted_ip($ip); ?>
+            <span class="badge b-<?= $tr ? 'published' : 'draft' ?>"><?= $tr ? 'trusted: password alone' : 'code asked here' ?></span>
+            <?php endif; ?></td></tr>
         <tr><td>Excluded networks</td><td class="n r"><?php $exIps = (array) cfg('analytics_exclude_ips', []); ?>
           <?= $exIps ? e(implode(', ', array_map('strval', $exIps))) : '<span class="dim">none</span>' ?></td></tr>
         <?php if ($exclCounts !== null): $exTotal = $exclCounts[AN_AUTOMATED] + $exclCounts[AN_OWNER]; ?>
@@ -1469,6 +1546,27 @@ dialog.why::backdrop { background: rgba(10,10,15,.45); }
         <tr><td>Timezone</td><td class="n r"><?= e((string) cfg('timezone', 'Europe/Warsaw')) ?></td></tr>
         <tr><td>PHP</td><td class="n r"><?= PHP_VERSION ?></td></tr>
         <tr><td>Last build</td><td class="n r"><?= admin_last_build_ts() ? date('Y-m-d H:i', admin_last_build_ts()) : 'never' ?></td></tr>
+        <tr><td>Sign-in<br><span class="dim" style="font-size:.78rem"><?= ADMIN_MAX_FAILS ?> wrong attempts lock an address for <?= ADMIN_LOCK_SECS / 60 ?> min, four times longer each repeat; <?= ADMIN_FLOOD_MAX ?> failures from anywhere in <?= ADMIN_FLOOD_WINDOW / 60 ?> min close the form for everyone for <?= ADMIN_FLOOD_LOCK / 60 ?> min (your networks excepted); sessions end after <?= ADMIN_IDLE_MAX / 3600 ?> h idle</span></td>
+          <td class="n r"><?= admin_totp_enabled() ? 'login + password + one-time code' : 'login + password <span class="badge b-draft">no second factor</span>' ?><br>
+            <?php $allowCc = (array) cfg('admin_allow_countries', []); $fl = admin_flood_remaining(); ?>
+            <?php $trusted = (array) cfg('admin_trusted_ips', []); ?>
+            <span class="dim">open from: <?= $allowCc ? e(implode(', ', array_map('strval', $allowCc))) : 'anywhere' ?> · password alone from: <?= $trusted ? e(implode(', ', array_map('strval', $trusted))) : 'nowhere' ?> · spam check: <?= turnstile_enabled() ? 'Turnstile' : 'off' ?> · alerts: <?= cfg('admin_alerts', true) && nl_mail_enabled() ? 'mail' : 'off' ?></span><br>
+            <span class="badge b-<?= $fl > 0 ? 'draft' : 'published' ?>"><?= $fl > 0 ? 'site-wide freeze, ' . (int) ceil($fl / 60) . ' min left' : 'open' ?></span></td></tr>
+      </table>
+      <?php $auth = admin_auth_recent(25); ?>
+      <h2 style="margin-top:1.6rem">Sign-in attempts <span class="dim">— last <?= count($auth) ?>, newest first</span></h2>
+      <p class="note">Every attempt at the login form, from anywhere, as written to <code>content/auth.log</code> (pulled home by <code>deploy.sh data</code>). A run of “wrong login or password” from one address is someone guessing; “refused: country not allowed” is the rule doing its job.</p>
+      <table><tr><th>When</th><th></th><th>Address</th><th>What</th><th>Client</th></tr>
+      <?php foreach ($auth as $r): $bad = !in_array($r['ev'] ?? '', ['ok', 'totp_ok', 'pw_ok', 'logout'], true); ?>
+        <tr>
+          <td class="n"><?= date('m-d H:i', (int) ($r['ts'] ?? 0)) ?></td>
+          <td title="<?= e(an_country_name((string) ($r['cc'] ?? ''))) ?>"><?= an_flag((string) ($r['cc'] ?? '')) ?: '·' ?></td>
+          <td class="n"><code><?= e((string) ($r['ip'] ?? '')) ?></code></td>
+          <td<?= $bad ? ' style="color:#b91c1c"' : '' ?>><?= e(admin_auth_label((string) ($r['ev'] ?? ''))) ?><?= !empty($r['lock']) ? ' <span class="badge b-draft">locked ' . (int) round(((int) $r['lock']) / 60) . ' min</span>' : '' ?><?= !empty($r['flood']) ? ' <span class="badge b-draft">freeze</span>' : '' ?></td>
+          <td class="dim"><?= e(substr((string) ($r['ua'] ?? ''), 0, 60)) ?></td>
+        </tr>
+      <?php endforeach; ?>
+      <?php if (!$auth): ?><tr><td colspan="5" class="dim">nothing yet</td></tr><?php endif; ?>
       </table>
   </div><!-- /system -->
   <?php endif; ?>

@@ -1,0 +1,52 @@
+<mxfile host="app.diagrams.net" agent="bfrackowiak.pl diagram-gen" version="24.7.17">
+  <diagram name="where-the-architect-enters" id="where-the-architect-enters">
+    <mxGraphModel dx="1040" dy="300" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1040" pageHeight="300" background="none" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="b1" value="target architecture&lt;br&gt;the agent can read" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#6366E8;fontColor=#6366E8;fontSize=13;fontFamily=Helvetica;strokeWidth=1.8;" vertex="1" parent="1">
+          <mxGeometry x="20" y="60" width="160" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="b1n" value="no owner yet" style="text;html=1;strokeColor=none;fillColor=none;fontColor=#6366E8;fontSize=11;fontFamily=Helvetica;align=center;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="20" y="124" width="160" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="b2" value="agent plans" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#767884;fontColor=#767884;fontSize=13;fontFamily=Helvetica;strokeWidth=1.6;" vertex="1" parent="1">
+          <mxGeometry x="270" y="60" width="130" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="b3" value="agent writes&lt;br&gt;the diff" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#767884;fontColor=#767884;fontSize=13;fontFamily=Helvetica;strokeWidth=1.6;" vertex="1" parent="1">
+          <mxGeometry x="460" y="60" width="130" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="b4" value="checks&lt;br&gt;the written rules" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#767884;fontColor=#767884;fontSize=13;fontFamily=Helvetica;strokeWidth=1.6;" vertex="1" parent="1">
+          <mxGeometry x="650" y="60" width="140" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="b4n" value="has an owner" style="text;html=1;strokeColor=none;fillColor=none;fontColor=#767884;fontSize=11;fontFamily=Helvetica;align=left;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="650" y="124" width="80" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="b5" value="merged" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#767884;fontColor=#767884;fontSize=13;fontFamily=Helvetica;strokeWidth=1.6;" vertex="1" parent="1">
+          <mxGeometry x="880" y="60" width="130" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="b6" value="human approval" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#767884;fontColor=#767884;fontSize=13;fontFamily=Helvetica;strokeWidth=1.6;dashed=1;dashPattern=5 4;" vertex="1" parent="1">
+          <mxGeometry x="650" y="210" width="140" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="e1" value="read first" style="edgeStyle=none;rounded=0;html=1;strokeColor=#6366E8;fontColor=#6366E8;fontSize=11;fontFamily=Helvetica;strokeWidth=1.6;endArrow=block;endFill=1;labelBackgroundColor=none;verticalAlign=bottom;" edge="1" parent="1" source="b1" target="b2">
+          <mxGeometry relative="1" as="geometry"><mxPoint as="offset" x="0" y="-6"/></mxGeometry>
+        </mxCell>
+        <mxCell id="e2" value="" style="edgeStyle=none;rounded=0;html=1;strokeColor=#767884;fontColor=#767884;fontSize=11;fontFamily=Helvetica;strokeWidth=1.6;endArrow=block;endFill=1;labelBackgroundColor=none;" edge="1" parent="1" source="b2" target="b3">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e3" value="" style="edgeStyle=none;rounded=0;html=1;strokeColor=#767884;fontColor=#767884;fontSize=11;fontFamily=Helvetica;strokeWidth=1.6;endArrow=block;endFill=1;labelBackgroundColor=none;" edge="1" parent="1" source="b3" target="b4">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e4" value="" style="edgeStyle=none;rounded=0;html=1;strokeColor=#767884;fontColor=#767884;fontSize=11;fontFamily=Helvetica;strokeWidth=1.6;endArrow=block;endFill=1;labelBackgroundColor=none;" edge="1" parent="1" source="b4" target="b5">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e5" value="no rule for this yet" style="edgeStyle=none;rounded=0;html=1;strokeColor=#767884;fontColor=#767884;fontSize=11;fontFamily=Helvetica;strokeWidth=1.6;endArrow=block;endFill=1;dashed=1;dashPattern=5 4;labelBackgroundColor=none;align=left;exitX=0.8;exitY=1;entryX=0.8;entryY=0;" edge="1" parent="1" source="b4" target="b6">
+          <mxGeometry relative="1" as="geometry"><mxPoint as="offset" x="8" y="0"/></mxGeometry>
+        </mxCell>
+        <mxCell id="e6" value="after a wait" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#767884;fontColor=#767884;fontSize=11;fontFamily=Helvetica;strokeWidth=1.6;endArrow=block;endFill=1;dashed=1;dashPattern=5 4;labelBackgroundColor=none;verticalAlign=bottom;exitX=1;exitY=0.5;entryX=0.5;entryY=1;" edge="1" parent="1" source="b6" target="b5">
+          <mxGeometry relative="1" as="geometry"><mxPoint as="offset" x="0" y="-6"/></mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

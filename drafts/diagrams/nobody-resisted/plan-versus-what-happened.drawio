@@ -1,0 +1,46 @@
+<mxfile host="app.diagrams.net" agent="bfrackowiak.pl diagram-gen" version="24.7.17">
+  <diagram name="plan-versus-what-happened" id="plan-versus-what-happened">
+    <mxGraphModel dx="900" dy="300" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="900" pageHeight="300" background="none" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="l1" value="the plan" style="text;html=1;strokeColor=none;fillColor=none;fontColor=#767884;fontSize=11;fontFamily=Helvetica;align=left;verticalAlign=middle;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="20" y="50" width="100" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="p1" value="a skeptic" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#767884;fontColor=#767884;fontSize=13;fontFamily=Helvetica;strokeWidth=1.6;dashed=1;dashPattern=5 4;" vertex="1" parent="1">
+          <mxGeometry x="130" y="50" width="170" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="p2" value="a workshop,&lt;br&gt;a champion, a pilot" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#767884;fontColor=#767884;fontSize=13;fontFamily=Helvetica;strokeWidth=1.6;dashed=1;dashPattern=5 4;" vertex="1" parent="1">
+          <mxGeometry x="380" y="50" width="170" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="p3" value="adopts the one&lt;br&gt;shared way" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#767884;fontColor=#767884;fontSize=13;fontFamily=Helvetica;strokeWidth=1.6;dashed=1;dashPattern=5 4;" vertex="1" parent="1">
+          <mxGeometry x="630" y="50" width="170" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="pe1" value="months" style="edgeStyle=none;rounded=0;html=1;strokeColor=#767884;fontColor=#767884;fontSize=11;fontFamily=Helvetica;strokeWidth=1.6;endArrow=block;endFill=1;dashed=1;dashPattern=5 4;labelBackgroundColor=none;verticalAlign=bottom;" edge="1" parent="1" source="p1" target="p2">
+          <mxGeometry relative="1" as="geometry"><mxPoint as="offset" x="0" y="-6"/></mxGeometry>
+        </mxCell>
+        <mxCell id="pe2" value="months" style="edgeStyle=none;rounded=0;html=1;strokeColor=#767884;fontColor=#767884;fontSize=11;fontFamily=Helvetica;strokeWidth=1.6;endArrow=block;endFill=1;dashed=1;dashPattern=5 4;labelBackgroundColor=none;verticalAlign=bottom;" edge="1" parent="1" source="p2" target="p3">
+          <mxGeometry relative="1" as="geometry"><mxPoint as="offset" x="0" y="-6"/></mxGeometry>
+        </mxCell>
+        <mxCell id="l2" value="what happened" style="text;html=1;strokeColor=none;fillColor=none;fontColor=#6366E8;fontSize=11;fontFamily=Helvetica;align=left;verticalAlign=middle;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="20" y="180" width="100" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="r1" value="says yes&lt;br&gt;on day one" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#6366E8;fontColor=#6366E8;fontSize=13;fontFamily=Helvetica;strokeWidth=1.8;" vertex="1" parent="1">
+          <mxGeometry x="130" y="180" width="170" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="r2" value="builds its own&lt;br&gt;in an afternoon" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#6366E8;fontColor=#6366E8;fontSize=13;fontFamily=Helvetica;strokeWidth=1.8;" vertex="1" parent="1">
+          <mxGeometry x="380" y="180" width="170" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="r3" value="seven review bots,&lt;br&gt;eight spec variants" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#6366E8;fontColor=#6366E8;fontSize=13;fontFamily=Helvetica;strokeWidth=1.8;" vertex="1" parent="1">
+          <mxGeometry x="630" y="180" width="170" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="re1" value="a week" style="edgeStyle=none;rounded=0;html=1;strokeColor=#6366E8;fontColor=#6366E8;fontSize=11;fontFamily=Helvetica;strokeWidth=1.6;endArrow=block;endFill=1;labelBackgroundColor=none;verticalAlign=bottom;" edge="1" parent="1" source="r1" target="r2">
+          <mxGeometry relative="1" as="geometry"><mxPoint as="offset" x="0" y="-6"/></mxGeometry>
+        </mxCell>
+        <mxCell id="re2" value="eleven weeks" style="edgeStyle=none;rounded=0;html=1;strokeColor=#6366E8;fontColor=#6366E8;fontSize=11;fontFamily=Helvetica;strokeWidth=1.6;endArrow=block;endFill=1;labelBackgroundColor=none;verticalAlign=bottom;" edge="1" parent="1" source="r2" target="r3">
+          <mxGeometry relative="1" as="geometry"><mxPoint as="offset" x="0" y="-6"/></mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

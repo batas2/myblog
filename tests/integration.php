@@ -24,13 +24,17 @@ require_once dirname(__DIR__) . '/lib/scores.php';
 // so the exit-tracking assertions can call the real readers instead of re-writing
 // their SQL in the test and proving only that two queries agree
 require_once dirname(__DIR__) . '/lib/analytics.php';
+// pure functions again: the admin flow below types the code the server expects
+require_once dirname(__DIR__) . '/lib/totp.php';
 
 $ROOT = dirname(__DIR__);
 $SANDBOX = sys_get_temp_dir() . '/bfrackowiak-test-' . getmypid();
 $PORT = 8900 + (getmypid() % 90);
 $BASE = "http://127.0.0.1:{$PORT}";
 $serverPid = null;
+const ADMIN_USER = 'itest-admin';
 const ADMIN_PW = 'itest-admin-pw';
+const ITEST_TOTP = 'JBSWY3DPEHPK3PXP';   // any base32 will do; the test computes codes from it
 const STATS_KEY = 'itest-stats-key';
 
 $cleanup = function () use (&$serverPid, $SANDBOX) {
@@ -57,8 +61,9 @@ exec('rsync -a --exclude=_remote-backup/ --exclude=_archive/ --exclude=docs/ --e
 t_eq(0, $rc, 'sandbox copied');
 mkdir($SANDBOX . '/content/comments', 0755, true);
 
-// deterministic config: known keys, admin enabled, everything else prod-like
-file_put_contents($SANDBOX . '/config.php', '<?php return ' . var_export([
+// deterministic config: known keys, admin enabled, everything else prod-like.
+// $writeCfg rewrites it with overrides; the built-in server reads it per request
+$itestCfg = [
     'site_url'            => 'https://bfrackowiak.pl',
     'site_name'           => 'bfrackowiak.pl',
     'author'              => 'Bartosz Frąckowiak',
@@ -67,11 +72,18 @@ file_put_contents($SANDBOX . '/config.php', '<?php return ' . var_export([
     'comments_secret'     => 'itest-comments-secret',
     'preview_secret'      => 'itest-preview-secret',
     'stats_key'           => STATS_KEY,
+    'admin_user'          => ADMIN_USER,
     'admin_password_hash' => password_hash(ADMIN_PW, PASSWORD_DEFAULT),
+    'admin_totp_secret'   => ITEST_TOTP,
+    // the sandbox has no geoip.dat; loopback must still get in with the rule on
+    'admin_allow_countries' => ['PL'],
+    'admin_trusted_ips'   => [],
     'timezone'            => 'Europe/Warsaw',
     'php_bin'             => PHP_BINARY,
     'smtp'                => ['host' => '', 'port' => 587, 'user' => '', 'pass' => '', 'from' => '', 'from_name' => '', 'to' => ''],
-], true) . ";\n");
+];
+$writeCfg = fn(array $over = []) => file_put_contents($SANDBOX . '/config.php', '<?php return ' . var_export($over + $itestCfg, true) . ";\n");
+$writeCfg();
 
 // fixture posts: one per status
 $fixture = fn(string $title, string $extra = '') => "# {$title}\n\n*Integration fixture subtitle.*\n\n"
@@ -777,29 +789,128 @@ t_assert(is_file($rlDir . '/c_rl_' . substr(sha1('127.0.0.1|bfrackowiak-comments
 
 /* ---------------- admin flow ---------------- */
 section('admin flow');
-@unlink($rlDir . '/adm_rl_' . substr(sha1('127.0.0.1|bfrackowiak-admin'), 0, 16));
+$admRl = $rlDir . '/adm_rl_' . substr(sha1('127.0.0.1|bfrackowiak-admin'), 0, 16);
+@mkdir($rlDir, 0700, true);
+@unlink($admRl);
+@unlink($rlDir . '/adm_flood');
+$sessionCookie = function (array $hdrs): string {
+    foreach ($hdrs as $h) {
+        if (stripos($h, 'Set-Cookie: bfadmin=') === 0 && preg_match('/bfadmin=([^;]+)/', $h, $m)) return 'bfadmin=' . $m[1];
+    }
+    return '';
+};
+$login = fn(string $user, string $pw) => http_req('POST', "$BASE/admin.php", ['body' => http_build_query(['action' => 'login', 'user' => $user, 'password' => $pw])]);
 
 [$code, $body] = http_req('GET', "$BASE/admin.php");
 t_eq(200, $code, 'admin login page 200');
 t_contains('Sign in', $body, 'login form shown when logged out');
+t_contains('name="user"', $body, 'the form asks for a login name');
+t_contains('name="password"', $body, 'and a password');
 t_not_contains('Control room', $body, 'dashboard hidden when logged out');
 
-[$code, , $loc] = http_req('POST', "$BASE/admin.php", ['body' => http_build_query(['action' => 'login', 'password' => 'wrong'])]);
+// the lock and the freeze both show on the page and refuse the POST — planted
+// as marker files, so the rest of the run is never locked out of its own login
+file_put_contents($admRl, json_encode(['until' => time() + 600, 'locks' => 1]));
+[, $body] = http_req('GET', "$BASE/admin.php");
+t_contains('Too many attempts', $body, 'a locked address is told so on the form');
+t_contains('name="password" autocomplete="current-password" disabled', $body, 'the locked form is disabled');
+[$code, , $loc] = $login(ADMIN_USER, ADMIN_PW);
+t_eq(302, $code, 'a locked address is redirected even with the right credentials');
+t_contains('err=login', $loc, 'and never gets in');
+unlink($admRl);
+file_put_contents($rlDir . '/adm_flood', json_encode(['until' => time() + 600, 't' => []]));
+[, $body] = http_req('GET', "$BASE/admin.php");
+t_contains('closed for everyone', $body, 'the site-wide freeze is explained on the form');
+[, , $loc] = $login(ADMIN_USER, ADMIN_PW);
+t_contains('err=login', $loc, 'the freeze refuses the right credentials too');
+unlink($rlDir . '/adm_flood');
+
+[$code, , $loc] = $login(ADMIN_USER, 'wrong');
 t_eq(302, $code, 'wrong password redirects');
 t_contains('err=login', $loc, 'wrong password flagged');
+[, , $loc] = $login('someone-else', ADMIN_PW);
+t_contains('err=login', $loc, 'the right password under the wrong name is still wrong');
+[, $body] = http_req('GET', "$BASE/admin.php?err=login");
+t_contains('Wrong login or password', $body, 'the message never says which half was wrong');
+@unlink($admRl);   // the two misses above must not count against the real sign-in
 
-[$code, , $loc, $hdrs] = http_req('POST', "$BASE/admin.php", ['body' => http_build_query(['action' => 'login', 'password' => ADMIN_PW])]);
-t_eq(302, $code, 'correct password redirects');
-t_assert(!str_contains($loc, 'err'), 'no error on correct password');
-t_assert((bool) array_filter($hdrs, fn($h) => stripos($h, 'Set-Cookie: bfx=1') === 0), 'login excludes the owner browser from stats');
-$cookie = '';
-foreach ($hdrs as $h) {
-    if (stripos($h, 'Set-Cookie: bfadmin=') === 0 && preg_match('/bfadmin=([^;]+)/', $h, $m)) $cookie = 'bfadmin=' . $m[1];
-}
+[$code, , $loc, $hdrs] = $login(ADMIN_USER, ADMIN_PW);
+t_eq(302, $code, 'correct credentials redirect');
+t_assert(!str_contains($loc, 'err'), 'no error on correct credentials');
+t_assert(!array_filter($hdrs, fn($h) => stripos($h, 'Set-Cookie: bfx=1') === 0), 'the owner exclusion waits for the second factor');
+$cookie = $sessionCookie($hdrs);
 t_assert($cookie !== '', 'session cookie issued');
 $asAdmin = fn(string $method, string $url, array $opt = []) => http_req($method, $url, array_merge($opt, [
     'headers' => ($opt['headers'] ?? "User-Agent: TestAdmin/1\r\n") . "Cookie: {$cookie}\r\n",
 ]));
+
+// second factor: the password alone opens nothing
+[$code, $body] = $asAdmin('GET', "$BASE/admin.php");
+t_eq(200, $code, 'code step page 200');
+t_contains('One more step', $body, 'the password alone leads to the code step');
+t_not_contains('Control room', $body, 'dashboard still hidden before the code');
+t_contains('name="code"', $body, 'code field present');
+preg_match('/name="csrf" value="([^"]+)"/', $body, $m);
+$totpCsrf = $m[1] ?? '';
+t_assert($totpCsrf !== '', 'the code form carries a csrf token');
+[$code, , $loc] = $asAdmin('POST', "$BASE/admin.php", ['body' => http_build_query(['action' => 'totp', 'csrf' => $totpCsrf, 'code' => '000000'])]);
+t_eq(302, $code, 'wrong code redirects');
+t_contains('err=totp', $loc, 'wrong code flagged');
+[, , $loc] = $asAdmin('POST', "$BASE/admin.php", ['body' => http_build_query(['action' => 'totp', 'csrf' => 'forged', 'code' => totp_code(ITEST_TOTP)])]);
+t_contains('err=totp', $loc, 'the right code behind a forged csrf token is refused');
+[, $body] = $asAdmin('GET', "$BASE/admin.php?err=totp");
+t_contains('Wrong code', $body, 'the code step reports a wrong code');
+@unlink($admRl);   // the wrong code counted as a miss; clear it before the real one
+$goodCode = totp_code(ITEST_TOTP);
+[$code, , $loc, $hdrs] = $asAdmin('POST', "$BASE/admin.php", ['body' => http_build_query(['action' => 'totp', 'csrf' => $totpCsrf, 'code' => $goodCode])]);
+t_eq(302, $code, 'right code redirects');
+t_assert(!str_contains($loc, 'err'), 'no error on the right code');
+t_assert((bool) array_filter($hdrs, fn($h) => stripos($h, 'Set-Cookie: bfx=1') === 0), 'the completed sign-in excludes the owner browser from stats');
+$cookie2 = $sessionCookie($hdrs);
+t_assert($cookie2 !== '' && $cookie2 !== $cookie, 'the session id is regenerated when the sign-in completes');
+$cookie = $cookie2;
+$asAdmin = fn(string $method, string $url, array $opt = []) => http_req($method, $url, array_merge($opt, [
+    'headers' => ($opt['headers'] ?? "User-Agent: TestAdmin/1\r\n") . "Cookie: {$cookie}\r\n",
+]));
+
+// a code is good once: a second session presenting the same digits is refused
+[, , , $h2] = $login(ADMIN_USER, ADMIN_PW);
+$replayCookie = $sessionCookie($h2);
+[, $rBody] = http_req('GET', "$BASE/admin.php", ['headers' => "User-Agent: T/1\r\nCookie: {$replayCookie}\r\n"]);
+preg_match('/name="csrf" value="([^"]+)"/', $rBody, $m);
+[, , $loc] = http_req('POST', "$BASE/admin.php", ['headers' => "User-Agent: T/1\r\nCookie: {$replayCookie}\r\n",
+    'body' => http_build_query(['action' => 'totp', 'csrf' => $m[1] ?? '', 'code' => $goodCode])]);
+t_contains('err=totp', $loc, 'a code already used does not work a second time');
+@unlink($admRl);
+@unlink($rlDir . '/adm_flood');
+
+$authLog = (string) @file_get_contents($SANDBOX . '/content/auth.log');
+t_contains('"ev":"fail"', $authLog, 'wrong credentials are logged');
+t_contains('"ev":"locked"', $authLog, 'an attempt during a lock is logged');
+t_contains('"ev":"pw_ok"', $authLog, 'the password step is logged');
+t_contains('"ev":"totp_fail"', $authLog, 'a wrong code is logged');
+t_contains('"ev":"totp_ok"', $authLog, 'the completed sign-in is logged');
+t_contains('"ip":"127.0.0.1"', $authLog, 'with the address');
+t_not_contains(ADMIN_PW, $authLog, 'the password never lands in the log');
+t_not_contains('someone-else', $authLog, 'nor does the name that was tried');
+
+// a trusted network: the password alone signs in there, the code is asked everywhere else
+$writeCfg(['admin_trusted_ips' => ['127.0.0.1']]);
+[$code, , $loc, $hdrs] = $login(ADMIN_USER, ADMIN_PW);
+t_eq(302, $code, 'trusted network: correct credentials redirect');
+t_assert(!str_contains($loc, 'err'), 'trusted network: no error');
+t_assert((bool) array_filter($hdrs, fn($h) => stripos($h, 'Set-Cookie: bfx=1') === 0), 'trusted network: the sign-in is complete at the password step');
+$trustedCookie = $sessionCookie($hdrs);
+[$code, $body] = http_req('GET', "$BASE/admin.php", ['headers' => "User-Agent: T/1\r\nCookie: {$trustedCookie}\r\n"]);
+t_eq(200, $code, 'trusted network: dashboard 200');
+t_contains('Control room', $body, 'trusted network: straight into the dashboard');
+t_not_contains('One more step', $body, 'trusted network: the code form never shows');
+t_contains('trusted: password alone', $body, 'System says this address is trusted');
+t_contains('"ev":"ok"', (string) file_get_contents($SANDBOX . '/content/auth.log'), 'a password-only sign-in is logged as such');
+$writeCfg();   // back to "the code everywhere" for the rest of the run
+[, $body] = http_req('GET', "$BASE/admin.php", ['headers' => "User-Agent: T/1\r\nCookie: {$trustedCookie}\r\n"]);
+t_contains('code asked here', $body, 'and no longer trusted once the list is empty again');
+@unlink($admRl);
 
 [$code, $body] = $asAdmin('GET', "$BASE/admin.php");
 t_eq(200, $code, 'dashboard 200 with session');
@@ -810,6 +921,9 @@ t_contains('ITest Draft Post', $body, 'draft post visible in pipeline');
 t_contains('tester@example.com', $body, 'comment listed for moderation (full email for admin)');
 t_contains('Acquisition', $body, 'analytics tabs folded into the admin page');
 t_contains('Recent visits', $body, 'activity pane rendered inline');
+t_contains('in last 30 days, filtered ones included', $body, 'the activity list is scoped to the default range');
+[, $body7] = $asAdmin('GET', "$BASE/admin.php?days=7");
+t_contains('in last 7 days, filtered ones included', $body7, 'and follows the range selector');
 // exits: the inbound half has a tab, so the outbound half needs one that renders
 // with real rows in it, not just a heading
 t_contains('href="#exits"', $body, 'exits tab reachable from the dashboard nav');
@@ -818,6 +932,11 @@ t_contains('Outbound clicks', $body, 'exits pane carries its summary card');
 t_contains('github.com', $body, 'a recorded destination shows up in the dashboard');
 t_contains('Exits per 100 views', $body, 'exit rate stated against pageviews');
 t_contains('Rebuild site', $body, 'admin actions present for the full session');
+t_contains('Sign-in attempts', $body, 'System lists the sign-in attempts');
+t_contains('signed in (password + code)', $body, 'including the one that just happened');
+t_contains('refused: locked out', $body, 'and the one the lock refused');
+t_contains('login + password + one-time code', $body, 'System states what the sign-in requires');
+t_contains('open from: PL', $body, 'and where from');
 
 // editorial scores pane (docs/SCORING-RUBRIC.md): the fixtures are unscored on
 // purpose, so this also covers the unscored path end to end

@@ -19,6 +19,13 @@ require_once __DIR__ . '/lib/admin.php';
 header('Cache-Control: no-store');
 header('X-Robots-Tag: noindex, nofollow');
 
+// the country rule holds here as much as on the login form: a key presented
+// from elsewhere mints nothing, and an existing session is refused the same way
+if (!admin_geo_allowed(admin_client_ip())) {
+    http_response_code(404);
+    exit('Not found');
+}
+
 $key = (string) cfg('stats_key');
 if ($key !== '' && hash_equals($key, (string) ($_GET['key'] ?? ''))) {
     // one-time key → stats session, so the dashboard stays keyless

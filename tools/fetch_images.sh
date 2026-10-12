@@ -49,6 +49,14 @@ declare -A Q=(
   [adoption-is-the-deliverable]="desire path grass|worn path beside paved footpath"
   [the-bottleneck-moved]="stack of paper documents pile|paperwork stacked desk office"
   [we-deleted-the-wrong-half-of-agile]="scaffolding supporting building facade|scaffolding old building front"
+  # a railway switch: the direction is set by a rule, not by someone standing at the track
+  [every-approval-is-a-missing-rule]="railway switch tracks points|railroad track switch junction"
+  # sprawl, not resistance: everyone said yes and every team built its own
+  [nobody-resisted]="suburban sprawl aerial view houses|dense rooftops aerial"
+  # the agent grading its own work
+  [the-model-grades-its-own-homework]="exam marking red pen paper|grading papers red pen desk"
+  # four levels, three cliffs: terraces cut into a slope, each one a level with a drop between
+  [four-levels-three-cliffs]="Moray Inca terraces circular|agricultural terraces Peru Andes"
 )
 
 TMP=$(mktemp -d)

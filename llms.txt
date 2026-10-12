@@ -25,6 +25,11 @@ For LLM ingestion: the complete blog content in one plain-text file is at https:
 
 Selected posts:
 
+- Nobody Resisted: https://bfrackowiak.pl/blog/nobody-resisted/
+- Every Approval Is a Missing Rule: https://bfrackowiak.pl/blog/every-approval-is-a-missing-rule/
+- Turn the Sequence Diagram on Its Side: https://bfrackowiak.pl/blog/turn-the-sequence-diagram-on-its-side/
+- We Deleted the Wrong Half of Agile: https://bfrackowiak.pl/blog/we-deleted-the-wrong-half-of-agile/
+- Design the Stopping Point: https://bfrackowiak.pl/blog/design-the-stopping-point/
 - Count Your Rejections: https://bfrackowiak.pl/blog/count-your-rejections/
 - Adoption Is the Deliverable: https://bfrackowiak.pl/blog/adoption-is-the-deliverable/
 - The Bottleneck Moved: https://bfrackowiak.pl/blog/the-bottleneck-moved/

@@ -1,0 +1,52 @@
+<mxfile host="app.diagrams.net" agent="bfrackowiak.pl diagram-gen" version="24.7.17">
+  <diagram name="four-levels-three-cliffs" id="four-levels-three-cliffs">
+    <mxGraphModel dx="1000" dy="360" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1000" pageHeight="360" background="none" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="s1" value="1. browser tab&lt;br&gt;&lt;span style=&quot;font-size:11px&quot;&gt;context: your head&lt;/span&gt;" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#767884;fontColor=#767884;fontSize=13;fontFamily=Helvetica;strokeWidth=1.6;" vertex="1" parent="1">
+          <mxGeometry x="20" y="260" width="190" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="s2" value="2. local agent&lt;br&gt;&lt;span style=&quot;font-size:11px&quot;&gt;context: your files&lt;/span&gt;" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#767884;fontColor=#767884;fontSize=13;fontFamily=Helvetica;strokeWidth=1.6;" vertex="1" parent="1">
+          <mxGeometry x="280" y="180" width="190" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="s3" value="3. shared context&lt;br&gt;&lt;span style=&quot;font-size:11px&quot;&gt;context: a repo with an owner&lt;/span&gt;" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#767884;fontColor=#767884;fontSize=13;fontFamily=Helvetica;strokeWidth=1.6;" vertex="1" parent="1">
+          <mxGeometry x="540" y="100" width="190" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="s4" value="4. agentic environment&lt;br&gt;&lt;span style=&quot;font-size:11px&quot;&gt;context: the platform&lt;/span&gt;" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#767884;fontColor=#767884;fontSize=13;fontFamily=Helvetica;strokeWidth=1.6;" vertex="1" parent="1">
+          <mxGeometry x="800" y="20" width="190" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="c1" value="" style="endArrow=none;dashed=1;dashPattern=5 4;html=1;strokeColor=#6366E8;strokeWidth=1.8;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry"><mxPoint x="245" y="340" as="sourcePoint"/><mxPoint x="245" y="190" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="c1l" value="the agent&lt;br&gt;can act" style="text;html=1;strokeColor=none;fillColor=none;fontColor=#6366E8;fontSize=11;fontFamily=Helvetica;align=right;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="140" y="196" width="100" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="c2" value="" style="endArrow=none;dashed=1;dashPattern=5 4;html=1;strokeColor=#6366E8;strokeWidth=1.8;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry"><mxPoint x="505" y="260" as="sourcePoint"/><mxPoint x="505" y="110" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="c2l" value="context becomes&lt;br&gt;shared code" style="text;html=1;strokeColor=none;fillColor=none;fontColor=#6366E8;fontSize=11;fontFamily=Helvetica;align=right;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="388" y="116" width="112" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="c3" value="" style="endArrow=none;dashed=1;dashPattern=5 4;html=1;strokeColor=#6366E8;strokeWidth=1.8;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry"><mxPoint x="765" y="180" as="sourcePoint"/><mxPoint x="765" y="30" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="c3l" value="the decision leaves&lt;br&gt;human hands" style="text;html=1;strokeColor=none;fillColor=none;fontColor=#6366E8;fontSize=11;fontFamily=Helvetica;align=right;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="638" y="36" width="122" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="f1" value="blast radius: nobody" style="text;html=1;strokeColor=none;fillColor=none;fontColor=#767884;fontSize=11;fontFamily=Helvetica;align=center;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="20" y="334" width="190" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="f2" value="blast radius: you" style="text;html=1;strokeColor=none;fillColor=none;fontColor=#767884;fontSize=11;fontFamily=Helvetica;align=center;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="280" y="254" width="190" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="f3" value="blast radius: the team" style="text;html=1;strokeColor=none;fillColor=none;fontColor=#767884;fontSize=11;fontFamily=Helvetica;align=center;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="540" y="174" width="190" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="f4" value="blast radius: the organization" style="text;html=1;strokeColor=none;fillColor=none;fontColor=#767884;fontSize=11;fontFamily=Helvetica;align=center;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="800" y="94" width="190" height="20" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

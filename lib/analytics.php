@@ -206,15 +206,28 @@ function an_is_bot(string $ua): bool
  * is either a hand-rolled POST to a.php or a pre-v2 row, and counts as neither
  * a reader nor a mystery.
  *
- * The cost is Tor Browser, which normalizes to UTC on purpose. That is the
- * trade, and it is reversible: excluded rows are kept, counted separately in
- * admin → System, and an_reclassify() re-runs this rule over all history
- * whenever it changes.
+ * The second tell is a contradiction: a desktop OS (Windows, macOS, Linux,
+ * ChromeOS) reporting a phone-sized screen. The beacon sends screen.width —
+ * the physical display, not the window — and no Mac or PC is 599 pixels
+ * wide. That is an emulated mobile viewport under a desktop user agent,
+ * which is how scraper frameworks come configured. The 2026-09-11 crawl of
+ * the whole archive (23 hits, Chrome on "macOS", phone screen, a region
+ * timezone, zero seconds read on every page) is the row that wrote this rule.
+ *
+ * The cost is Tor Browser, which normalizes to UTC on purpose, and a phone
+ * in "request desktop site" mode, which presents as macOS or Linux on a
+ * phone screen. That is the trade, and it is reversible: excluded rows are
+ * kept, counted separately in admin → System, and an_reclassify() re-runs
+ * this rule over all history whenever it changes.
  */
+const AN_DESKTOP_OS = ['Windows', 'macOS', 'Linux', 'ChromeOS'];
+
 function an_looks_automated(array $r): bool
 {
     $tz = strtoupper(trim((string) ($r['tz'] ?? '')));
-    if ($tz !== '') return in_array($tz, ['UTC', 'ETC/UTC', 'GMT', 'ETC/GMT', 'UCT', 'ZULU'], true);
+    if ($tz !== '' && in_array($tz, ['UTC', 'ETC/UTC', 'GMT', 'ETC/GMT', 'UCT', 'ZULU'], true)) return true;
+    if (($r['screen'] ?? '') === 'phone' && in_array($r['os'] ?? '', AN_DESKTOP_OS, true)) return true;
+    if ($tz !== '') return false;
     return ($r['screen'] ?? '') === '' && ($r['lang'] ?? '') === '';
 }
 
@@ -226,7 +239,7 @@ function an_looks_automated(array $r): bool
  */
 function an_reclassify(PDO $db): int
 {
-    $rows = $db->query('SELECT rowid AS rid, tz, screen, lang, excl FROM hits')->fetchAll(PDO::FETCH_ASSOC);
+    $rows = $db->query('SELECT rowid AS rid, tz, screen, lang, os, excl FROM hits')->fetchAll(PDO::FETCH_ASSOC);
     $set = $db->prepare('UPDATE hits SET excl = ? WHERE rowid = ?');
     $changed = 0;
     // the migration calls this from inside the beacon's request; own the
@@ -829,14 +842,41 @@ function an_paths(PDO $db, string $since, array $paths, string $until = ''): arr
  * the one view that shows them: a filter you cannot watch working is a filter
  * you cannot tune, and the rows it drops are exactly the ones worth eyeballing.
  */
-function an_recent(PDO $db, int $limit = 30, string $path = ''): array
+/** The activity list shows every hit in the chosen range up to this many, newest first. */
+const AN_RECENT_CAP = 300;
+
+/**
+ * Newest hits first, every verdict included — the one reader that does not go
+ * through an_where(), because a filter you cannot watch working is a filter
+ * you cannot tune. $since (a UTC day) scopes it to the dashboard's range so
+ * the range selector means the same thing on this tab as on every other;
+ * '' means all of history.
+ */
+function an_recent(PDO $db, int $limit = 30, string $path = '', string $since = ''): array
 {
-    $sql = 'SELECT ts, path, ref, ref_group, country, browser, os, device, lang, tz, duration, excl FROM hits';
-    $args = [];
-    if ($path !== '') { $sql .= ' WHERE path = ?'; $args[] = $path; }
-    $st = $db->prepare($sql . ' ORDER BY ts DESC LIMIT ' . max(1, $limit));
+    [$where, $args] = an_recent_where($since, $path);
+    $st = $db->prepare('SELECT ts, path, ref, ref_group, country, browser, os, device, lang, tz, duration, excl FROM hits'
+        . $where . ' ORDER BY ts DESC LIMIT ' . max(1, $limit));
     $st->execute($args);
     return $st->fetchAll(PDO::FETCH_ASSOC);
+}
+
+/** How many hits an_recent() is choosing from, so the pane can say "newest 300 of 1,204". */
+function an_recent_total(PDO $db, string $since = '', string $path = ''): int
+{
+    [$where, $args] = an_recent_where($since, $path);
+    $st = $db->prepare('SELECT COUNT(*) FROM hits' . $where);
+    $st->execute($args);
+    return (int) $st->fetchColumn();
+}
+
+function an_recent_where(string $since, string $path): array
+{
+    $cond = [];
+    $args = [];
+    if ($since !== '') { $cond[] = 'day >= ?'; $args[] = $since; }
+    if ($path !== '')  { $cond[] = 'path = ?'; $args[] = $path; }
+    return [$cond ? ' WHERE ' . implode(' AND ', $cond) : '', $args];
 }
 
 /** How a period's rows split across the verdicts, for admin → System. */

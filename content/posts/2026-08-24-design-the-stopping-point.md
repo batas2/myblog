@@ -68,8 +68,6 @@ It also answers the question every engineering director eventually asks. Should 
 
 The objection I hear is that writing the shortcut down blesses it, that planning the resting position means giving up on quality. But the shortcut doesn't wait for a blessing. It happens either way. The only choice on offer is whether it is chosen or discovered.
 
-An accepted risk with a name on it is engineering. The same risk unnamed is just something that happened to you.
-
 ## What it changed
 
 That whiteboard conversation never produced a clean answer, and I stopped expecting one. What it changed was smaller than an answer.
