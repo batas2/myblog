@@ -149,7 +149,7 @@ function log_rows(array $posts, bool $withTags = false, string $extraClass = '')
         // the essay's own drawing beats a stock photo that looks like every other stock photo
         $html .= thumb_span(figure_thumb_meta($p['slug']) ?? hero_meta($p['slug']), 'thumb');
         $html .= '<span class="log-main">';
-        $html .= '<span class="date">' . log_ts($p['publish_ts']) . '</span>';
+        $html .= '<span class="date">' . log_ts($p['publish_ts']) . series_suffix($p['slug']) . '</span>';
         $html .= '<h3>' . e($p['title']) . '</h3><span class="sub">' . e($p['subtitle']) . '</span>';
         $html .= '</span>';
         $html .= '<span class="rt">' . $p['minutes'] . ' min</span>';
@@ -385,21 +385,6 @@ function series_nav(string $slug, array $all): string
         $html .= '</li>';
     }
     return $html . '</ol></nav></div>';
-}
-
-/** The whole archive as a compact list: date, title, one line, length. No pictures. */
-function archive_rows(array $posts): string
-{
-    $html = '<ol class="archive">';
-    foreach ($posts as $p) {
-        $html .= '<li class="arow"><a href="' . e(post_path($p['slug'])) . '">';
-        $html .= '<span class="a-date">' . log_ts($p['publish_ts']) . '</span>';
-        $html .= '<span class="a-main"><span class="a-title">' . e($p['title']) . '</span>';
-        $html .= '<span class="a-sub">' . e($p['subtitle']) . '</span></span>';
-        $html .= '<span class="a-meta">' . $p['minutes'] . ' min' . series_suffix($p['slug']) . '</span>';
-        $html .= '</a></li>';
-    }
-    return $html . '</ol>';
 }
 
 /** Three doors into the archive, from reading_paths(); each lists its three essays. */

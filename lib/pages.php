@@ -130,11 +130,16 @@ function render_index(array $posts): string
     $header .= '<img class="home-face" src="/myself.jpeg" alt="Bartosz Frąckowiak" width="72" height="72" decoding="async">';
     $header .= eyebrow('Field Notes', true);
     $header .= '<h1 style="font-size:clamp(2.2rem,5vw,3.2rem)">Field Notes</h1>';
-    $header .= '<p class="home-lede">I\'m <strong>Bartosz Frąckowiak</strong>, a solution architect. I co-lead an AI transformation for several hundred developers, and I write about what breaks between the system, the people around it, and the company they form together. One essay, most Mondays.</p>';
+    $header .= '<p class="home-lede">An architect\'s notebook. Fifteen years of designing systems, and what they taught me about the decisions behind the boxes and arrows: who owns a boundary, why a migration never starts, what changes when agents write the code.</p>';
+    $header .= '<ul class="home-promise">'
+             . '<li><b>Patterns you can use on Monday.</b> Decision records, review rules, diagrams people actually argue with, each one tried on a real system first.</li>'
+             . '<li><b>The part nobody draws.</b> Ownership, handovers and incentives, the reasons a sound design still fails in a real company.</li>'
+             . '<li><b>AI in engineering, minus the hype.</b> What happened when several hundred developers started working with agents, with the numbers I could get.</li>'
+             . '</ul>';
     $header .= '<p class="hero-actions">'
              . '<a class="btn btn-primary" href="/blog/start/">Start here ' . arrow_icon() . '</a>'
-             . '<a class="btn btn-ghost" href="#newsletter">Get it by email</a>'
-             . '<a class="btn btn-ghost" href="/feed.xml">RSS</a></p>';
+             . '<a class="btn btn-ghost" href="#newsletter">Subscribe by email</a>'
+             . '<a class="btn btn-ghost" href="/about/#contact">Contact me</a></p>';
     $header .= '<p class="proof"><span>Solution architect in global SaaS</span><span>PhD research, University of Warsaw</span>'
              . '<span>Top 3% on Toptal</span><span>' . $count . ' essays and counting</span></p>';
     $header .= '</div>';
@@ -143,8 +148,11 @@ function render_index(array $posts): string
     $content .= '<div class="home-section"><div class="section-head">' . eyebrow('Three doors')
               . '<h2>Pick where to start</h2></div>' . doors_block($posts) . '</div>';
     $content .= '<div class="home-section">' . most_read_block($posts) . '</div>';
-    $content .= '<div class="home-section"><div class="section-head">' . eyebrow('All ' . $count . ' essays')
-              . '<h2>Everything, newest first</h2></div>' . archive_rows($posts) . '</div>';
+    // the newest essays after the featured one, with thumbnails; the rest live on /blog/archive/
+    $latest = array_slice($posts, 1, HOME_LATEST_COUNT);
+    $content .= '<div class="home-section"><div class="section-head">' . eyebrow('Latest ' . HOME_LATEST_COUNT)
+              . '<h2>Recently published</h2></div>' . log_rows($latest)
+              . '<p class="home-all"><a class="btn btn-ghost" href="/blog/archive/">All ' . $count . ' essays ' . arrow_icon() . '</a></p></div>';
     $content .= '<div style="margin-top:4rem">' . newsletter_box() . '</div>';
 
     return listing_page(
@@ -154,6 +162,26 @@ function render_index(array $posts): string
         $extra,
         $header,
         $content
+    );
+}
+
+/** /blog/archive/: every published essay, newest first, as rows with small thumbnails. */
+function render_archive_page(array $posts): string
+{
+    $count = count($posts);
+    $url = cfg('site_url') . '/blog/archive/';
+    $extra  = ld_script(schema_item_list($posts)) . "\n";
+    $extra .= ld_script(schema_breadcrumbs(['Field Notes' => cfg('site_url') . '/', 'All essays' => $url]));
+    $header  = eyebrow('Archive');
+    $header .= '<h1 style="font-size:clamp(2rem,4.5vw,2.8rem)">All ' . $count . ' essays</h1>';
+    $header .= '<p>Everything published so far, newest first. New here? <a href="/blog/start/">Start with the map</a>.</p>';
+    return listing_page(
+        'All essays · Field Notes · Bartosz Frąckowiak',
+        'Every Field Notes essay on software architecture, the people around it, and AI in engineering teams, newest first.',
+        $url,
+        $extra,
+        $header,
+        log_rows($posts) . '<div style="margin-top:4rem">' . newsletter_box() . '</div>'
     );
 }
 

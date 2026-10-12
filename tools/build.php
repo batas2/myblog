@@ -42,7 +42,7 @@ function build_cleanup_stale(array $keepSlugs, array $keepTagSlugs): array
     $sweep = function (string $parent, array $keep, string $label, bool $needPair) use (&$removed): void {
         foreach (glob($parent . '/*', GLOB_ONLYDIR) ?: [] as $dir) {
             $slug = basename($dir);
-            if ($slug === 'tag' || $slug === 'start' || in_array($slug, $keep, true)) continue;
+            if ($slug === 'tag' || $slug === 'start' || $slug === 'archive' || in_array($slug, $keep, true)) continue;
             if ($needPair && !(is_file("$dir/index.php") && is_file("$dir/index.md"))) continue;
             foreach (['index.php', 'index.md'] as $f) {
                 if (is_file("$dir/$f")) unlink("$dir/$f");
@@ -102,6 +102,8 @@ build_write(APP_ROOT . '/blog/index.php', render_blog_redirect());
 build_write(APP_ROOT . '/blog/_latest.php', render_latest_partial($posts));
 @mkdir(APP_ROOT . '/blog/start', 0755, true);
 build_write(APP_ROOT . '/blog/start/index.php', render_start_page($posts));
+@mkdir(APP_ROOT . '/blog/archive', 0755, true);
+build_write(APP_ROOT . '/blog/archive/index.php', render_archive_page($posts));
 build_write(APP_ROOT . '/404.php', render_404_page($posts));
 
 $tags = collect_tags($posts);

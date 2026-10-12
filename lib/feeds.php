@@ -61,6 +61,7 @@ function render_sitemap(array $posts): string
     $logMod = is_file($logSrc) ? date('Y-m-d', (int) filemtime($logSrc)) : $stemmaMod;
     $urls = "  <url><loc>{$site}/</loc><lastmod>{$latest}</lastmod><priority>1.0</priority></url>\n"
           . "  <url><loc>{$site}/blog/start/</loc><lastmod>{$latest}</lastmod><priority>0.8</priority></url>\n"
+          . "  <url><loc>{$site}/blog/archive/</loc><lastmod>{$latest}</lastmod><priority>0.6</priority></url>\n"
           . "  <url><loc>{$site}/about/</loc><lastmod>{$latest}</lastmod><priority>0.7</priority></url>\n"
           . "  <url><loc>{$site}/stemma/</loc><lastmod>{$stemmaMod}</lastmod><priority>0.8</priority></url>\n"
           . "  <url><loc>{$site}/stemma/changelog/</loc><lastmod>{$logMod}</lastmod><priority>0.5</priority></url>\n";

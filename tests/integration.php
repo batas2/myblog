@@ -117,7 +117,7 @@ t_contains('draft:     itest-draft-post', $buildOut, 'build reports drafts');
 )));
 t_assert($allN >= $pubN + 2 && $pubN > 0, "counts sane (all={$allN}, published={$pubN}, tags={$tagN})");
 
-$postDirs = array_filter(glob($SANDBOX . '/blog/*'), fn($d) => is_dir($d) && !in_array(basename($d), ['tag', 'start'], true));
+$postDirs = array_filter(glob($SANDBOX . '/blog/*'), fn($d) => is_dir($d) && !in_array(basename($d), ['tag', 'start', 'archive'], true));
 t_eq($pubN, count($postDirs), 'exactly one directory per published post');
 $mdOk = $phpOk = true;
 foreach ($postDirs as $d) {
@@ -163,7 +163,7 @@ section('generated page contracts');
 t_assert(simplexml_load_file($SANDBOX . '/feed.xml') !== false, 'generated feed.xml valid');
 $sm = simplexml_load_file($SANDBOX . '/sitemap.xml');
 t_assert($sm !== false, 'generated sitemap.xml valid');
-t_eq(5 + $pubN + $tagN, count($sm->url), 'sitemap url count = home + start + about + stemma + changelog + posts + tags');
+t_eq(6 + $pubN + $tagN, count($sm->url), 'sitemap url count = home + start + archive + about + stemma + changelog + posts + tags');
 t_contains('/blog/start/', $smRaw, 'start page in sitemap');
 t_contains('/about/', $smRaw, 'about page in sitemap');
 t_contains('/stemma/', $smRaw, 'project page in sitemap');
@@ -201,7 +201,9 @@ $legacy = (string) file_get_contents($SANDBOX . '/blog/stop-calling-it-legacy-co
 t_contains('Also published on Medium', $legacy, 'syndication badge on medium post');
 t_contains('rel="syndication"', $legacy, 'syndication head link');
 t_contains('class="featured2', $index, 'featured split card present');
-t_eq($pubN, substr_count($index, '<li class="arow">'), 'archive rows = every published essay');
+t_contains('href="/blog/archive/"', $index, 'homepage links the full archive');
+$archivePage = (string) file_get_contents($SANDBOX . '/blog/archive/index.php');
+t_eq($pubN, substr_count($archivePage, '<li><a href="/blog/'), 'archive page = every published essay');
 t_not_contains('class="pcard', $index, 'no magazine grid on the homepage');
 t_contains('class="doors"', $index, 'three doors on the homepage');
 t_contains('Most read', $index, 'most-read block on the homepage');

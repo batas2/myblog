@@ -126,7 +126,7 @@ Body in markdown (h2, lists, quotes, code fences, links)…
 order written; without it the block falls back to shared tags, which is coarse because most
 essays share *Software Architecture*. A post that belongs to a thread goes into `SERIES` in
 `lib/blog.php`: the essay then carries a series box after the text and a "Series, part N" label
-in every list. The homepage "Most read" block is `HOME_MOST_READ` in the same file, curated by
+in every list. The homepage lists the newest `HOME_LATEST_COUNT` (10) essays and links `/blog/archive/` for the rest; its "Most read" block is `HOME_MOST_READ` in the same file, curated by
 hand from the admin Content tab (engaged time), because the build never sees analytics.db.
 The list thumbnail is the post's first diagram when that diagram is no wider than 2:1, else the
 hero photo.
