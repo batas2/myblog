@@ -61,11 +61,38 @@ const SHARE_TARGETS = [
     'newsletter' => ['label' => 'Newsletter', 'medium' => 'email'],
 ];
 
-/** Posts that belong to a named series: slug => [series name, part]. */
+/** Posts that belong to a named series: slug => [series name, part]. One series per post. */
 const SERIES = [
-    'from-signals-to-blips'      => ['Tools That Scale', 1],
-    'probabilistic-metrics'      => ['Tools That Scale', 2],
-    'prompt-driven-architecture' => ['Tools That Scale', 3],
+    'from-signals-to-blips'                   => ['Tools That Scale', 1],
+    'probabilistic-metrics'                   => ['Tools That Scale', 2],
+    'prompt-driven-architecture'              => ['Tools That Scale', 3],
+    'the-bottleneck-moved'                    => ['Reviewability', 1],
+    'we-deleted-the-wrong-half-of-agile'      => ['Reviewability', 2],
+    'every-approval-is-a-missing-rule'        => ['The agentic operating model', 1],
+    'the-model-grades-its-own-homework'       => ['The agentic operating model', 2],
+    'four-levels-three-cliffs'                => ['The agentic operating model', 3],
+    'adoption-is-the-deliverable'             => ['Adoption', 1],
+    'nobody-resisted'                         => ['Adoption', 2],
+    'the-model-is-the-easy-part'              => ['Invent the least', 1],
+    'a-feature-is-not-a-service'              => ['Invent the least', 2],
+    'decisions-have-an-architecture-too'      => ['Decisions', 1],
+    'the-migration-that-never-starts'         => ['Decisions', 2],
+    'design-the-stopping-point'               => ['Decisions', 3],
+    'diagrams-are-conversations-not-documentation' => ['Diagrams', 1],
+    'the-diagram-that-cannot-lie'             => ['Diagrams', 2],
+    'turn-the-sequence-diagram-on-its-side'   => ['Diagrams', 3],
+];
+
+/**
+ * The homepage "Most read" block. Curated by hand from the admin Content tab
+ * (engaged time, not pageviews): the build cannot read analytics.db, which is
+ * gitignored and only lives on the server. Refresh it quarterly.
+ */
+const HOME_MOST_READ = [
+    'the-bottleneck-moved',
+    'mathematicians-vs-lawyers',
+    'prompt-driven-architecture',
+    'multi-agent-is-an-org-chart',
 ];
 
 /* ---------------- urls & labels ---------------- */
@@ -188,7 +215,7 @@ function parse_post_file(string $file): ?array
        for the value, and where the raw value lands. Adding a meta key is one
        row here rather than another near-identical branch in the loop below. */
     $meta = ['Status' => null, 'Publish' => null, 'Updated' => null,
-             'Scores' => null, 'Scored' => null, 'Tags' => null];
+             'Scores' => null, 'Scored' => null, 'Tags' => null, 'Related' => null];
     foreach (array_keys(SYNDICATION) as $platform) $meta[$platform] = null;
     foreach (array_keys(SHARED_ON) as $platform) $meta[$platform] = null;
     $metaPattern = ['Status' => '[a-zA-Z]+'];
@@ -261,6 +288,10 @@ function parse_post_file(string $file): ?array
     $scoredRaw  = $meta['Scored'] ?? '';
     $draft      = strtolower((string) $meta['Status']) === 'draft';
     $tags       = $meta['Tags'] === null ? [] : array_map('trim', explode(',', $meta['Tags']));
+    // optional **Related:** slug, slug — the author's own picks for "keep reading";
+    // tags only fill the block when this line is absent
+    $related    = $meta['Related'] === null ? []
+                : array_values(array_filter(array_map('trim', explode(',', $meta['Related'])), fn($s) => $s !== ''));
 
     if ($inFence) {
         blog_warn("{$name}.md: unclosed code fence — any metadata after it (Status/Publish/Tags) is treated as fenced text and ignored");
@@ -300,6 +331,7 @@ function parse_post_file(string $file): ?array
         'title'       => $title,
         'subtitle'    => $subtitle,
         'tags'        => $tags,
+        'related'     => $related,
         'syndication' => $syndication,
         'shared' => $shared,
         'status'      => $status,
@@ -521,9 +553,23 @@ function post_write_status(string $file, string $action, string $when = ''): boo
     );
 }
 
-/** Up to $n other posts sharing the most tags with $post; recency breaks ties. */
+/**
+ * Up to $n other posts to keep reading. The author's **Related:** picks come first,
+ * in the order written, skipping slugs that are not in the pool; without picks it
+ * falls back to the posts sharing the most tags, recency breaking ties. The tag
+ * fallback is coarse on purpose (25 of 33 essays share one tag), which is why the
+ * manual line exists at all.
+ */
 function related_posts(array $post, array $pool, int $n = 3): array
 {
+    if (!empty($post['related'])) {
+        $by = array_column($pool, null, 'slug');
+        $picked = [];
+        foreach ($post['related'] as $slug) {
+            if ($slug !== $post['slug'] && isset($by[$slug])) $picked[] = $by[$slug];
+        }
+        if ($picked) return array_slice($picked, 0, $n);
+    }
     $scored = [];
     foreach ($pool as $p) {
         if ($p['slug'] === $post['slug']) continue;
@@ -691,4 +737,79 @@ function render_llms_full(array $posts): string
         $out .= "\n\n============================================================\n\n" . render_md($p);
     }
     return $out;
+}
+
+/* ---------------- series, reading paths, figure thumbnails ---------------- */
+
+/** Every slug of the series $slug belongs to, in part order; [] outside a series. */
+function series_slugs(string $slug): array
+{
+    if (!isset(SERIES[$slug])) return [];
+    $name = SERIES[$slug][0];
+    $parts = [];
+    foreach (SERIES as $s => [$n, $i]) if ($n === $name) $parts[$i] = $s;
+    ksort($parts);
+    return array_values($parts);
+}
+
+/**
+ * The three reading paths ("doors"): one editorial list, rendered on the start
+ * page and on the homepage so the two never drift apart.
+ */
+function reading_paths(): array
+{
+    return [
+        [
+            'k'     => 'Architecture & orgs',
+            'title' => 'People problems, dressed as technical ones',
+            'desc'  => 'Ownership gaps, decision rights, and the org chart hiding inside your architecture. For architects and tech leads who keep fixing the same "technical" issue that never was one.',
+            'reads' => ['nobody-owns-the-sum', 'decisions-have-an-architecture-too', 'the-anti-corruption-layer-is-for-people-too'],
+        ],
+        [
+            'k'      => 'The AI transformation',
+            'title'  => 'Running AI adoption at real scale',
+            'desc'   => 'Fifteen squads, several hundred developers, one transformation: the tech radar that drives it, the metrics that survive contact with reality, and the architecture practice that grew out of both.',
+            'series' => 'The “Tools That Scale” series',
+            'reads'  => ['from-signals-to-blips', 'probabilistic-metrics', 'prompt-driven-architecture'],
+        ],
+        [
+            'k'     => 'Building in the open',
+            'title' => 'One person, three products, AI agents',
+            'desc'  => 'Field reports from shipping my own products solo, with AI doing the typing: what actually changes, what breaks, and the receipts to prove it.',
+            'reads' => ['a-company-of-one-staffed-by-agents', 'the-diagram-that-cannot-lie', 'edge-cases-written-by-parliament'],
+        ],
+    ];
+}
+
+/** Widest figure (width / height) still legible as a list thumbnail. */
+const FIGURE_THUMB_MAX_RATIO = 2.0;
+
+/**
+ * The post's own drawing as a thumbnail, when it has one: the first PNG under
+ * assets/img/posts/<slug>/ (alphabetical), skipping dark variants. A `-light.png`
+ * reports its `-dark.png` sibling so a card can swap it in dark mode. Stock photos
+ * all look alike in a list; a figure is the one picture that is about the essay.
+ */
+function figure_thumb_meta(string $slug): ?array
+{
+    $dir = APP_ROOT . '/assets/img/posts/' . $slug;
+    if (!is_dir($dir)) return null;
+    $files = glob($dir . '/*.png') ?: [];
+    sort($files);
+    foreach ($files as $f) {
+        $name = basename($f);
+        if (str_ends_with($name, '-dark.png')) continue;
+        [$w, $h] = getimagesize($f) ?: [null, null];
+        if (!$w || !$h) continue;
+        // only the first figure is a candidate: a flow strip wider than 2:1 turns into an
+        // unreadable line in a 150x94 thumb, and the post then keeps its photo instead
+        if ($w / $h > FIGURE_THUMB_MAX_RATIO) return null;
+        $out = ['figure' => true, 'src' => "/assets/img/posts/{$slug}/{$name}", 'w' => $w, 'h' => $h, 'dark' => null];
+        if (str_ends_with($name, '-light.png')) {
+            $darkName = substr($name, 0, -strlen('-light.png')) . '-dark.png';
+            if (is_file($dir . '/' . $darkName)) $out['dark'] = "/assets/img/posts/{$slug}/{$darkName}";
+        }
+        return $out;
+    }
+    return null;
 }

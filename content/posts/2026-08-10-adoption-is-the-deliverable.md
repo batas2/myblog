@@ -74,4 +74,6 @@ I am still watching for that ceiling. I cannot compute where it sits. What I can
 **Publish:** 2026-08-10 09:00
 **Updated:** 2026-08-13 13:05
 
+**Related:** turn-the-sequence-diagram-on-its-side, pricing-the-invisible, a-feature-is-not-a-service
+
 **Tags:** Software Architecture, Domain-Driven Design, Organizational Design, Engineering Leadership, Systems Thinking

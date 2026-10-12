@@ -62,18 +62,24 @@ function render_post(array $p, ?array $prev, ?array $next, array $all = []): str
     $html .= '<h1>' . e($p['title']) . '</h1>';
     if ($p['subtitle']) $html .= '<p class="dek">' . e($p['subtitle']) . '</p>';
     $html .= '<p class="meta" style="margin-top:1.4rem">' . post_meta_line($p) . '</p>';
+    $html .= byline();
     $html .= '<div class="rule"></div></div>';
 
     if ($hero) $html .= hero_figure($hero, $p['title']);
-    $html .= syndication_badge($p['syndication']);
 
     $html .= '<article class="prose rise-2">' . $p['html'] . '</article>';
+
+    // the cross-post badges used to sit above the first paragraph, which is an
+    // invitation to leave before reading; they belong with the tags, after the essay
+    $html .= syndication_badge($p['syndication']);
 
     if ($p['tags']) {
         $html .= '<div class="tag-row">';
         foreach ($p['tags'] as $t) $html .= tag_link($t);
         $html .= '</div>';
     }
+
+    if ($all) $html .= series_nav($p['slug'], $all);
 
     if ($prev || $next) {
         $html .= '<nav class="pager">';
@@ -82,10 +88,10 @@ function render_post(array $p, ?array $prev, ?array $next, array $all = []): str
         $html .= '</nav>';
     }
 
-    // keep the reader in the archive: closest essays by shared tags
+    // keep the reader in the archive: the author's picks, or the closest essays by shared tags
     if ($all && ($rel = related_posts($p, $all))) {
         $html .= '<div class="related-wrap">';
-        $html .= '<div class="related-head">' . eyebrow('Keep reading') . '<h2>Related field notes</h2></div>';
+        $html .= '<div class="related-head">' . eyebrow(!empty($p['related']) ? 'Picked by the author' : 'Keep reading') . '<h2>Related field notes</h2></div>';
         $html .= log_rows($rel);
         $html .= '</div>';
     }
@@ -106,9 +112,13 @@ function render_post(array $p, ?array $prev, ?array $next, array $all = []): str
  * the root, so the generated HTML stays inside the one directory .gitignore
  * already treats as build output.
  *
- * There is deliberately no hero, no portrait and no call to action above the
- * essays. A reader arriving from a link should meet the writing first; the
- * person behind it is one click away on /about/ for anyone who wants it.
+ * The hero says who writes this and why to trust him, in plain text (the AI
+ * fetchers read this page more than any other), with Start here as a real
+ * button. Below it: the newest essay, three doors into the archive, the essays
+ * readers stay on longest, and the whole archive as a compact list. The 2026-10
+ * analytics pull behind this shape: 44% of homepage visits went to a second
+ * page, zero of them to Start here, and the 33-card photo wall was eleven rows
+ * of identical cards on a desktop and thirty screens on a phone.
  */
 function render_index(array $posts): string
 {
@@ -116,16 +126,25 @@ function render_index(array $posts): string
     $extra .= ld_script(schema_blog()) . "\n" . ld_script(schema_item_list($posts));
 
     $count = count($posts);
-    $header  = eyebrow('Field Notes', true);
+    $header  = '<div class="home-hero">';
+    $header .= '<img class="home-face" src="/myself.jpeg" alt="Bartosz Frąckowiak" width="72" height="72" decoding="async">';
+    $header .= eyebrow('Field Notes', true);
     $header .= '<h1 style="font-size:clamp(2.2rem,5vw,3.2rem)">Field Notes</h1>';
-    $header .= '<p>Weekly essays on software architecture, the people around it, and the corporate machine they form together.</p>';
-    $header .= '<p class="meta" style="margin-top:1rem">' . $count . ' essays · new signal most Mondays'
-             . ' · <a href="/blog/start/">new here? start here</a>'
-             . ' · <a href="#newsletter">by email</a>'
-             . ' · <a href="/feed.xml">RSS</a></p>';
+    $header .= '<p class="home-lede">I\'m <strong>Bartosz Frąckowiak</strong>, a solution architect. I co-lead an AI transformation for several hundred developers, and I write about what breaks between the system, the people around it, and the company they form together. One essay, most Mondays.</p>';
+    $header .= '<p class="hero-actions">'
+             . '<a class="btn btn-primary" href="/blog/start/">Start here ' . arrow_icon() . '</a>'
+             . '<a class="btn btn-ghost" href="#newsletter">Get it by email</a>'
+             . '<a class="btn btn-ghost" href="/feed.xml">RSS</a></p>';
+    $header .= '<p class="proof"><span>Solution architect in global SaaS</span><span>PhD research, University of Warsaw</span>'
+             . '<span>Top 3% on Toptal</span><span>' . $count . ' essays and counting</span></p>';
+    $header .= '</div>';
 
     $content  = featured_card($posts[0]);
-    $content .= post_grid(array_slice($posts, 1));
+    $content .= '<div class="home-section"><div class="section-head">' . eyebrow('Three doors')
+              . '<h2>Pick where to start</h2></div>' . doors_block($posts) . '</div>';
+    $content .= '<div class="home-section">' . most_read_block($posts) . '</div>';
+    $content .= '<div class="home-section"><div class="section-head">' . eyebrow('All ' . $count . ' essays')
+              . '<h2>Everything, newest first</h2></div>' . archive_rows($posts) . '</div>';
     $content .= '<div style="margin-top:4rem">' . newsletter_box() . '</div>';
 
     return listing_page(
@@ -203,7 +222,7 @@ function render_404_page(array $posts): string
     $html .= '<p style="color:var(--muted);max-width:56ch">The page you\'re after doesn\'t exist. Maybe the link aged, maybe a slug changed — or the essay is scheduled and not live yet. The archive, however, is very much alive:</p>';
     $html .= '<p style="margin:1.8rem 0 3rem"><a class="btn btn-primary" href="/blog/start/">Start here ' . arrow_icon() . '</a> ';
     $html .= '<a class="btn btn-ghost" href="/" style="margin-left:.6rem">All essays</a></p>';
-    $html .= '<div class="related-head">' . eyebrow('Newest signals', true) . '</div>';
+    $html .= '<div class="related-head">' . eyebrow('Newest essays', true) . '</div>';
     $html .= log_rows(array_slice($posts, 0, 3));
     $html .= '</main>';
     return $html . site_footer();
@@ -222,27 +241,7 @@ function render_start_page(array $posts): string
     $pick = fn(string $slug): ?array => $by[$slug] ?? null;
 
     $hook = $pick('mathematicians-vs-lawyers');
-    $doors = [
-        [
-            'k'     => 'Architecture & orgs',
-            'title' => 'People problems, dressed as technical ones',
-            'desc'  => 'Ownership gaps, decision rights, and the org chart hiding inside your architecture. For architects and tech leads who keep fixing the same "technical" issue that never was one.',
-            'reads' => ['nobody-owns-the-sum', 'decisions-have-an-architecture-too', 'the-anti-corruption-layer-is-for-people-too'],
-        ],
-        [
-            'k'      => 'The AI transformation',
-            'title'  => 'Running AI adoption at real scale',
-            'desc'   => 'Fifteen squads, several hundred developers, one transformation: the tech radar that drives it, the metrics that survive contact with reality, and the architecture practice that grew out of both.',
-            'series' => 'The “Tools That Scale” series',
-            'reads'  => ['from-signals-to-blips', 'probabilistic-metrics', 'prompt-driven-architecture'],
-        ],
-        [
-            'k'     => 'Building in the open',
-            'title' => 'One person, three products, AI agents',
-            'desc'  => 'Field reports from shipping my own products solo, with AI doing the typing: what actually changes, what breaks, and the receipts to prove it.',
-            'reads' => ['a-company-of-one-staffed-by-agents', 'the-diagram-that-cannot-lie', 'edge-cases-written-by-parliament'],
-        ],
-    ];
+    $doors = reading_paths();   // shared with the homepage, so the two never drift
 
     $n = count($posts);
     $url = cfg('site_url') . '/blog/start/';
@@ -280,7 +279,7 @@ function render_start_page(array $posts): string
     $html .= '<img class="start-face" src="/myself.jpeg" alt="Bartosz Frąckowiak" width="76" height="76" loading="lazy" decoding="async">';
     $html .= eyebrow('Start here', true);
     $html .= '<h1 style="font-size:clamp(2.1rem,4.6vw,3rem)">' . $n . ' essays in. Here is the map.</h1>';
-    $html .= '<p>I\'m <strong>Bartosz Frąckowiak</strong> — solution architect, currently leading an AI transformation across several hundred engineers. Every week I publish one field note about systems, the people around them, and the corporate machine they form together. This page is the shortest path to the good stuff.</p>';
+    $html .= '<p>I\'m <strong>Bartosz Frąckowiak</strong> — solution architect, co-leading an AI transformation across several hundred engineers. Every week I publish one field note about systems, the people around them, and the corporate machine they form together. This page is the shortest path to the good stuff.</p>';
     $html .= '<p class="proof" style="margin-top:1.1rem"><span>Solution Architect in global SaaS</span><span>PhD research, University of Warsaw</span><span>Top 3% on Toptal</span><span>' . $n . ' essays and counting</span></p>';
     $html .= '</div>';
 

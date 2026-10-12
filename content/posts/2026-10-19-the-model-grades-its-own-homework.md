@@ -65,4 +65,6 @@ Take your last twenty merged pull requests. For each one, write down the class t
 **Scores:** tension=7 originality=6 personal=7 contrarian=7 substance=8 punch=7 trend=8
 **Scored:** 2026-10-11 rubric=v1 model=claude-fable-5-1
 
+**Related:** every-approval-is-a-missing-rule, the-bottleneck-moved, we-deleted-the-wrong-half-of-agile
+
 **Tags:** Software Architecture, AI Transformation, Artificial Intelligence, Engineering Leadership, Decision Making

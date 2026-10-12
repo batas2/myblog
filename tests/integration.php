@@ -201,7 +201,10 @@ $legacy = (string) file_get_contents($SANDBOX . '/blog/stop-calling-it-legacy-co
 t_contains('Also published on Medium', $legacy, 'syndication badge on medium post');
 t_contains('rel="syndication"', $legacy, 'syndication head link');
 t_contains('class="featured2', $index, 'featured split card present');
-t_eq($pubN - 1, substr_count($index, 'class="pcard reveal"'), 'grid cards = published minus featured');
+t_eq($pubN, substr_count($index, '<li class="arow">'), 'archive rows = every published essay');
+t_not_contains('class="pcard', $index, 'no magazine grid on the homepage');
+t_contains('class="doors"', $index, 'three doors on the homepage');
+t_contains('Most read', $index, 'most-read block on the homepage');
 t_not_contains('On Medium</h2>', $index, 'medium strip removed');
 
 /* ---------------- HTTP layer ---------------- */
@@ -259,6 +262,9 @@ t_contains('Architecture Health Check', $body, 'services page lists engagements'
 t_not_contains('PLN', $body, 'no prices on the public services page');
 t_contains('/about/#contact', $body, 'services page falls back to contact CTA when calendly unset');
 t_contains('noindex', $body, 'unlisted commercial page carries noindex');
+[, $body] = http_req('GET', "$BASE/blog/mathematicians-vs-lawyers/");
+t_contains('<details class="comment-details"', $body, 'an empty thread hides the form behind a disclosure');
+t_contains('<summary>Leave a comment</summary>', $body, 'with a plain invitation as its summary');
 [, $body] = http_req('GET', "$BASE/blog/nobody-owns-the-sum/");
 t_not_contains('href="/services/"', $body, 'reading pages never link the commercial page');
 t_contains('href="/about/"', $body, 'reading pages link to About instead');
@@ -273,7 +279,7 @@ t_not_contains('/services/', $nav, 'top nav no longer links services');
 t_contains('/about/', $nav, 'top nav offers About');
 t_eq(true, strpos($nav, 'href="/"') < strpos($nav, '/about/'), 'blog sits left of about in the nav');
 [, $body] = http_req('GET', "$BASE/");
-t_contains('start here', $body, 'home page invites new readers to the start page');
+t_contains('class="btn btn-primary" href="/blog/start/">Start here', $body, 'home page invites new readers to the start page with a button');
 [$code, $body] = http_req('GET', "$BASE/blog/data-driven-theater/index.md");
 t_eq(200, $code, 'markdown mirror served');
 [$code] = http_req('GET', "$BASE/feed.xml");

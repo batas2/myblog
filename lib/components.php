@@ -8,16 +8,25 @@ declare(strict_types=1);
 
 /* ---------------- primitives ---------------- */
 
-/** Lazy-loaded image with explicit dimensions (no layout shift). */
-function img_lazy(string $src, string $alt, $w, $h): string
+/** ` srcset="…" sizes="…"` when a responsive candidate list is given, else nothing. */
+function img_srcset(string $srcset, string $sizes): string
 {
-    return '<img src="' . e($src) . '" alt="' . e($alt) . '" width="' . $w . '" height="' . $h . '" loading="lazy" decoding="async">';
+    if ($srcset === '') return '';
+    return ' srcset="' . e($srcset) . '"' . ($sizes !== '' ? ' sizes="' . e($sizes) . '"' : '');
+}
+
+/** Lazy-loaded image with explicit dimensions (no layout shift). */
+function img_lazy(string $src, string $alt, $w, $h, string $srcset = '', string $sizes = ''): string
+{
+    return '<img src="' . e($src) . '" alt="' . e($alt) . '" width="' . $w . '" height="' . $h . '"'
+         . img_srcset($srcset, $sizes) . ' loading="lazy" decoding="async">';
 }
 
 /** Eagerly-loaded LCP image with explicit dimensions. */
-function img_eager(string $src, string $alt, $w, $h): string
+function img_eager(string $src, string $alt, $w, $h, string $srcset = '', string $sizes = ''): string
 {
-    return '<img src="' . e($src) . '" alt="' . e($alt) . '" width="' . $w . '" height="' . $h . '" loading="eager" decoding="async" fetchpriority="high">';
+    return '<img src="' . e($src) . '" alt="' . e($alt) . '" width="' . $w . '" height="' . $h . '"'
+         . img_srcset($srcset, $sizes) . ' loading="eager" decoding="async" fetchpriority="high">';
 }
 
 /** The radar-blip eyebrow label; $live adds the ping animation. */
@@ -39,10 +48,21 @@ function post_meta_line(array $p): string
     return nice_ts($p['publish_ts']) . ' · ' . $p['minutes'] . ' min read' . series_suffix($p['slug']);
 }
 
-/** Thumbnail wrapped in a named span, when the post has a hero image. */
+/**
+ * Thumbnail wrapped in a named span, when the post has a picture. A figure
+ * (figure_thumb_meta) renders at its own proportions, as a <picture> when it
+ * ships a dark variant; a photo (hero_meta) renders its cropped thumb.
+ */
 function thumb_span(?array $h, string $class): string
 {
     if (!$h) return '';
+    if (!empty($h['figure'])) {
+        $img = img_lazy($h['src'], '', $h['w'], $h['h']);
+        if (!empty($h['dark'])) {
+            $img = '<picture><source media="(prefers-color-scheme: dark)" srcset="' . e($h['dark']) . '">' . $img . '</picture>';
+        }
+        return '<span class="' . $class . ' thumb-figure">' . $img . '</span>';
+    }
     return '<span class="' . $class . '">' . img_lazy($h['thumb'], '', $h['tw'], $h['th']) . '</span>';
 }
 
@@ -126,7 +146,8 @@ function log_rows(array $posts, bool $withTags = false, string $extraClass = '')
     foreach ($posts as $p) {
         $html .= '<li' . ($withTags && $p['tags'] ? ' class="has-tags"' : '') . '>';
         $html .= '<a href="' . e(post_path($p['slug'])) . '">';
-        $html .= thumb_span(hero_meta($p['slug']), 'thumb');
+        // the essay's own drawing beats a stock photo that looks like every other stock photo
+        $html .= thumb_span(figure_thumb_meta($p['slug']) ?? hero_meta($p['slug']), 'thumb');
         $html .= '<span class="log-main">';
         $html .= '<span class="date">' . log_ts($p['publish_ts']) . '</span>';
         $html .= '<h3>' . e($p['title']) . '</h3><span class="sub">' . e($p['subtitle']) . '</span>';
@@ -146,7 +167,9 @@ function log_rows(array $posts, bool $withTags = false, string $extraClass = '')
 /** one essay card for the magazine grid */
 function post_card(array $p): string
 {
-    $out  = '<a class="pcard reveal" href="' . e(post_path($p['slug'])) . '">';
+    // no scroll-reveal: a card that is invisible until an observer fires is a blank
+    // screen for anyone who scrolls faster than the animation
+    $out  = '<a class="pcard" href="' . e(post_path($p['slug'])) . '">';
     $out .= thumb_span(hero_meta($p['slug']), 'pcard-media');
     $out .= '<span class="pcard-body">';
     $out .= '<span class="meta">' . log_ts($p['publish_ts']) . ' · ' . $p['minutes'] . ' min</span>';
@@ -167,17 +190,22 @@ function post_card(array $p): string
 function featured_card(array $p, bool $eager = true): string
 {
     $hero = hero_meta($p['slug']);
-    $html  = '<a class="featured2 rise-2" href="' . e(post_path($p['slug'])) . '">';
+    $html  = '<a class="featured2" href="' . e(post_path($p['slug'])) . '">';
     $html .= '<span class="f2-body">';
-    $html .= eyebrow('Latest signal', true);
+    $html .= eyebrow('Latest essay', true);
     $html .= '<h2>' . e($p['title']) . '</h2>';
     $html .= '<p>' . e($p['subtitle']) . '</p>';
     $html .= '<span class="meta">' . post_meta_line($p) . '</span>';
     $html .= '<span class="f2-go">Read the essay ' . arrow_icon() . '</span>';
     $html .= '</span>';
     if ($hero) {
-        $img = $eager ? img_eager($hero['src'], $p['title'], $hero['w'], $hero['h'])
-                      : img_lazy($hero['src'], $p['title'], $hero['w'], $hero['h']);
+        // the card is half the row on a desktop and the whole row on a phone, and the
+        // 480px thumb is enough for the phone — the full file only loads where it shows
+        $srcset = $hero['thumb'] !== $hero['src']
+            ? $hero['thumb'] . ' ' . $hero['tw'] . 'w, ' . $hero['src'] . ' ' . $hero['w'] . 'w' : '';
+        $sizes = $srcset !== '' ? '(max-width: 860px) 100vw, 50vw' : '';
+        $img = $eager ? img_eager($hero['src'], $p['title'], $hero['w'], $hero['h'], $srcset, $sizes)
+                      : img_lazy($hero['src'], $p['title'], $hero['w'], $hero['h'], $srcset, $sizes);
         $html .= '<span class="f2-media">' . $img . '</span>';
     }
     return $html . '</a>';
@@ -206,7 +234,7 @@ function newsletter_box(string $variant = ''): string
     return <<<HTML
 <div class="newsletter {$variant}" id="newsletter">
   <div class="nl-text">
-    <span class="eyebrow"><span class="blip blip-live"></span>The signal</span>
+    <span class="eyebrow"><span class="blip blip-live"></span>Newsletter</span>
     <h3>Get the next field note</h3>
     <p>One essay on architecture, the people around it, and the corporate machine. Most Mondays, straight to your inbox.</p>
   </div>
@@ -318,4 +346,93 @@ document.documentElement.classList.add('js');
 })();
 </script>
 HTML;
+}
+
+/* ---------------- homepage blocks, byline, series ---------------- */
+
+/** One line under an article title: face, name, what he does, a door to About. */
+function byline(): string
+{
+    return '<p class="byline"><img src="/myself.jpeg" alt="" width="36" height="36" loading="lazy" decoding="async">'
+         . '<span><b>Bartosz Frąckowiak</b> · solution architect, co-leading an AI transformation for several hundred developers'
+         . ' · <a href="/about/">about me</a></span></p>';
+}
+
+/**
+ * The series box after an article: every live part, the current one marked.
+ * Nothing renders unless at least two parts are in $all, so a series whose
+ * later parts are still scheduled does not advertise an empty list.
+ */
+function series_nav(string $slug, array $all): string
+{
+    $slugs = series_slugs($slug);
+    if (!$slugs) return '';
+    $by = array_column($all, null, 'slug');
+    $live = array_values(array_filter($slugs, fn($s) => isset($by[$s])));
+    if (count($live) < 2) return '';
+    [$name] = SERIES[$slug];
+    $html  = '<div class="series-wrap"><nav class="series-nav" aria-label="' . e($name) . ' series">';
+    $html .= eyebrow('Series');
+    $html .= '<p class="series-title">' . e($name) . '</p><ol>';
+    foreach ($slugs as $i => $s) {
+        if (!isset($by[$s])) continue;
+        $p = $by[$s];
+        $cur = $s === $slug;
+        $html .= '<li' . ($cur ? ' aria-current="page"' : '') . '>';
+        $html .= '<span class="series-no">' . ($i + 1) . '</span>';
+        $html .= $cur ? '<span class="series-cur">' . e($p['title']) . '</span>'
+                      : '<a href="' . e(post_path($s)) . '">' . e($p['title']) . '</a>';
+        $html .= '</li>';
+    }
+    return $html . '</ol></nav></div>';
+}
+
+/** The whole archive as a compact list: date, title, one line, length. No pictures. */
+function archive_rows(array $posts): string
+{
+    $html = '<ol class="archive">';
+    foreach ($posts as $p) {
+        $html .= '<li class="arow"><a href="' . e(post_path($p['slug'])) . '">';
+        $html .= '<span class="a-date">' . log_ts($p['publish_ts']) . '</span>';
+        $html .= '<span class="a-main"><span class="a-title">' . e($p['title']) . '</span>';
+        $html .= '<span class="a-sub">' . e($p['subtitle']) . '</span></span>';
+        $html .= '<span class="a-meta">' . $p['minutes'] . ' min' . series_suffix($p['slug']) . '</span>';
+        $html .= '</a></li>';
+    }
+    return $html . '</ol>';
+}
+
+/** Three doors into the archive, from reading_paths(); each lists its three essays. */
+function doors_block(array $posts): string
+{
+    $by = array_column($posts, null, 'slug');
+    $html = '<div class="doors">';
+    foreach (reading_paths() as $i => $d) {
+        $reads = array_values(array_filter(array_map(fn($s) => $by[$s] ?? null, $d['reads'])));
+        if (!$reads) continue;
+        $html .= '<section class="door">';
+        $html .= '<span class="k">' . sprintf('%02d', $i + 1) . ' · ' . e($d['k']) . '</span>';
+        $html .= '<h3>' . e($d['title']) . '</h3>';
+        $html .= '<p>' . e($d['desc']) . '</p>';
+        $html .= '<ol>';
+        foreach ($reads as $j => $p) {
+            $html .= '<li><a href="' . e(post_path($p['slug'])) . '"><span class="d-no">' . sprintf('%02d', $j + 1) . '</span>'
+                   . '<span>' . e($p['title']) . '</span><span class="d-min">' . $p['minutes'] . ' min</span></a></li>';
+        }
+        $html .= '</ol>';
+        $html .= '<a class="door-more" href="/blog/start/">The whole map ' . arrow_icon() . '</a>';
+        $html .= '</section>';
+    }
+    return $html . '</div>';
+}
+
+/** The essays readers stay on longest (HOME_MOST_READ), as rows. */
+function most_read_block(array $posts): string
+{
+    $by = array_column($posts, null, 'slug');
+    $picks = array_values(array_filter(array_map(fn($s) => $by[$s] ?? null, HOME_MOST_READ)));
+    if (!$picks) return '';
+    $html  = '<div class="section-head">' . eyebrow('Most read') . '<h2>Where readers stay longest</h2></div>';
+    $html .= log_rows($picks);
+    return $html;
 }

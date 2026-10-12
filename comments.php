@@ -166,8 +166,16 @@ $c_msgs = [
     </ol>
   <?php endif; ?>
 
+  <?php /* An empty thread ending every essay reads as an empty room. Until the first
+           comment lands, the form waits behind a disclosure; once there is a thread,
+           the form stays open under it. A submit error reopens it either way. */ ?>
+  <?php $c_collapsed = $c_n === 0 && !isset($c_msgs[$c_err]); ?>
+  <?php if ($c_collapsed): ?>
+  <details class="comment-details">
+    <summary>Leave a comment</summary>
+  <?php endif; ?>
   <div class="comment-form" id="comment-form">
-    <h3>Leave a comment</h3>
+    <?php if (!$c_collapsed): ?><h3>Leave a comment</h3><?php endif; ?>
     <?php if (isset($c_msgs[$c_err])): ?>
       <div class="form-err"><?= e($c_msgs[$c_err]) ?></div>
     <?php endif; ?>
@@ -205,5 +213,6 @@ $c_msgs = [
       <p class="comment-note">Your email is required but published only in masked form (j***@example.com). Nothing else is stored.</p>
     </form>
   </div>
+  <?php if ($c_collapsed): ?></details><?php endif; ?>
   <?php if (turnstile_enabled()) echo turnstile_script(); ?>
 </section>

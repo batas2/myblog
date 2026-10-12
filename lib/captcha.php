@@ -27,7 +27,9 @@ function turnstile_widget(string $action): string
 {
     $key = e((string) ((array) cfg('turnstile', []))['sitekey']);
     $act = e($action);
-    return '<div class="cf-turnstile" data-sitekey="' . $key . '" data-theme="auto" data-action="' . $act . '"></div>';
+    // interaction-only: the widget stays invisible unless Cloudflare actually needs a click,
+    // so a form is a field and a button, not a field, a button and a third-party badge
+    return '<div class="cf-turnstile" data-sitekey="' . $key . '" data-theme="auto" data-appearance="interaction-only" data-action="' . $act . '"></div>';
 }
 
 /** The loader tag — emit once per page, only when a widget is present. */

@@ -50,7 +50,7 @@ const VC_TIER = [
 const VC_RHETORICAL = '(send(s|ing)?|sent) an? signal|\ba signal (about|to)\b|\bsignall?ing (that|a )';
 
 /** Meta lines are `**Key:** value` by design; the inline-header grep must not see them. */
-const VC_META_KEYS = 'Medium|DevTo|Scores|Scored|Tags|Updated|Publish|Status';
+const VC_META_KEYS = 'Medium|DevTo|Scores|Scored|Tags|Updated|Publish|Status|Related';
 
 /**
  * Posts that mirror a version already published somewhere else, word for word.

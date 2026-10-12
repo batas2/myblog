@@ -94,4 +94,6 @@ I still read fifteen reports a month. What I look for now is not the ageing queu
 **Publish:** 2026-09-07 09:00
 **Updated:** 2026-09-12 16:50
 
+**Related:** the-bottleneck-moved, every-approval-is-a-missing-rule, the-model-grades-its-own-homework
+
 **Tags:** Software Architecture, Engineering Leadership, AI Transformation, Organizational Culture, Systems Thinking

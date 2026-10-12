@@ -681,7 +681,8 @@ t_contains('<lastmod>2026-06-01</lastmod>', render_sitemap([$upPost]), 'sitemap 
 /* ---------------- cards / boxes ---------------- */
 section('components');
 $card = post_card($posts[1]);
-t_contains('class="pcard reveal"', $card, 'card has reveal class');
+t_contains('class="pcard"', $card, 'card renders without a scroll-reveal class');
+t_not_contains('reveal', $card, 'cards never hide until an observer fires');
 t_contains('.thumb.jpg', $card, 'card uses thumbnail');
 t_not_contains('<a class="tag"', $card, 'no nested anchors inside card link');
 $nl = newsletter_box();
@@ -1105,7 +1106,8 @@ t_eq(2, substr_count($twoBadges, '<a href='), 'both platforms get their own link
 t_eq(1, substr_count($twoBadges, '<div class="syndication">'), 'both sit in one row');
 $fc = featured_card($posts[0]);
 t_contains('class="featured2', $fc, 'featured card class');
-t_contains('Latest signal', $fc, 'featured card eyebrow');
+t_contains('Latest essay', $fc, 'featured card eyebrow');
+t_not_contains('Latest signal', $fc, 'radar jargon is gone from the featured card');
 
 section('related posts');
 $mk = fn(string $slug, array $tags, int $ts) => ['slug' => $slug, 'tags' => $tags, 'publish_ts' => $ts];
@@ -1531,5 +1533,93 @@ $ico = APP_ROOT . '/favicon.ico';
 t_assert(is_file($ico), 'favicon.ico exists at the site root');
 t_eq("\x00\x00\x01\x00", (string) substr((string) @file_get_contents($ico), 0, 4), 'and is a real ICO container');
 t_contains('image/x-icon', (string) file_get_contents(APP_ROOT . '/.htaccess'), 'and is cached like the other images');
+
+
+/* ---------------- homepage retention (branch homepage-retention) ---------------- */
+section('homepage: hero and jargon');
+$home = render_index($posts);
+t_contains('src="/myself.jpeg"', $home, 'homepage hero shows the author');
+t_contains('co-lead', $home, 'hero says co-lead, never lead');
+t_contains('class="btn btn-primary" href="/blog/start/"', $home, 'Start here is a real button');
+t_contains('class="proof"', $home, 'proof chips moved onto the homepage');
+t_not_contains('new signal most Mondays', $home, 'no "new signal" in the meta line');
+t_not_contains('Latest signal', $home, 'no "Latest signal" eyebrow');
+t_not_contains('>The signal<', $home, 'no "The signal" eyebrow on the newsletter box');
+t_contains('A new essay most Mondays', site_footer(), 'footer speaks plain English');
+t_not_contains('New signal', site_footer(), 'footer lost the radar jargon');
+if (($nlb = newsletter_box()) !== '') {
+    t_contains('>Newsletter<', $nlb, 'newsletter eyebrow is the word Newsletter');
+}
+t_contains('Newest essays', render_404_page($posts), '404 lists newest essays, not signals');
+$start = render_start_page($posts);
+t_contains('co-leading', $start, 'start page says co-leading');
+t_not_contains('currently leading', $start, 'start page no longer claims to lead alone');
+
+section('homepage: doors, most read, archive');
+$paths = reading_paths();
+t_eq(3, count($paths), 'three reading paths');
+foreach ($paths as $d) t_eq(3, count($d['reads']), 'each path names three essays');
+t_contains('class="doors"', $home, 'the three doors render on the homepage');
+t_contains(e($paths[0]['title']), $home, 'first door title on the homepage');
+t_contains(e($paths[0]['title']), $start, 'start page still renders the same doors');
+t_contains('Most read', $home, 'most-read block present');
+foreach (HOME_MOST_READ as $slug) t_contains('href="' . post_path($slug) . '"', $home, "most read links {$slug}");
+t_eq(count($posts), substr_count($home, '<li class="arow">'), 'archive lists every published essay once');
+t_not_contains('class="pcard', $home, 'no magazine grid on the homepage');
+t_not_contains('class="featured2 rise-2"', $home, 'featured card no longer waits for a load-in animation');
+t_not_contains('reveal', post_card($posts[0]), 'cards no longer hide until scrolled into view');
+
+section('series');
+t_contains('Reviewability, part 1', series_suffix('the-bottleneck-moved'), 'bottleneck opens the reviewability series');
+t_eq(['the-bottleneck-moved', 'we-deleted-the-wrong-half-of-agile'], series_slugs('the-bottleneck-moved'), 'series slugs in order');
+t_eq([], series_slugs('mathematicians-vs-lawyers'), 'no series, no slugs');
+$allPosts = load_posts(true);
+$nav = series_nav('we-deleted-the-wrong-half-of-agile', $allPosts);
+t_contains('class="series-nav"', $nav, 'series nav renders for a series post');
+t_contains('aria-current="page"', $nav, 'series nav marks the current part');
+t_contains('The Bottleneck Moved', $nav, 'series nav lists the sibling part');
+t_eq('', series_nav('mathematicians-vs-lawyers', $allPosts), 'no series nav outside a series');
+t_contains('Reviewability, part 1', $home, 'archive rows carry the series label');
+$bySlug = array_column($allPosts, null, 'slug');
+t_contains('class="series-nav"', render_post($bySlug['the-bottleneck-moved'], null, null, $posts), 'post page carries the series nav');
+
+section('figure thumbnails');
+$ft = figure_thumb_meta('a-feature-is-not-a-service');
+t_eq('/assets/img/posts/a-feature-is-not-a-service/feature-vs-service.png', $ft['src'], 'first diagram of the post is the figure thumb');
+t_assert(($ft['w'] ?? 0) > 0 && ($ft['h'] ?? 0) > 0, 'figure thumb carries real dimensions');
+// a 4:1 flow strip shrinks to an unreadable line inside a 150x94 thumb
+t_eq(null, figure_thumb_meta('the-bottleneck-moved'), 'a diagram wider than 2:1 is no thumbnail');
+t_eq(null, figure_thumb_meta('mathematicians-vs-lawyers'), 'no diagram, no figure thumb');
+$ftPair = figure_thumb_meta('turn-the-sequence-diagram-on-its-side');
+t_eq('/assets/img/posts/turn-the-sequence-diagram-on-its-side/same-flow-in-lanes-light.png', $ftPair['src'], 'light variant is the default figure thumb');
+t_eq('/assets/img/posts/turn-the-sequence-diagram-on-its-side/same-flow-in-lanes-dark.png', $ftPair['dark'], 'dark sibling found for a light/dark pair');
+$rowsFig = log_rows([$bySlug['a-feature-is-not-a-service']]);
+t_contains('class="thumb thumb-figure"', $rowsFig, 'rows prefer the diagram as thumbnail');
+t_contains('feature-vs-service.png', $rowsFig, 'and point at the diagram file');
+t_contains('.thumb.jpg', log_rows([$bySlug['the-bottleneck-moved']]), 'a wide strip falls back to the photo');
+$rowsPair = log_rows([$bySlug['turn-the-sequence-diagram-on-its-side']]);
+t_contains('<picture>', $rowsPair, 'a light/dark pair renders as a picture element');
+t_contains('prefers-color-scheme: dark', $rowsPair, 'with the dark source for dark mode');
+$rowsPhoto = log_rows([$bySlug['mathematicians-vs-lawyers']]);
+t_contains('.thumb.jpg', $rowsPhoto, 'no diagram falls back to the photo thumbnail');
+
+section('post page: byline, badges, related');
+$pp = render_post($bySlug['the-bottleneck-moved'], null, null, $posts);
+t_contains('class="byline"', $pp, 'byline under the title');
+t_assert(strpos($pp, 'class="byline"') < strpos($pp, '<article'), 'byline sits before the article');
+t_contains('href="/about/"', substr($pp, 0, strpos($pp, '<article')), 'byline links to About');
+$legacyPage = render_post($bySlug['stop-calling-it-legacy-code'], null, null, $posts);
+t_assert(strpos($legacyPage, 'class="syndication"') > strpos($legacyPage, '</article>'), 'syndication badges moved below the article');
+t_contains('data-appearance="interaction-only"', turnstile_widget('newsletter'), 'turnstile stays invisible unless it needs a click');
+t_contains('srcset=', featured_card($posts[0]), 'featured image ships a srcset');
+t_contains('sizes=', featured_card($posts[0]), 'and sizes');
+$rp = parse_post_file($mkpost('2020-01-05-fixture-related.md', '**Related:** nobody-owns-the-sum, data-driven-theater'));
+t_eq(['nobody-owns-the-sum', 'data-driven-theater'], $rp['related'], 'Related meta parses into slugs');
+t_eq([], parse_post_file($mkpost('2020-01-05-fixture-norelated.md'))['related'], 'no Related meta = empty list');
+$manual = ['slug' => 'manual', 'tags' => ['Nothing Shared'], 'publish_ts' => 1, 'related' => ['data-driven-theater', 'no-such-post', 'nobody-owns-the-sum']];
+t_eq(['data-driven-theater', 'nobody-owns-the-sum'], array_column(related_posts($manual, $posts), 'slug'), 'manual related keeps author order and skips unknown slugs');
+$auto = ['slug' => 'auto', 'tags' => ['Software Architecture'], 'publish_ts' => 1, 'related' => []];
+t_eq(3, count(related_posts($auto, $posts)), 'without a manual list, tags still fill the block');
+t_contains('Picked by the author', $pp, 'manually related essays are labelled as picked');
 
 if (basename($_SERVER['SCRIPT_NAME'] ?? '') === 'unit.php') exit(t_summary());

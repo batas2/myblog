@@ -72,4 +72,6 @@ I stopped asking whether we are adopting AI. I ask which cliff a team is standin
 **Scores:** tension=6 originality=5 personal=7 contrarian=6 substance=8 punch=6 trend=8
 **Scored:** 2026-10-11 rubric=v1 model=claude-fable-5-1
 
+**Related:** nobody-resisted, the-model-grades-its-own-homework, a-company-of-one-staffed-by-agents
+
 **Tags:** AI Transformation, Engineering Leadership, Artificial Intelligence, Organizational Design, Systems Thinking

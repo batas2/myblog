@@ -117,8 +117,19 @@ Body in markdown (h2, lists, quotes, code fences, links)…
 **Scores:** tension=7 originality=6 personal=9 contrarian=5 substance=8 punch=4 trend=3
 **Scored:** 2026-07-27 rubric=v1 model=claude-opus-5
 
+**Related:** other-slug, another-slug (optional; the author's "keep reading" picks)
+
 **Tags:** Tag One, Tag Two, Tag Three, Tag Four, Tag Five
 ```
+
+`**Related:**` lists up to three slugs shown under the essay as "Picked by the author", in the
+order written; without it the block falls back to shared tags, which is coarse because most
+essays share *Software Architecture*. A post that belongs to a thread goes into `SERIES` in
+`lib/blog.php`: the essay then carries a series box after the text and a "Series, part N" label
+in every list. The homepage "Most read" block is `HOME_MOST_READ` in the same file, curated by
+hand from the admin Content tab (engaged time), because the build never sees analytics.db.
+The list thumbnail is the post's first diagram when that diagram is no wider than 2:1, else the
+hero photo.
 
 Optionally drop a hero image at `assets/img/posts/my-slug.jpg` (the build picks it up,
 generates dimensions and uses the `.thumb.jpg` variant in lists), then `php tools/build.php`.

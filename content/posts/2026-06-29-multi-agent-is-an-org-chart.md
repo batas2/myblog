@@ -67,4 +67,6 @@ And if the answer makes you uncomfortable: the agents are ready whenever you are
 **Scores:** tension=8 originality=8 personal=8 contrarian=7 substance=8 punch=9 trend=9
 **Scored:** 2026-07-27 rubric=v1 model=claude-opus-5
 
+**Related:** nobody-owns-the-sum, nobody-resisted, prompt-driven-architecture
+
 **Tags:** Multi-Agent Systems, Artificial Intelligence, Organizational Design, Software Architecture, Conways Law

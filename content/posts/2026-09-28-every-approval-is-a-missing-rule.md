@@ -65,4 +65,6 @@ There will be a next revision of the operating model. I would rather the archite
 **Scores:** tension=7 originality=6 personal=8 contrarian=7 substance=7 punch=7 trend=8
 **Scored:** 2026-10-11 rubric=v1 model=claude-fable-5-1
 
+**Related:** the-model-grades-its-own-homework, nobody-owns-the-sum, adoption-is-the-deliverable
+
 **Tags:** Software Architecture, AI Transformation, Engineering Leadership, Organizational Design, Artificial Intelligence

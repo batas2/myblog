@@ -97,7 +97,7 @@ function site_footer(): string
   <div class="footer-inner">
     <div class="f-brand">
       <a class="wordmark" href="/">bfrackowiak<span class="tld">.pl</span></a>
-      <p>Field notes on software architecture, the people around it, and the corporate machine they form together. New signal most Mondays.</p>
+      <p>Field notes on software architecture, the people around it, and the corporate machine they form together. A new essay most Mondays.</p>
     </div>
     <div class="f-cols">
       <div class="f-col">

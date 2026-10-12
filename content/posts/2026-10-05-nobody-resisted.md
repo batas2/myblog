@@ -67,4 +67,6 @@ They did not come with "why should I use this". They came with "which of the sev
 **Scores:** tension=7 originality=7 personal=8 contrarian=7 substance=7 punch=7 trend=8
 **Scored:** 2026-10-11 rubric=v1 model=claude-fable-5-1
 
+**Related:** multi-agent-is-an-org-chart, adoption-is-the-deliverable, from-signals-to-blips
+
 **Tags:** AI Transformation, Organizational Design, Engineering Leadership, Artificial Intelligence, Systems Thinking

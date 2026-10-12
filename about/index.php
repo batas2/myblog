@@ -103,7 +103,7 @@ echo page_head(
       <div class="section-head">
         <?= eyebrow('The journey', false) ?>
         <h2>From proving architectures to shipping them, and now teaching machines to help.</h2>
-        <p>I started by trying to formalize architecture in a PhD, learned in production why people bend every formal model, and now lead an AI transformation across hundreds of engineers. The essays linked below are the receipts from each stage.</p>
+        <p>I started by trying to formalize architecture in a PhD, learned in production why people bend every formal model, and now co-lead an AI transformation across hundreds of engineers. The essays linked below are the receipts from each stage.</p>
       </div>
 
       <ol class="timeline">
@@ -182,7 +182,7 @@ echo page_head(
             <span class="tl-metric"><b>15</b><i>squads, AI-native</i></span>
           </div>
           <div class="tl-body">
-            <h3>Leading an AI transformation at scale</h3>
+            <h3>Co-leading an AI transformation at scale</h3>
             <p><strong>AI-native engineering across fifteen squads and several hundred developers.</strong> An agentic tech radar that turns signals into decisions, probabilistic metrics for work no database records, and a prompt-driven architecture practice. This blog exists because that work keeps producing field notes worth publishing.</p>
             <div class="tl-facts"><span>Claude Code</span><span>agentic tech radar</span><span>probabilistic metrics</span></div>
             <div class="tl-notes"><span class="lbl">Field notes from this era</span>

@@ -82,4 +82,6 @@ The queue did not shrink. It moved one seat to the right, and it is quieter over
 
 **Publish:** 2026-08-03 09:00
 
+**Related:** we-deleted-the-wrong-half-of-agile, nobody-resisted, multi-agent-is-an-org-chart
+
 **Tags:** Artificial Intelligence, AI Transformation, Engineering Leadership, Organizational Design, Software Architecture
