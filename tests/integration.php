@@ -444,6 +444,25 @@ $prevStage = null; $alternates = true;
 foreach ($secs[1] as $stage) { if ($prevStage !== null && $stage !== '' && $prevStage !== '') $alternates = false; $prevStage = $stage; }
 t_assert($alternates, 'no two staged sections sit next to each other');
 
+/* ---------------- the project page: two layers, one model ----------------
+   The point the page has to make in its first screen: the canvas aligns people,
+   the text files align people and agents, and the second half needs no plugin. */
+t_contains('id="layers"', $body, 'the project page opens with the two layers');
+t_contains('href="#layers"', $body, 'and the contents rail reaches them');
+foreach (['Visual layer', 'Text layer', 'out of the box'] as $claim) {
+    t_contains($claim, $body, "the project page says: {$claim}");
+}
+foreach (['visual layer', 'text layer', 'out of the box'] as $claim) {
+    t_contains($claim, $mdFlat, "the markdown mirror says: {$claim}");
+}
+t_not_contains('STEMMA.md dropped into every new workspace, so', substr($body, strpos($body, 'id="layers"'), 4000), 'the layers block does not promise the roadmap item as shipped');
+// no em dash anywhere a reader sees text on the page (it reads as generated copy)
+$visible = preg_replace(['~<style.*?</style>~s', '~<script.*?</script>~s', '~<pre>.*?</pre>~s'], '', substr($body, strpos($body, '<main'), strpos($body, '</main>') - strpos($body, '<main')));
+t_not_contains('—', html_entity_decode(strip_tags($visible)), 'no em dash in the visible Stemma copy');
+t_not_contains(' — ', $md, 'no spaced em dash in the markdown mirror');
+// the contents rail keeps a wider gap to the text
+t_contains('- 196px', $body, 'the contents rail sits 72px from the column');
+
 /* ---------------- newsletter (self-hosted) ---------------- */
 section('newsletter');
 /* Every page a reader can land on and decide from carries the form itself. This is

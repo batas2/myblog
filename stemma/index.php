@@ -32,23 +32,23 @@ $shot = cfg('site_url') . '/assets/img/stemma/canvas-dark.webp';
    the page, which is the only way it is allowed to be used. */
 $faq = [
     'Does the diagram stay in sync with the code?' =>
-        'It cannot drift, because it is the same artefact. The model is C# in Architecture/*.cs inside your repository, and a canvas edit is a Roslyn DocumentEditor rewrite of that file. There is no export step to forget and no second copy to reconcile.',
+        'It cannot drift, because it is the same thing. The model is C# in Architecture/*.cs inside your repository, and a canvas edit is a Roslyn DocumentEditor rewrite of that file. There is no export step to forget and no second copy to keep in sync.',
     'Does my whole system have to be written in C#?' =>
-        'No. C# is the notation the model is written in, not a constraint on what you model. The workspace can be a model-only folder with no solution in it, and the systems it describes can be written in anything. A .NET runtime is the only requirement, and a model-only workspace opens with no SDK, no restore and no NuGet.',
+        'No. C# is only the notation of the model, not a limit on what you model. The workspace can be a model-only folder with no solution in it, and the systems it describes can be written in anything. You need a .NET runtime, and a model-only workspace opens with no SDK, no restore and no NuGet.',
     'Where is the data stored?' =>
-        'In your Git working tree, and nowhere else. There is no runtime database at any layer. The model is C# source; presentation — positions, styling, routing, notes — is a stemma.layout.json sidecar committed beside it. While a workspace is open the model lives in memory; permanent storage is the files.',
+        'In your Git working tree, and nowhere else. There is no runtime database at any layer. The model is C# source, and the presentation (positions, styling, routing, notes) is a stemma.layout.json sidecar committed next to it. While a workspace is open the model is in memory; the files are the permanent storage.',
     'How is this different from draw.io, Lucidchart or an EA tool?' =>
-        'Drawing tools produce a picture that is true on the day it is saved. Reverse-engineering tools read code but cannot edit it. Stemma closes the loop in both directions and guarantees round-trip fidelity, so a UI edit arrives as a diff containing only that edit — which is what makes the loop trustworthy enough to use.',
+        'A drawing tool gives you a picture that is true on the day you save it. A reverse-engineering tool reads code but cannot edit it. Stemma works in both directions and keeps round-trip fidelity, so a UI edit becomes a diff with only that edit in it. That is what makes the loop safe to use.',
     'What does a change look like in review?' =>
-        'A normal Git diff. Renaming one element on the canvas rewrites the declaration and every reference Roslyn can see, and touches nothing else: no reordering, no reformatting, no lost comment. Reviewers read it as the change it was.',
+        'A normal Git diff. Renaming one element on the canvas rewrites the declaration and every reference Roslyn can see, and nothing else: no reordering, no reformatting, no lost comment. The reviewer reads it as the change it was.',
     'How do stakeholders see the model without installing anything?' =>
-        'Two ways. A story book is an ordered, audience-tagged sequence of pages that drives the canvas as you present, stored beside the model so it cannot go stale either. Or export a single self-contained HTML report — one file, opens offline with no server, no login and no seat, with audience modes and element-anchored comments that import back.',
+        'Two ways, both in the visual layer. A story book is an ordered sequence of pages for one audience that drives the canvas while you present, stored next to the model so it cannot get stale. Or you export one self-contained HTML report: a single file that opens offline, with no server, no login and no seat, with audience modes and comments attached to elements that you can import back.',
     'Can an agent use this without opening the canvas?' =>
-        'That is the whole second half of the tool. A workspace is three text files — Architecture/*.cs, Views/*.cs and stemma.layout.json — and all three are documented for a writer who will never see the app. An agent authors them, runs stemma validate to catch the string ids nothing else checks, and runs stemma render to produce the image with no browser open and no mouse. Arrangement is expressed as a constraint (grid, row, column, stack) rather than as coordinates, because a model is good at intent and bad at pixels.',
+        'Yes, and out of the box: that is the text layer. A workspace is three text files, Architecture/*.cs, Views/*.cs and stemma.layout.json, and all three are documented for someone who will never see the app. An agent writes them, runs stemma validate to catch the string ids nothing else checks, and runs stemma render to get the image with no browser and no mouse. The layout is a constraint (grid, row, column, stack) instead of coordinates, because a model is good at intent and bad at pixels.',
     'What stops a published diagram from going stale?' =>
-        'Every render writes a sibling manifest fingerprinting the model, the view, the layout and the profile it was drawn from. stemma render --check re-computes that fingerprint and exits non-zero when the committed image has stopped matching its source, so a build fails instead of a reader being misled. It is the same drift guarantee as the diff, extended past the app window.',
+        'Every render writes a manifest next to the image, with a fingerprint of the model, the view, the layout and the profile. stemma render --check calculates it again and exits non-zero when the committed image no longer matches its source, so the build fails before a reader sees an old picture. It is the same drift guarantee as the diff, outside the app window.',
     'What licence is it under?' =>
-        'PolyForm Noncommercial 1.0.0. Free for any noncommercial purpose — personal use, study, hobby projects, and use by charities, educational institutions, public research bodies and government. Commercial use of any kind needs a commercial licence: kontakt@bfrackowiak.pl. It is source-available, not open source, and the distinction is deliberate.',
+        'PolyForm Noncommercial 1.0.0. Free for any noncommercial use: personal use, study, hobby projects, and use by charities, schools, public research bodies and government. Any commercial use needs a commercial licence: kontakt@bfrackowiak.pl. It is source-available, not open source, and that is on purpose.',
 ];
 
 $extra  = ld_script([
@@ -58,7 +58,7 @@ $extra  = ld_script([
             '@type' => 'WebPage',
             '@id' => $url . '#page',
             'url' => $url,
-            'name' => 'Stemma — the architecture model that is your source code',
+            'name' => 'Stemma: the architecture model that is your source code',
             'description' => 'How Stemma works: the C# model, the diff a rename produces, the headless pipeline an agent drives, the views, the story books, and the single-file HTML report.',
             'inLanguage' => 'en',
             'isPartOf' => ['@id' => cfg('site_url') . '/#website'],
@@ -83,7 +83,7 @@ $extra  = ld_script([
             'operatingSystem' => 'Linux, macOS, Windows',
             'softwareRequirements' => '.NET 10 runtime',
             'author' => ['@id' => cfg('site_url') . '/#person'],
-            'description' => 'An architecture modelling tool for solution architects in which the C# source on disk is the model database. Canvas edits become Roslyn rewrites of real .cs files, so the diagram cannot drift from the code — and the same model can be authored as text by an agent and rendered headlessly with one command.',
+            'description' => 'An architecture modelling tool for solution architects in which the C# source on disk is the model database. Canvas edits become Roslyn rewrites of real .cs files, so the diagram cannot drift from the code. The same model is also three text files that an agent can write, validate and render with one command, out of the box.',
             'codeRepository' => $repo,
             'softwareHelp' => $repo,
             'screenshot' => $shot,
@@ -102,12 +102,12 @@ $extra  = ld_script([
                 'Narrated, audience-tagged story books that drive the canvas in present mode',
                 'Headless CLI: stemma render turns a model and a view into an image with no browser and no mouse',
                 'stemma validate reports the dangling ids, empty views and half-drawn links the compiler cannot see',
-                'Layout expressed as a declarative constraint — grid, row, column, stack — solved to coordinates',
+                'Layout expressed as a declarative constraint (grid, row, column, stack) solved to coordinates',
                 'A render manifest and stemma render --check, so a build fails when a published image stops matching its model',
                 'A published JSON Schema for the presentation sidecar, and a protocol reference for authoring a workspace as text',
                 'Export to PNG, true vector SVG, draw.io, Mermaid, PDF view-books and a single-file interactive HTML report',
                 'Local-only diagnostics: structured logs with no network sink, and redacted shareable bundles',
-                'No runtime database — Git is the store and the collaboration model',
+                'No runtime database: Git is the store and the collaboration model',
             ],
         ],
         [
@@ -116,8 +116,8 @@ $extra  = ld_script([
             // because it is what the thumbnail below shows.
             '@type' => 'VideoObject',
             '@id' => $url . '#film',
-            'name' => 'Stemma — the diagram is the code',
-            'description' => 'A two-minute look at Stemma: a model built from an empty file on camera — bounded contexts, modules, relationships — the two-line diff a rename produces in the source, the narrated story books that walk each audience through it, and the single self-contained HTML report the whole thing exports to.',
+            'name' => 'Stemma: the diagram is the code',
+            'description' => 'A two-minute look at Stemma: a model built from an empty file on camera (bounded contexts, modules, relationships), the two-line diff a rename produces in the source, the narrated story books that walk each audience through it, and the single self-contained HTML report the whole thing exports to.',
             'contentUrl' => $film,
             'thumbnailUrl' => [$shot, cfg('site_url') . '/assets/img/stemma/og.jpg'],
             'uploadDate' => '2026-08-04',
@@ -144,8 +144,8 @@ $extra .= ld_script(schema_breadcrumbs([
 ])) . "\n";
 $extra .= '<meta property="og:image:width" content="1200">' . "\n"
         . '<meta property="og:image:height" content="630">' . "\n"
-        . '<meta property="og:image:alt" content="Stemma — the diagram is the code. An architecture model held as C# in your repository.">' . "\n"
-        . '<meta name="twitter:image:alt" content="Stemma — the diagram is the code. An architecture model held as C# in your repository.">' . "\n";
+        . '<meta property="og:image:alt" content="Stemma: the diagram is the code. An architecture model held as C# in your repository.">' . "\n"
+        . '<meta name="twitter:image:alt" content="Stemma: the diagram is the code. An architecture model held as C# in your repository.">' . "\n";
 
 /* A pasted link should unfurl as the film, not as a still. Slack, Discord, Telegram and X all
    read og:video and will play an mp4 inline; everything else ignores these and falls back to
@@ -247,10 +247,10 @@ $extra .= <<<'CSS'
 /* ---- contents rail ------------------------------------------------------
    Lives in the left gutter on a screen wide enough to have one, and nowhere
    else. It marks where you are; it is not the primary way to navigate. */
-/* Sits in the gutter, never over the text: 124px of rail plus a 24px gap has to
-   fit beside the 1320px column, which needs 1680px of viewport to exist at all. */
+/* Sits in the gutter, never over the text: 124px of rail plus a 72px gap has to
+   fit beside the 1320px column, which needs 1780px of viewport to exist at all. */
 .st-toc {
-  display: none; position: fixed; left: calc((100vw - var(--max)) / 2 - 148px);
+  display: none; position: fixed; left: calc((100vw - var(--max)) / 2 - 196px);
   top: 50%; transform: translateY(-50%); z-index: 40; width: 124px;
 }
 .st-toc ol { list-style: none; display: flex; flex-direction: column; gap: 0.1rem; }
@@ -267,19 +267,12 @@ $extra .= <<<'CSS'
 }
 .js .st-toc { opacity: 0; pointer-events: none; transition: opacity .4s ease; }
 .js .st-toc.on { opacity: 1; pointer-events: auto; }
-@media (min-width: 1680px) { .st-toc { display: block; } }
+@media (min-width: 1780px) { .st-toc { display: block; } }
 
 /* ---- the fact strip under the hero --------------------------------------- */
-.st-strip { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 /* 165px, not 190: five facts have to sit on one row down to the 940px breakpoint
    where the borders flip from left to top, or the fifth wraps and wears a left
    border in the middle of nowhere. */
-.st-strip dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); }
-.st-strip dl > div { padding: 1.6rem 1.6rem 1.6rem 1.8rem; border-left: 1px solid var(--line); }
-.st-strip dl > div:first-child { padding-left: 0; border-left: 0; }
-.st-strip dt { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.45rem; }
-.st-strip dd { font-size: 1rem; font-weight: 600; color: var(--ink); line-height: 1.35; }
-.st-strip dd span { display: block; font-weight: 400; font-size: 0.84rem; color: var(--muted); margin-top: 0.15rem; }
 
 /* ---- source ⇄ concept: code pinned, notes scrolling past ------------------ */
 .st-source { display: grid; grid-template-columns: minmax(0, 1.18fr) minmax(0, 0.82fr); gap: 3.8rem; align-items: start; margin-top: 3.5rem; }
@@ -437,6 +430,16 @@ $extra .= <<<'CSS'
 .st-repo-url svg { width: 17px; height: 17px; flex: none; }
 .st-repo p { font-size: 0.95rem; color: var(--muted); line-height: 1.65; margin-top: 1.4rem; }
 
+/* ---- two layers ----------------------------------------------------------- */
+.st-two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.4rem; max-width: 64rem; margin: 2.6rem auto 0; }
+.st-two-card { border: 1px solid var(--line); border-radius: 16px; padding: 1.7rem 1.8rem; background: var(--paper); }
+.st-two-text { border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); }
+.st-two-k { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); font-weight: 600; }
+.st-two-card h3 { margin: 0.7rem 0 0.6rem; font-size: 1.15rem; color: var(--ink); }
+.st-two-card p { font-size: 0.95rem; color: var(--body); line-height: 1.65; }
+.st-two-card ul { margin-top: 1rem; padding-left: 1.1rem; display: flex; flex-direction: column; gap: 0.4rem; font-size: 0.9rem; color: var(--muted); }
+@media (max-width: 820px) { .st-two { grid-template-columns: minmax(0, 1fr); } }
+
 /* ---- colophon: the small print, pitched as small print ------------------- */
 .st-colophon { border-top: 1px solid var(--line); padding: 2.2rem 0 3rem; }
 .st-colophon p { max-width: 44rem; font-size: 0.84rem; line-height: 1.65; color: var(--faint); }
@@ -449,8 +452,6 @@ $extra .= <<<'CSS'
   .st-note p { max-width: none; }
   /* Nothing is pinned any more, so nothing can drive the emphasis. */
   .st-lit .l { opacity: 1; }
-  .st-strip dl > div { padding: 1.1rem 0; border-left: 0; border-top: 1px solid var(--line); }
-  .st-strip dl > div:first-child { border-top: 0; }
 }
 /* No film on a phone or a tablet. The script checks the same width before it
    attaches a source, so this is belt and braces rather than the mechanism. */
@@ -473,8 +474,8 @@ CSS;
 // One description does double duty: Google cuts around 155 characters and the social cards
 // show two or three lines, so the differentiator has to survive in the first clause.
 echo page_head(
-    'Stemma — the architecture model that is your source code',
-    'Architecture modelling for solution architects: the C# in your repository is the model. Edit the canvas, Roslyn rewrites the file — the diagram cannot drift.',
+    'Stemma: the architecture model that is your source code',
+    'An architecture model that lives in your repo as C# files. People edit it on a canvas, agents edit it as text, and the diagram cannot drift from the model.',
     $url,
     $extra,
     cfg('site_url') . '/assets/img/stemma/og.jpg'
@@ -491,10 +492,11 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
        without script it is still a working list of anchors. -->
   <nav class="st-toc" id="st-toc" aria-label="On this page">
     <ol>
+      <li><a href="#layers">Two layers</a></li>
       <li><a href="#source">The source</a></li>
       <li><a href="#edit">The edit</a></li>
       <li><a href="#vocabulary">The vocabulary</a></li>
-      <li><a href="#agents">The agent's half</a></li>
+      <li><a href="#agents">The text layer</a></li>
       <li><a href="#views">The views</a></li>
       <li><a href="#books">Story books</a></li>
       <li><a href="#shape">The shape of it</a></li>
@@ -510,14 +512,13 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
       <?= eyebrow('Stemma', true) ?>
       <h1 class="st-h1">The diagram <em>is</em> the code.</h1>
       <p class="st-sub">
-        An architecture model for solution architects that lives in your repository as C# source:
-        edit the canvas, and Roslyn rewrites the file. Or skip the canvas entirely — the same model is
-        three text files an agent can write, and one command renders the picture with no browser open
-        and no mouse.
+        Stemma is my side project: an architecture model that lives in your repository as plain C# files.
+        People work with it on a canvas. Agents work with it as text. Both change the same files, so the
+        picture and the model never go separate ways.
       </p>
       <p class="st-cta">
         <a class="btn btn-primary" href="#repository">Where to find it <?= arrow_icon() ?></a>
-        <a class="btn btn-ghost" href="#agents">The agent's half</a>
+        <a class="btn btn-ghost" href="#layers">How the two layers work</a>
       </p>
     </div>
     <!-- The screenshot is the poster. On a phone that is all it ever is: the video
@@ -528,13 +529,13 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
         <picture>
           <source srcset="/assets/img/stemma/canvas-dark.webp" media="(prefers-color-scheme: dark)">
           <img src="/assets/img/stemma/canvas-light.webp" width="2400" height="1470" fetchpriority="high" decoding="async"
-               alt="The Stemma canvas: three bounded contexts as lanes — Ordering, Payments, Fulfilment — with modules nested inside them, labelled data flows between them, and external systems along the top.">
+               alt="The Stemma canvas: three bounded contexts as lanes, Ordering, Payments and Fulfilment, with modules inside them, labelled data flows between them, and external systems along the top.">
         </picture>
         <!-- No src attributes: the sources are attached by script, and only on a
              viewport wide enough to show the film. Nothing downloads otherwise —
              and only ever one of the two cuts, the one this reader's system asks for. -->
         <video id="st-video" preload="none" muted playsinline disablepictureinpicture
-               width="1920" height="1080" aria-label="The Stemma film — two minutes, silent"
+               width="1920" height="1080" aria-label="The Stemma film, two minutes, silent"
                data-dark-webm="/assets/video/stemma-film-dark.webm" data-dark-mp4="/assets/video/stemma-film-dark.mp4"
                data-light-webm="/assets/video/stemma-film-light.webm" data-light-mp4="/assets/video/stemma-film-light.mp4"></video>
         <button type="button" class="st-replay" id="st-replay" hidden>Replay</button>
@@ -542,16 +543,48 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
     </div>
   </section>
 
-  <!-- ==================== FACT STRIP ==================== -->
-  <section class="st-strip">
+  <!-- ==================== TWO LAYERS ====================
+       The idea of the tool in one screen: the canvas aligns people with each
+       other, the text files align people with agents. Only shipped behaviour is
+       claimed here; the STEMMA.md brief is still on the roadmap. -->
+  <section class="st-sec st-two-wrap" id="layers">
     <div class="wrap">
-      <dl>
-        <div><dt>Storage</dt><dd>Your Git working tree<span>No runtime database, at any layer</span></dd></div>
-        <div><dt>Engine</dt><dd>Roslyn <span class="st-mono">DocumentEditor</span><span>Targeted rewrites, never string rebuilds</span></dd></div>
-        <div><dt>Guarantee</dt><dd>Round-trip fidelity<span>A UI edit diffs as only that edit</span></dd></div>
-        <div><dt>Headless</dt><dd><span class="st-mono">stemma render</span><span>Model in, image out. No browser, no mouse</span></dd></div>
-        <div><dt>Narrative</dt><dd>Story books<span>The walkthrough that lands it, kept with the model</span></dd></div>
-      </dl>
+      <div class="st-open reveal">
+        <?= eyebrow('Two layers, one model') ?>
+        <h2 class="st-h2">One for people, one for people and agents.</h2>
+        <p class="st-sub">
+          The model has two faces, and both are the same files in Git. I built it like this because
+          an architecture today has two audiences: the people who decide and build, and the agents
+          that write more and more of the code.
+        </p>
+      </div>
+      <div class="st-two reveal">
+        <div class="st-two-card">
+          <span class="st-two-k">Visual layer · for people</span>
+          <h3>Agreement in the room.</h3>
+          <p>The canvas, the views and the story books. Here an architect, a team and the people who pay
+            for the work look at the same picture and agree on it. Every edit on the canvas is a small
+            Roslyn rewrite of the C# file, so agreeing on the picture means agreeing on the model.</p>
+          <ul>
+            <li>Module map and dependency graph, plus your own saved views</li>
+            <li>Story books that drive the canvas in a review meeting</li>
+            <li>A one-file HTML report for people who will not install anything</li>
+          </ul>
+        </div>
+        <div class="st-two-card st-two-text">
+          <span class="st-two-k">Text layer · for people and agents</span>
+          <h3>Agreement with the agents.</h3>
+          <p>The same model as three text files: <span class="st-mono">Architecture.cs</span>, one file per
+            view, and a layout sidecar with a JSON Schema. An agent reads and writes them, checks them and
+            renders them from a shell, and a human reviews the result as a normal diff. You get this
+            out of the box: no plugin, no API key, no export step.</p>
+          <ul>
+            <li><span class="st-mono">stemma validate</span> catches broken ids the compiler cannot see</li>
+            <li><span class="st-mono">stemma render</span> draws any view to PNG or SVG, no browser open</li>
+            <li><span class="st-mono">--check</span> fails the build when a committed image is out of date</li>
+          </ul>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -562,9 +595,9 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
         <?= eyebrow('The source') ?>
         <h2 class="st-h2">Your model is a file you can read.</h2>
         <p class="st-sub">
-          No project format, no XML, no notation to learn. A model is C# records in
-          <span class="st-mono">Architecture/Architecture.cs</span>, and anyone on the team can open it
-          in a text editor and follow it.
+          No project format, no XML, no new notation. The model is C# records in
+          <span class="st-mono">Architecture/Architecture.cs</span>, and anyone on the team, or any agent, can open
+          it in an editor and follow it.
         </p>
       </div>
 
@@ -580,40 +613,39 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
           <div class="st-note" data-g="ctx">
             <span class="st-tick">Bounded contexts</span>
             <h3>Contexts are declared, not drawn.</h3>
-            <p>A bounded context is a record with an id and a name. On the canvas it renders as a lane
-              that other elements nest inside — but the nesting is a real reference in the file, not a
-              position on a grid. Move a module between lanes and one string argument changes.</p>
+            <p>A bounded context is a record with an id and a name. On the canvas it is a lane and modules sit
+              inside it, but the nesting is a real reference in the file, not a position on a grid. Move a
+              module to another lane and one string argument changes.</p>
           </div>
           <div class="st-note" data-g="mod">
             <span class="st-tick">Elements</span>
-            <h3>Ids are stable; names are not.</h3>
-            <p>Every element carries an id that never changes and a display name that can. Flows,
-              dependencies, tags and views all reference the id, so renaming a concept as your
-              understanding improves costs nothing and breaks nothing.</p>
+            <h3>Ids are stable, names are not.</h3>
+            <p>Each element has an id that never changes and a display name that can. Flows, dependencies,
+              tags and views point at the id, so you can rename a concept when you understand it better and
+              nothing breaks.</p>
           </div>
           <div class="st-note" data-g="flow">
             <span class="st-tick">Relationships</span>
-            <h3>An arrow that says what it carries.</h3>
-            <p>A <span class="st-mono">DataFlow</span> names its payload and its direction; a
-              <span class="st-mono">Dependency</span> names its kind — uses, calls, reads, publishes,
-              consumes. A link renders in a view only when both of its endpoints are present, so a
-              filtered view never shows an arrow into nothing.</p>
+            <h3>An arrow says what it carries.</h3>
+            <p>A <span class="st-mono">DataFlow</span> names its payload and its direction. A
+              <span class="st-mono">Dependency</span> names its kind: uses, calls, reads, publishes or consumes.
+              A link is drawn in a view only when both ends are in that view, so a filtered view never
+              shows an arrow going nowhere.</p>
           </div>
           <div class="st-note" data-g="tag">
             <span class="st-tick">Lifecycle &amp; ownership</span>
-            <h3>Target state lives on the model, not in a deck.</h3>
-            <p><span class="st-mono">Lifecycle</span> marks a thing current, target, to-adapt,
-              to-be-created or deprecated, with a phase and validity dates.
-              <span class="st-mono">Ownership</span> attaches a squad, a domain and RAPID roles.
-              Both go on elements <em>and</em> on relationships, which is where migration plans
-              usually fall apart.</p>
+            <h3>Target state lives in the model, not in a deck.</h3>
+            <p><span class="st-mono">Lifecycle</span> marks a thing as current, target, to-adapt, to-be-created or
+              deprecated, with a phase and validity dates. <span class="st-mono">Ownership</span> adds a squad, a
+              domain and RAPID roles. Both work on elements <em>and</em> on relationships, and the
+              relationships are usually where a migration plan goes wrong.</p>
           </div>
           <div class="st-note" data-g="risk">
             <span class="st-tick">Concerns</span>
-            <h3>Risks and questions are first-class.</h3>
-            <p>A risk, an open question or a standing assumption is a model element anchored to what it
-              concerns. It renders as a dotted edge to its subject, versions with it, and turns up on the
-              Concerns board — instead of in a wiki page nobody opens.</p>
+            <h3>Risks and questions are model elements.</h3>
+            <p>A risk, an open question or an assumption is an element attached to what it is about. It shows
+              as a dotted edge to its subject, it is versioned with it, and it appears on the Concerns board.
+              Not in a wiki page nobody opens.</p>
           </div>
         </div>
       </div>
@@ -627,9 +659,9 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
         <?= eyebrow('The edit') ?>
         <h2 class="st-h2">One rename. Three lines. Nothing else moved.</h2>
         <p class="st-sub">
-          Double-click the <span class="st-mono">Ledger</span> box on the canvas, type a longer name,
-          press Enter. This is what <span class="st-mono">git diff</span> reported — all three hunks,
-          with the file header removed and two over-long lines cut at the right margin.
+          I double-clicked the <span class="st-mono">Ledger</span> box on the canvas, typed a longer name and
+          pressed Enter. This is the <span class="st-mono">git diff</span> I got: all three hunks, without the file
+          header, and with two long lines cut at the right margin.
         </p>
       </div>
 
@@ -658,16 +690,16 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
       </div>
 
       <ul class="st-reads reveal">
-        <li><b>The declaration</b>The display name changed. The id did not, so every reference elsewhere still resolves.</li>
-        <li><b>The local variable, twice</b>Roslyn renamed the symbol, so the tag and the aggregate list followed it. A find-and-replace would have missed one and still compiled.</li>
-        <li><b>And nothing else</b>No reordering, no reformatting, no blank line moved, no comment lost. The reviewer sees a rename, because that is what happened.</li>
+        <li><b>The declaration</b>The display name changed. The id stayed, so every other reference still works.</li>
+        <li><b>The local variable, twice</b>Roslyn renamed the symbol, so the tag and the list followed it. A find-and-replace would miss one, and the code would still compile.</li>
+        <li><b>Nothing else</b>No reordering, no reformatting, no moved blank line, no lost comment. The reviewer sees a rename, because it was a rename.</li>
       </ul>
 
       <p class="st-kick reveal" style="text-align:center">
-        This is the contract the rest of the tool rests on. A suite of minimal, realistic and deliberately
-        pathological fixtures runs every operation and asserts the diff byte for byte, and the codebase has
-        one standing instruction about it: <strong>when the fidelity suite fails, the implementation is
-        wrong, not the test</strong>.
+        Everything else in the tool depends on this. A suite of small, realistic and deliberately nasty
+        fixtures runs every operation and compares the diff byte by byte, and the codebase has one fixed
+        rule about it: <strong>when the fidelity suite fails, the implementation is wrong, not the
+        test</strong>.
       </p>
     </div>
   </section>
@@ -679,8 +711,8 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
         <?= eyebrow('The vocabulary') ?>
         <h2 class="st-h2">Everything you are allowed to say.</h2>
         <p class="st-sub">
-          Deliberately richer than a class diagram, deliberately poorer than an IDE. This is the whole
-          language — there is no hidden second half.
+          More than a class diagram, less than an IDE. This is the whole language, there is no
+          hidden second part.
         </p>
       </div>
 
@@ -690,9 +722,9 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
           <table>
             <thead><tr><th>Record</th><th>Carries</th></tr></thead>
             <tbody>
-              <tr><th>Person</th><td>An actor, with a role — external, internal, user</td></tr>
+              <tr><th>Person</th><td>An actor with a role: external, internal or user</td></tr>
               <tr><th>SoftwareSystem</th><td>A system, usually a neighbouring one you don't own</td></tr>
-              <tr><th>Container</th><td>A deployable unit inside a system, with a kind — service, worker, cronjob, db</td></tr>
+              <tr><th>Container</th><td>A deployable unit inside a system, with a kind: service, worker, cronjob or db</td></tr>
               <tr><th>BoundedContext</th><td>A DDD context; renders as a lane other elements nest inside</td></tr>
               <tr><th>Module</th><td>A unit of cohesion, optionally inside a context</td></tr>
               <tr><th>Capability</th><td>A business capability, optionally inside a context</td></tr>
@@ -700,7 +732,7 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
               <tr><th>Risk</th><td>A design risk, anchored to what it concerns</td></tr>
               <tr><th>Question</th><td>An open design question, anchored the same way</td></tr>
               <tr><th>Assumption</th><td>A standing assumption everything downstream rests on</td></tr>
-              <tr><th>Concept</th><td>A named box that asserts <em>nothing</em> about a system — for drawing an argument rather than an architecture</td></tr>
+              <tr><th>Concept</th><td>A named box that asserts <em>nothing</em> about a system, for drawing an argument instead of an architecture</td></tr>
             </tbody>
           </table>
         </div>
@@ -711,12 +743,12 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
             <thead><tr><th>Record</th><th>Carries</th></tr></thead>
             <tbody>
               <tr><th>DataFlow</th><td>From, to, a payload name shown as the edge label, and a direction</td></tr>
-              <tr><th>Dependency</th><td>From, to, and a kind — uses, calls, reads, publishes, consumes</td></tr>
-              <tr><th>Relation</th><td>From, to, and a free label — an arrow that claims nothing beyond what it says</td></tr>
+              <tr><th>Dependency</th><td>From, to, and a kind: uses, calls, reads, publishes or consumes</td></tr>
+              <tr><th>Relation</th><td>From, to, and a free label. An arrow that claims nothing more than its label</td></tr>
               <tr><th>Lifecycle</th><td>Status (current, target, to-adapt, to-be-created, deprecated, or your own word), phase, valid-from, valid-until</td></tr>
-              <tr><th>Ownership</th><td>Squad, domain, and RAPID role lists — recommend, agree, perform, input, decide</td></tr>
+              <tr><th>Ownership</th><td>Squad, domain, and RAPID role lists: recommend, agree, perform, input, decide</td></tr>
               <tr><th>Tag.For</th><td>Attaches a lifecycle and/or an ownership to any element <em>or any link</em></td></tr>
-              <tr><th>View</th><td>A named subset with a base lens — module map, dependency graph, or all — stored as its own <span class="st-mono">.cs</span> file</td></tr>
+              <tr><th>View</th><td>A named subset with a base lens (module map, dependency graph or all), stored as its own <span class="st-mono">.cs</span> file</td></tr>
             </tbody>
           </table>
         </div>
@@ -732,12 +764,13 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
   <section class="st-sec st-stage" id="agents">
     <div class="wrap">
       <div class="st-open reveal">
-        <?= eyebrow('The agent&rsquo;s half') ?>
+        <?= eyebrow('The text layer') ?>
         <h2 class="st-h2">Nobody has to open it.</h2>
         <p class="st-sub">
-          Everything above happens with a mouse in it. But a workspace is three text files in a
-          vocabulary that is written down — so the canvas is <strong>an</strong> authoring surface, not
-          the only one. An agent with a shell writes the model; one command turns it into a picture.
+          This is the text layer up close. A workspace is three text files with a vocabulary that is
+          written down, so the canvas is <strong>one</strong> way to edit the model, not the only one. An
+          agent with a shell writes the files, checks them and renders the picture. Nothing to install or
+          connect for this: it is how the tool works from the first commit.
         </p>
       </div>
 
@@ -753,45 +786,43 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
           <div class="st-note" data-g="model">
             <span class="st-tick">The model</span>
             <h3>A box that asserts nothing.</h3>
-            <p>Every other element kind is a claim — <em>this is a bounded context</em>, <em>this is
-              deployable</em>. An argument's boxes claim nothing, and forcing one into a
-              <span class="st-mono">Module</span> writes a falsehood into a file other people will copy
-              from. <span class="st-mono">Concept</span> and <span class="st-mono">Relation</span> are
-              the way out: a named box and a labelled arrow that mean only what they say.</p>
+            <p>Every other element kind is a claim: <em>this is a bounded context</em>, <em>this is
+              deployable</em>. The boxes in an argument claim nothing, and if you force one into a
+              <span class="st-mono">Module</span>, you write something false into a file other people will copy.
+              <span class="st-mono">Concept</span> and <span class="st-mono">Relation</span> are the way out: a named box and a
+              labelled arrow that mean only what they say.</p>
           </div>
           <div class="st-note" data-g="view">
             <span class="st-tick">The view</span>
             <h3>The view is the question.</h3>
-            <p>A view names the subset this particular picture is about. A link is drawn only when
-              <em>both</em> of its endpoints are in it — the single most common reason a diagram comes
-              out looking right and missing an arrow. So the validator reports that case by name,
-              rather than leaving it to be noticed.</p>
+            <p>A view names the subset one picture is about. A link is drawn only when <em>both</em> ends are
+              in the view. This is the most common reason a diagram looks fine and still misses an arrow, so
+              the validator reports this case by name.</p>
           </div>
           <div class="st-note" data-g="layout">
             <span class="st-tick">The layout</span>
-            <h3>Say what the arrangement is, not where things are.</h3>
-            <p>A language model is good at intent and poor at pixels, so it states the intent — three
-              columns, sixty apart, centred — and Stemma solves it to coordinates. Nudging one box by
-              hand records an offset <em>against</em> the constraint instead of replacing it, so the
-              arrangement survives being corrected and the nudge travels with its slot when the grid
-              re-solves. <span class="st-mono">row</span>, <span class="st-mono">column</span> and
+            <h3>Describe the arrangement, not the positions.</h3>
+            <p>A language model is good at intent and bad at pixels. So the agent writes the intent, three
+              columns, sixty apart, centred, and Stemma calculates the coordinates. When you move one box by
+              hand, Stemma stores an offset <em>against</em> the constraint instead of replacing it, so the
+              arrangement survives the correction and the offset moves with its slot when the grid is solved
+              again. <span class="st-mono">row</span>, <span class="st-mono">column</span> and
               <span class="st-mono">stack</span> work the same way.</p>
           </div>
           <div class="st-note" data-g="ink">
             <span class="st-tick">Annotation</span>
             <h3>Ink is not architecture.</h3>
-            <p>Swimlane labels, brackets, callouts — anything carrying no architectural meaning — are
-              free-form shapes in the sidecar, never elements. Worth stating plainly, because it is the
-              rule an agent breaks first: if you want to add an element so that a picture looks better,
-              what you want is a shape.</p>
+            <p>Swimlane labels, brackets and callouts carry no architectural meaning, so they are free-form
+              shapes in the sidecar, never elements. I write this down because agents break this rule first:
+              if you want an element only to make the picture look better, what you want is a shape.</p>
           </div>
         </div>
       </div>
 
       <div class="st-term st-code reveal">
-        <div class="st-code-bar"><b>a shell, no browser open</b><span>check it, draw it, then catch it going stale</span><span class="st-r">wrapped to fit</span></div>
+        <div class="st-code-bar"><b>a shell, no browser open</b><span>check it, draw it, then catch it when it gets stale</span><span class="st-r">wrapped to fit</span></div>
 <pre><code><span class="l"><span class="l-p">$ </span><span class="l-c">stemma validate --workspace .</span></span>
-<span class="l l-o">  info    model/is-a-figure            6 of 6 elements are Concepts — this is</span>
+<span class="l l-o">  info    model/is-a-figure            6 of 6 elements are Concepts, so this is</span>
 <span class="l l-o">                                       a figure rather than an architecture,</span>
 <span class="l l-o">                                       which is a fine thing to be</span>
 <span class="l l-ok">stemma validate: 0 error(s), 0 warning(s)</span>
@@ -812,20 +843,20 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
       </div>
 
       <ul class="st-reads reveal">
-        <li><b>Deterministic</b>Same input, same picture. Each render starts a short-lived backend of its own, so two can run at once and neither disturbs a workspace you have open.</li>
-        <li><b>Checkable</b>Every render writes a manifest fingerprinting the model, the view, the layout and the profile it came from. <span class="st-mono">--check</span> re-computes it and fails the build when a committed image has stopped matching its source.</li>
-        <li><b>Written down</b>The sidecar has a published JSON Schema and every file written points at it. The protocol reference explains the whole chain to somebody who will never open the app, with three worked examples that were built and rendered exactly as printed.</li>
+        <li><b>Deterministic</b>The same input gives the same picture. Every render starts its own short-lived backend, so two renders can run in parallel and neither touches a workspace you have open.</li>
+        <li><b>Checkable</b>Every render writes a manifest with a fingerprint of the model, the view, the layout and the profile. <span class="st-mono">--check</span> calculates it again and fails the build when a committed image no longer matches its source.</li>
+        <li><b>Written down</b>The sidecar has a published JSON Schema, and every file points to it. The protocol reference in the repo explains the whole chain for someone who never opens the app, with three worked examples that were built and rendered exactly as printed.</li>
       </ul>
 
       <p class="st-kick reveal" style="margin-top:2.4rem">
-        The workspace above draws a diagram that already exists on this site — the one in
-        <a href="/blog/the-bottleneck-moved/">The Bottleneck Moved</a>, originally made in draw.io.
-        Reproducing it from a model, with one command and no mouse, transparent and identical across two
-        machines, was the acceptance test for this whole pipeline. Its origin is less flattering: a later
-        essay's diagrams <em>were</em> drawn from a Stemma model, by a 190-line Playwright script that
-        started the app, opened a real browser and dragged every node into position with synthetic mouse
-        gestures — three passes, re-reading an anchor node before each one, because dragging was the only
-        thing that stuck. It worked, and it was a bug report against the product.
+        The workspace above draws a diagram that already exists on this blog, the one in
+        <a href="/blog/the-bottleneck-moved/">The Bottleneck Moved</a>, first made in draw.io. Getting the
+        same picture from a model, with one command and no mouse, transparent and identical on two
+        machines, was the acceptance test for this pipeline. The story behind it is less nice. Before,
+        the diagrams for a later essay <em>were</em> made from a Stemma model by a 190-line Playwright
+        script: it started the app, opened a real browser and dragged every node into place with fake
+        mouse events, in three passes, because dragging was the only thing that stayed. It worked, and it
+        was also a bug report against my own product.
         <strong><span class="st-mono">stemma render</span> is what deleted it.</strong>
       </p>
     </div>
@@ -836,10 +867,10 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
     <div class="wrap">
       <div class="st-open reveal">
         <?= eyebrow('The views') ?>
-        <h2 class="st-h2">One model. Whatever lens the room needs.</h2>
+        <h2 class="st-h2">One model, a different lens for each room.</h2>
         <p class="st-sub">
-          A view is a projection, not a copy — a named subset of the same model with its own layout,
-          styling and notes. Switching one changes the lens, never the data.
+          A view is a projection, not a copy: a named subset of the same model with its own layout,
+          styling and notes. When you switch a view, you change the lens, not the data.
         </p>
       </div>
 
@@ -851,8 +882,8 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
         </picture>
         <figcaption>
           <span class="st-pl">The Concerns board</span>
-          Every question, assumption and risk in the model, each still pointing at the element it belongs
-          to. Click one and it opens on the map, selected.
+          Every question, assumption and risk in the model, each one still pointing at its element.
+          Click one and it opens on the map, selected.
         </figcaption>
       </figure>
     </div>
@@ -863,11 +894,11 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
     <div class="wrap">
       <div class="st-open reveal">
         <?= eyebrow('Story books') ?>
-        <h2 class="st-h2">An architecture nobody followed is an architecture that didn't happen.</h2>
+        <h2 class="st-h2">The review meeting is part of the architecture.</h2>
         <p class="st-sub">
-          Modelling the system is half the job. The other half is forty minutes in front of people who
-          control the budget — and that walkthrough is normally a slide deck, rebuilt by hand every
-          quarter, drifting from the model the moment either one moves.
+          This is the visual layer at work. Modelling the system is half of the job. The other half is
+          forty minutes in front of the people who decide the budget, and usually that is a slide deck,
+          rebuilt by hand every quarter, which starts to drift from the model on the same day.
         </p>
       </div>
 
@@ -875,40 +906,39 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
         <div class="st-pin">
           <div class="st-code">
             <div class="st-code-bar"><b>Concepts/view-book.stemma.yaml</b><span class="st-r">excerpt</span></div>
-<pre><code><span class="l"><span class="c">books:</span></span><span class="l">  - id: book_steering</span><span class="l">    name: Steering review — extracting Payments</span><span class="l">    audience: <span class="s">leadership</span></span><span class="l">    pages:</span><span class="l">      - viewId: moduleMap</span><span class="l">        title: Where the money moves today</span><span class="l">        narrative: <span class="c">Three contexts. Ordering and Fulfilment are</span></span><span class="l">          <span class="c">already out of the monolith. Payments is the one still</span></span><span class="l">          <span class="c">half in — Settlement is target state for Q3, Ledger does</span></span><span class="l">          <span class="c">not exist yet…</span></span><span class="l"> </span><span class="l">      - viewId: dependencyGraph</span><span class="l">        title: The dependency that sets the order of work</span><span class="l">        narrative: <span class="c">Order Lifecycle still reads the legacy</span></span><span class="l">          <span class="c">monolith. That arrow is why Payments cannot go first…</span></span></code></pre>
+<pre><code><span class="l"><span class="c">books:</span></span><span class="l">  - id: book_steering</span><span class="l">    name: Steering review: extracting Payments</span><span class="l">    audience: <span class="s">leadership</span></span><span class="l">    pages:</span><span class="l">      - viewId: moduleMap</span><span class="l">        title: Where the money moves today</span><span class="l">        narrative: <span class="c">Three contexts. Ordering and Fulfilment are</span></span><span class="l">          <span class="c">already out of the monolith. Payments is the one still</span></span><span class="l">          <span class="c">half in. Settlement is target state for Q3, Ledger does</span></span><span class="l">          <span class="c">not exist yet…</span></span><span class="l"> </span><span class="l">      - viewId: dependencyGraph</span><span class="l">        title: The dependency that sets the order of work</span><span class="l">        narrative: <span class="c">Order Lifecycle still reads the legacy</span></span><span class="l">          <span class="c">monolith. That arrow is why Payments cannot go first…</span></span></code></pre>
           </div>
         </div>
 
         <div class="st-notes">
           <div class="st-note">
             <span class="st-tick">A page</span>
-            <h3>A view, plus the thing you would actually say.</h3>
-            <p>Each page points at a view of the model and carries a title and a narrative. Not a caption —
-              the sentence you say out loud when that picture is on the screen, written down so it survives
-              you being on holiday.</p>
+            <h3>A view, plus what you would actually say.</h3>
+            <p>Each page points to a view and has a title and a narrative. Not a caption, but the sentence
+              you say when that picture is on the screen, written down so it still works when you are on
+              holiday.</p>
           </div>
           <div class="st-note">
             <span class="st-tick">An audience</span>
             <h3>One model, one deck per room.</h3>
-            <p>A book is tagged for who it is for — leadership, engineering, security, operations. The
-              committee that funds the work and the team that builds it get different sequences, different
-              depth and different language, off the same model, with no second copy to keep honest.</p>
+            <p>A book has an audience: leadership, engineering, security or operations. The committee that
+              funds the work and the team that builds it get a different order, depth and language, from the
+              same model, with no second copy to maintain.</p>
           </div>
           <div class="st-note">
             <span class="st-tick">Present mode</span>
             <h3>The canvas follows the story.</h3>
-            <p>Open a book and the tool becomes the deck: the canvas switches to each page's view, the
-              narrative sits in a strip beneath it, and prev/next walks the room through it. Drag to
-              reorder pages, edit the narrative in place, export the whole thing as a multi-page PDF for
-              the people who want a document.</p>
+            <p>Open a book and the tool becomes the deck. The canvas switches to each page's view, the
+              narrative sits in a strip below it, and prev/next takes the room through it. Drag pages to
+              reorder them, edit the narrative in place, and export a multi-page PDF for people who want a
+              document.</p>
           </div>
           <div class="st-note">
             <span class="st-tick">Why it matters</span>
             <h3>The deck cannot drift either.</h3>
-            <p>A book stores the <em>reference</em> to a view, never a picture of it. Change the
-              architecture and next quarter's walkthrough redraws itself from the current model — so the
-              story you told the board and the code you shipped stay the same artifact. That is the part
-              no diagramming tool can offer, because it has no model to point at.</p>
+            <p>A book stores a <em>reference</em> to a view, never a picture of it. When the architecture
+              changes, next quarter's walkthrough is drawn again from the current model, so the story you
+              told the board and the code you shipped stay one artefact.</p>
           </div>
         </div>
       </div>
@@ -917,12 +947,12 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
         <picture>
           <source srcset="/assets/img/stemma/book-dark.webp" media="(prefers-color-scheme: dark)">
           <img src="/assets/img/stemma/book-light.webp" width="2400" height="1470" loading="lazy" decoding="async"
-               alt="Stemma in present mode: a four-page steering-review book tagged for leadership, with the page strip along the bottom and the narrative for page one beneath the canvas.">
+               alt="Stemma in present mode: a four-page steering review for leadership, with the page strip along the bottom and the narrative for page one below the canvas.">
         </picture>
         <figcaption>
           <span class="st-pl">Present mode</span>
-          A four-page steering review tagged <span class="st-mono">leadership</span>. The strip along the
-          bottom is the story; the canvas above it is the model. Nothing was exported to build this.
+          A four-page steering review for <span class="st-mono">leadership</span>. The strip at the bottom
+          is the story, the canvas above it is the model. Nothing was exported to build this.
         </figcaption>
       </figure>
     </div>
@@ -936,12 +966,12 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
         <h2 class="st-h2">Four layers, one direction, no second store.</h2>
         <p class="st-sub">
           The engine is pure Roslyn. It knows nothing about the web layer and nothing about any model
-          provider, which is what keeps the fidelity guarantee testable in isolation.
+          provider, which is why I can test the fidelity guarantee on its own.
         </p>
       </div>
 
       <div class="st-stack reveal">
-        <div class="st-layer"><b>Client</b><span>React 19 · Vite · React&nbsp;Flow · zustand · Tailwind. Renders the active view, emits operations, applies deltas. Holds no authoritative state — a refresh re-fetches the snapshot.</span></div>
+        <div class="st-layer"><b>Client</b><span>React 19 · Vite · React&nbsp;Flow · zustand · Tailwind. Renders the active view, sends operations, applies deltas. It holds no authoritative state, a refresh just fetches the snapshot again.</span></div>
         <div class="st-arrow" aria-hidden="true">REST · SignalR ↓</div>
         <div class="st-layer"><b>Web</b><span>ASP.NET Core 10. REST for load, snapshot, layout and views; a SignalR hub for the operation stream. The only place model-provider calls are allowed to live.</span></div>
         <div class="st-arrow" aria-hidden="true">↓</div>
@@ -955,7 +985,7 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
       <figure class="st-fig reveal">
         <svg viewBox="0 0 560 252" role="img" aria-labelledby="st-fig-t st-fig-d">
           <title id="st-fig-t">The lineage of a Stemma workspace</title>
-          <desc id="st-fig-d">Two committed files at the top — Architecture.cs and stemma.layout.json — with descent lines to four derived views: Module Map, Dependency Graph, Concerns board and the HTML report.</desc>
+          <desc id="st-fig-d">Two committed files at the top, Architecture.cs and stemma.layout.json, with descent lines to four derived views: Module Map, Dependency Graph, Concerns board and the HTML report.</desc>
 
           <path class="st-desc st-d1" d="M155 82 V132"/>
           <path class="st-desc st-d1" d="M405 82 V132"/>
@@ -997,9 +1027,9 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
           <text class="st-sig" x="544" y="196">D</text>
         </svg>
         <figcaption>
-          A <i>stemma codicum</i> is the family tree philologists draw for a manuscript: every surviving
-          copy traced back to one archetype. Persistence here has the same shape — two committed files,
-          every view descended from them, and not one descendant that has to be kept honest by hand.
+          A <i>stemma codicum</i> is the family tree philologists draw for a manuscript: every copy traced
+          back to one original. The files here have the same shape. Two committed files, every view comes
+          from them, and nothing has to be kept in sync by hand.
         </figcaption>
       </figure>
     </div>
@@ -1012,9 +1042,9 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
         <?= eyebrow('Roadmap') ?>
         <h2 class="st-h2">Horizons, not dates.</h2>
         <p class="st-sub">
-          A side project built on evenings and weekends since 4 May 2026. Promising quarters would be a
-          lie with a nice font, so each item carries an honest position instead. The words are Stemma's
-          own lifecycle vocabulary — the same three it puts on your systems.
+          A side project I build on evenings and weekends, since 4 May 2026. I don't promise quarters,
+          so each item has a status instead, in Stemma's own lifecycle words, the same ones it puts on
+          your systems.
         </p>
       </div>
 
@@ -1023,39 +1053,39 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
           <h3>Now <span class="st-chip st-c-ok">current</span></h3>
           <ul style="color:var(--body)">
             <li><b>The Roslyn engine</b> and the fidelity suite that gates it</li>
-            <li><b>The canonical model</b> — elements, links, lifecycle, ownership, views as code, and the kinds that assert nothing</li>
-            <li><b>The canvas</b> — module map, dependency graph, saved views, layout, styling, shapes, notes</li>
+            <li><b>The canonical model</b>: elements, links, lifecycle, ownership, views as code, and the kinds that assert nothing</li>
+            <li><b>The canvas</b>: module map, dependency graph, saved views, layout, styling, shapes, notes</li>
             <li><b>The committed sidecar</b>, with a published schema and a protocol reference for writing it by hand</li>
-            <li><b>The headless CLI</b> — render and validate, the publication profile, layout as a constraint, the render manifest</li>
-            <li><b>Story books</b> — narrated, audience-tagged page sequences, with present mode and PDF export</li>
+            <li><b>The headless CLI</b>: render and validate, the publication profile, layout as a constraint, the render manifest</li>
+            <li><b>Story books</b>: narrated, audience-tagged page sequences, with present mode and PDF export</li>
             <li><b>The single-file HTML report</b>, with audience modes and a comment loop</li>
             <li><b>Model-only workspaces</b> and the from-scratch onboarding path</li>
-            <li><b>Local-only diagnostics</b> — structured logs, redacted bundles, no network sink</li>
+            <li><b>Local-only diagnostics</b>: structured logs, redacted bundles, no network sink</li>
           </ul>
         </section>
         <section style="color:var(--st-tgt)">
           <h3>Next <span class="st-chip st-c-tgt">target</span></h3>
           <ul style="color:var(--body)">
-            <li><b>Fidelity fixtures across the whole operation catalogue</b> — every operation, no exception</li>
+            <li><b>Fidelity fixtures across the whole operation catalogue</b>: every operation, no exception</li>
             <li><b>A desktop window</b>, so it stops reading as a dev server</li>
             <li><b>One-command install</b> as a global tool</li>
-            <li><b>A workspace brief</b> — a <span class="st-mono">STEMMA.md</span> dropped into every new workspace, so the agent that opens it needs no other document</li>
+            <li><b>A workspace brief</b>: a <span class="st-mono">STEMMA.md</span> dropped into every new workspace, so the agent that opens it needs no other document</li>
             <li><b>An embedded font in the vector export</b>, so an SVG cannot re-wrap on a machine that lacks the one it was drawn in</li>
-            <li><b>Auto-layout from the command line</b> — the four algorithms are pure functions already, and reachable only from the canvas</li>
-            <li><b>Clearer view management</b> — faster switching, better handling</li>
-            <li><b>An accessibility pass</b> — keyboard, focus, contrast, reduced motion</li>
+            <li><b>Auto-layout from the command line</b>: the four algorithms are pure functions already, and reachable only from the canvas</li>
+            <li><b>Clearer view management</b>: faster switching, better handling</li>
+            <li><b>An accessibility pass</b>: keyboard, focus, contrast, reduced motion</li>
             <li><b>A curated sample gallery</b> as living documentation</li>
           </ul>
         </section>
         <section style="color:var(--st-new)">
           <h3>Later <span class="st-chip st-c-new">to&#8209;be&#8209;created</span></h3>
           <ul style="color:var(--body)">
-            <li><b>More projections</b> — Mermaid and PlantUML output, a live code-preview pane</li>
-            <li><b>Git-backed sessions</b> — a session is a branch, a save is a commit</li>
-            <li><b>Deeper validation</b> — background compilation, richer rules inline</li>
+            <li><b>More projections</b>: Mermaid and PlantUML output, a live code-preview pane</li>
+            <li><b>Git-backed sessions</b>: a session is a branch, a save is a commit</li>
+            <li><b>Deeper validation</b>: background compilation, richer rules inline</li>
             <li><b>Canvas search and filter</b>, and deep-linkable views</li>
             <li><b>A repository integration</b> that regenerates the report on merge and comments the architecture change on the pull request</li>
-            <li><b>Hosted report links</b> — the one part that could ever be a service</li>
+            <li><b>Hosted report links</b>: the one part that could ever be a service</li>
           </ul>
         </section>
       </div>
@@ -1071,7 +1101,7 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
         <?= eyebrow('Questions') ?>
         <h2 class="st-h2">What people ask first.</h2>
         <p class="st-sub">
-          Nine objections, answered where you can find them rather than three emails in.
+          Nine questions people ask first, answered here instead of three emails later.
         </p>
       </div>
 
@@ -1085,9 +1115,9 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
       </div>
 
       <p class="st-kick reveal" style="text-align:center">
-        The argument behind all of it is an essay:
-        <a href="/blog/the-diagram-that-cannot-lie/">The Diagram That Cannot Lie</a> — why a diagram that
-        <em>can</em> drift always does. On what diagrams are actually for, there is
+        The argument behind all of this is an essay,
+        <a href="/blog/the-diagram-that-cannot-lie/">The Diagram That Cannot Lie</a>, about why a diagram
+        that <em>can</em> drift always does. And on what diagrams are really for:
         <a href="/blog/diagrams-are-conversations-not-documentation/">Diagrams Are Conversations, Not Documentation</a>.
       </p>
     </div>
@@ -1104,30 +1134,29 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
       <div class="st-repo reveal">
         <a class="st-repo-url" href="<?= e($repo) ?>" rel="noopener"><?= $ghIcon ?>github.com/batas2/Stemma</a>
         <p>
-          The source is there, engine included, with the fidelity suite that gates it. It needs the
-          .NET&nbsp;10 SDK and Node&nbsp;24 — no database, no container, nothing to procure —
-          and <span class="st-mono">./run.sh --dev --workspace samples/AuroraRail</span> opens the
-          reference model. What is still in flight is stated on the
-          <a href="#roadmap">roadmap</a> and what has already landed is dated in the
-          <a href="/stemma/changelog/">changelog</a>, so you can judge the pace yourself.
+          The source is there, with the engine and the fidelity suite. You need the .NET&nbsp;10 SDK and
+          Node&nbsp;24, no database and no container, and
+          <span class="st-mono">./run.sh --dev --workspace samples/AuroraRail</span> opens the reference
+          model. What is still in progress is on the <a href="#roadmap">roadmap</a>, and what already
+          shipped is dated in the <a href="/stemma/changelog/">changelog</a>, so you can check the pace
+          yourself.
         </p>
         <p>
-          <strong>PolyForm Noncommercial 1.0.0.</strong> Free for personal use, study, hobby projects,
-          and for charities, educational institutions, public research bodies and government. Source-available,
-          not open source: commercial use of any kind needs a commercial licence, which is
-          <a href="/about/#contact">a short email</a> rather than a procurement process.
+          <strong>PolyForm Noncommercial 1.0.0.</strong> Free for personal use, study and hobby projects,
+          and for charities, schools, public research and government. It is source-available, not open
+          source: any commercial use needs a commercial licence, and that is
+          <a href="/about/#contact">a short email</a>, not a procurement process.
         </p>
         <p>
-          If you want to argue with any of the above — which is more useful to me than agreement —
-          <a href="/about/#contact">write to me</a>. Architects who have lived with the drift problem long
-          enough to be cynical about it are exactly the readers I want.
+          If you disagree with something on this page, that is more useful to me than agreement, so
+          <a href="/about/#contact">write to me</a>. I especially want to hear from architects who lived
+          with diagram drift long enough to stop believing in fixes.
         </p>
         <p class="st-plain">
-          Reading this with a machine? The whole page is also
-          <a href="/stemma/index.md">plain markdown</a>, the changelog is
-          <a href="/stemma/changelog/index.md">plain markdown</a>, and the site's context file is
-          <a href="/llms.txt">llms.txt</a>. The repository carries a JSON Schema for the presentation
-          sidecar and a protocol reference for writing a workspace without opening the app.
+          Reading this with a machine? The whole page is also <a href="/stemma/index.md">plain markdown</a>,
+          the changelog too (<a href="/stemma/changelog/index.md">markdown</a>), and the site context file
+          is <a href="/llms.txt">llms.txt</a>. The repo has a JSON Schema for the layout sidecar and a
+          protocol reference for writing a workspace without the app.
         </p>
       </div>
     </div>
@@ -1147,11 +1176,10 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
   <div class="st-colophon">
     <div class="wrap">
       <p>
-        Stemma is a pet project. It is built by one person on evenings and weekends, the source is
-        readable by anyone, and it is not a company — there is no roadmap I owe anybody, no support line
-        and no sales call at the end of this page. A commercial licence exists because the licence had to
-        say something and that is the honest thing for it to say, not because there is a funnel behind it.
-        The tool exists because I wanted it and nobody had built it.
+        Stemma is my pet project. I build it alone, on evenings and weekends, the source is open to read,
+        and it is not a company. There is no roadmap I owe anybody, no support line and no sales call at
+        the end of this page. The commercial licence exists because a licence has to say something, not
+        because there is a funnel behind it. I built the tool because I wanted it and nobody else had.
       </p>
     </div>
   </div>
