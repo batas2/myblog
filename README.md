@@ -127,8 +127,6 @@ order written; without it the block falls back to shared tags, which is coarse b
 essays share *Software Architecture*. A post that belongs to a thread goes into `SERIES` in
 `lib/blog.php`: the essay then carries a series box after the text and a "Series, part N" label
 in every list. The homepage lists the newest `HOME_LATEST_COUNT` (10) essays and links `/blog/archive/` for the rest.
-The list thumbnail is the post's first diagram when that diagram is no wider than 2:1, else the
-hero photo.
 
 Optionally drop a hero image at `assets/img/posts/my-slug.jpg` (the build picks it up,
 generates dimensions and uses the `.thumb.jpg` variant in lists), then `php tools/build.php`.

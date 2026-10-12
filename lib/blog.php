@@ -774,36 +774,3 @@ function reading_paths(): array
         ],
     ];
 }
-
-/** Widest figure (width / height) still legible as a list thumbnail. */
-const FIGURE_THUMB_MAX_RATIO = 2.0;
-
-/**
- * The post's own drawing as a thumbnail, when it has one: the first PNG under
- * assets/img/posts/<slug>/ (alphabetical), skipping dark variants. A `-light.png`
- * reports its `-dark.png` sibling so a card can swap it in dark mode. Stock photos
- * all look alike in a list; a figure is the one picture that is about the essay.
- */
-function figure_thumb_meta(string $slug): ?array
-{
-    $dir = APP_ROOT . '/assets/img/posts/' . $slug;
-    if (!is_dir($dir)) return null;
-    $files = glob($dir . '/*.png') ?: [];
-    sort($files);
-    foreach ($files as $f) {
-        $name = basename($f);
-        if (str_ends_with($name, '-dark.png')) continue;
-        [$w, $h] = getimagesize($f) ?: [null, null];
-        if (!$w || !$h) continue;
-        // only the first figure is a candidate: a flow strip wider than 2:1 turns into an
-        // unreadable line in a 150x94 thumb, and the post then keeps its photo instead
-        if ($w / $h > FIGURE_THUMB_MAX_RATIO) return null;
-        $out = ['figure' => true, 'src' => "/assets/img/posts/{$slug}/{$name}", 'w' => $w, 'h' => $h, 'dark' => null];
-        if (str_ends_with($name, '-light.png')) {
-            $darkName = substr($name, 0, -strlen('-light.png')) . '-dark.png';
-            if (is_file($dir . '/' . $darkName)) $out['dark'] = "/assets/img/posts/{$slug}/{$darkName}";
-        }
-        return $out;
-    }
-    return null;
-}

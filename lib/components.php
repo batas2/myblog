@@ -48,21 +48,10 @@ function post_meta_line(array $p): string
     return nice_ts($p['publish_ts']) . ' · ' . $p['minutes'] . ' min read' . series_suffix($p['slug']);
 }
 
-/**
- * Thumbnail wrapped in a named span, when the post has a picture. A figure
- * (figure_thumb_meta) renders at its own proportions, as a <picture> when it
- * ships a dark variant; a photo (hero_meta) renders its cropped thumb.
- */
+/** Thumbnail wrapped in a named span, when the post has a hero image. */
 function thumb_span(?array $h, string $class): string
 {
     if (!$h) return '';
-    if (!empty($h['figure'])) {
-        $img = img_lazy($h['src'], '', $h['w'], $h['h']);
-        if (!empty($h['dark'])) {
-            $img = '<picture><source media="(prefers-color-scheme: dark)" srcset="' . e($h['dark']) . '">' . $img . '</picture>';
-        }
-        return '<span class="' . $class . ' thumb-figure">' . $img . '</span>';
-    }
     return '<span class="' . $class . '">' . img_lazy($h['thumb'], '', $h['tw'], $h['th']) . '</span>';
 }
 
@@ -146,8 +135,7 @@ function log_rows(array $posts, bool $withTags = false, string $extraClass = '')
     foreach ($posts as $p) {
         $html .= '<li' . ($withTags && $p['tags'] ? ' class="has-tags"' : '') . '>';
         $html .= '<a href="' . e(post_path($p['slug'])) . '">';
-        // the essay's own drawing beats a stock photo that looks like every other stock photo
-        $html .= thumb_span(figure_thumb_meta($p['slug']) ?? hero_meta($p['slug']), 'thumb');
+        $html .= thumb_span(hero_meta($p['slug']), 'thumb');
         $html .= '<span class="log-main">';
         $html .= '<span class="date">' . log_ts($p['publish_ts']) . series_suffix($p['slug']) . '</span>';
         $html .= '<h3>' . e($p['title']) . '</h3><span class="sub">' . e($p['subtitle']) . '</span>';

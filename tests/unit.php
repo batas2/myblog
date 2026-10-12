@@ -1608,25 +1608,15 @@ t_contains('Reviewability, part 1', $home, 'archive rows carry the series label'
 $bySlug = array_column($allPosts, null, 'slug');
 t_contains('class="series-nav"', render_post($bySlug['the-bottleneck-moved'], null, null, $posts), 'post page carries the series nav');
 
-section('figure thumbnails');
-$ft = figure_thumb_meta('a-feature-is-not-a-service');
-t_eq('/assets/img/posts/a-feature-is-not-a-service/feature-vs-service.png', $ft['src'], 'first diagram of the post is the figure thumb');
-t_assert(($ft['w'] ?? 0) > 0 && ($ft['h'] ?? 0) > 0, 'figure thumb carries real dimensions');
-// a 4:1 flow strip shrinks to an unreadable line inside a 150x94 thumb
-t_eq(null, figure_thumb_meta('the-bottleneck-moved'), 'a diagram wider than 2:1 is no thumbnail');
-t_eq(null, figure_thumb_meta('mathematicians-vs-lawyers'), 'no diagram, no figure thumb');
-$ftPair = figure_thumb_meta('turn-the-sequence-diagram-on-its-side');
-t_eq('/assets/img/posts/turn-the-sequence-diagram-on-its-side/same-flow-in-lanes-light.png', $ftPair['src'], 'light variant is the default figure thumb');
-t_eq('/assets/img/posts/turn-the-sequence-diagram-on-its-side/same-flow-in-lanes-dark.png', $ftPair['dark'], 'dark sibling found for a light/dark pair');
-$rowsFig = log_rows([$bySlug['a-feature-is-not-a-service']]);
-t_contains('class="thumb thumb-figure"', $rowsFig, 'rows prefer the diagram as thumbnail');
-t_contains('feature-vs-service.png', $rowsFig, 'and point at the diagram file');
-t_contains('.thumb.jpg', log_rows([$bySlug['the-bottleneck-moved']]), 'a wide strip falls back to the photo');
-$rowsPair = log_rows([$bySlug['turn-the-sequence-diagram-on-its-side']]);
-t_contains('<picture>', $rowsPair, 'a light/dark pair renders as a picture element');
-t_contains('prefers-color-scheme: dark', $rowsPair, 'with the dark source for dark mode');
-$rowsPhoto = log_rows([$bySlug['mathematicians-vs-lawyers']]);
-t_contains('.thumb.jpg', $rowsPhoto, 'no diagram falls back to the photo thumbnail');
+section('list thumbnails are always the main image of the post');
+foreach (['a-feature-is-not-a-service', 'the-bottleneck-moved', 'turn-the-sequence-diagram-on-its-side', 'mathematicians-vs-lawyers'] as $slug) {
+    $h = hero_meta($slug);
+    $row = log_rows([$bySlug[$slug]]);
+    t_contains('src="' . $h['thumb'] . '"', $row, "{$slug}: row uses the hero thumbnail");
+    t_not_contains('thumb-figure', $row, "{$slug}: no diagram thumbnail");
+}
+t_assert(!function_exists('figure_thumb_meta'), 'the diagram-thumbnail lookup is gone');
+t_not_contains('thumb-figure', (string) file_get_contents(APP_ROOT . '/assets/site.css'), 'and so is its styling');
 
 section('post page: byline, badges, related');
 $css = (string) file_get_contents(APP_ROOT . '/assets/site.css');

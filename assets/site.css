@@ -1305,9 +1305,6 @@ tr.prow:hover .ob { border-color: var(--accent); color: var(--accent); }
 .home-promise b { color: var(--ink); font-weight: 600; }
 .home-all { margin-top: 1.6rem; }
 
-/* a drawing as a thumbnail: its own proportions, on the card surface, never cropped */
-.log .thumb-figure img { object-fit: contain; background: var(--surface); padding: 6px; }
-.log .thumb-figure picture { display: block; }
 
 /* byline under the article title */
 .byline {
