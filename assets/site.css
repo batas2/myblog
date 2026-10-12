@@ -1348,3 +1348,14 @@ main { overflow-x: clip; }
 /* four proof chips as a 2×2 block instead of a ragged 1/2/1 wrap */
 .home-hero .proof { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.4rem 1.6rem; max-width: 40rem; }
 @media (max-width: 560px) { .home-hero .proof { grid-template-columns: 1fr; } }
+
+/* door illustrations: one glance says architecture, AI, or built in the open */
+.door-art {
+  display: flex; align-items: center; justify-content: center;
+  height: 112px; margin: -0.2rem 0 0.4rem; border-radius: 12px;
+  background: var(--wash); border: 1px solid rgba(79, 82, 229, 0.14);
+  color: var(--muted);
+}
+.door-art svg { width: 150px; height: 100px; }
+.path-info .door-art { margin: 0 0 1rem; height: 96px; }
+.path-info .door-art svg { height: 84px; }

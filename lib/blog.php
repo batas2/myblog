@@ -752,19 +752,22 @@ function reading_paths(): array
     return [
         [
             'k'     => 'Architecture & orgs',
+            'art'   => 'architecture',
             'title' => 'People problems, dressed as technical ones',
             'desc'  => 'Ownership gaps, decision rights, and the org chart hiding inside your architecture. For architects and tech leads who keep fixing the same "technical" issue that never was one.',
             'reads' => ['nobody-owns-the-sum', 'decisions-have-an-architecture-too', 'the-anti-corruption-layer-is-for-people-too'],
         ],
         [
             'k'      => 'The AI transformation',
+            'art'    => 'ai',
             'title'  => 'Running AI adoption at real scale',
             'desc'   => 'Fifteen squads, several hundred developers, one transformation: the tech radar that drives it, the metrics that survive contact with reality, and the architecture practice that grew out of both.',
             'series' => 'The “Tools That Scale” series',
             'reads'  => ['from-signals-to-blips', 'probabilistic-metrics', 'prompt-driven-architecture'],
         ],
         [
-            'k'     => 'Building in the open',
+            'k'     => 'Built in the open',
+            'art'   => 'open',
             'title' => 'One person, three products, AI agents',
             'desc'  => 'Field reports from shipping my own products solo, with AI doing the typing: what actually changes, what breaks, and the receipts to prove it.',
             'reads' => ['a-company-of-one-staffed-by-agents', 'the-diagram-that-cannot-lie', 'edge-cases-written-by-parliament'],

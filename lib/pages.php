@@ -133,13 +133,14 @@ function render_index(array $posts): string
     $header .= '<p class="hero-id"><img class="home-face" src="/myself.jpeg" alt="Bartosz Frąckowiak" width="56" height="56" decoding="async">'
              . '<span>' . eyebrow('Field Notes', true) . '<span class="hero-by">by <a href="/about/">Bartosz Frąckowiak</a>, solution architect</span></span></p>';
     $header .= '<h1 style="font-size:clamp(2.2rem,5vw,3.2rem)">Field Notes</h1>';
-    $header .= '<p class="home-lede">An architect\'s notebook. Fifteen years of designing systems, and what they taught me about the decisions behind the boxes and arrows: who owns a boundary, why a migration never starts, what changes when agents write the code.</p>';
+    $header .= '<p class="home-lede">Software architecture, with the people left in. An architect\'s notebook from twelve-plus years of distributed systems in production: the decisions behind the boxes and arrows, who owns a boundary, why a migration never starts, and what changes when agents write the code.</p>';
     $header .= '<p class="hero-actions">'
              . '<a class="btn btn-primary" href="/blog/start/">Start here ' . arrow_icon() . '</a>'
              . '<a class="btn btn-ghost" href="#newsletter">Subscribe by email</a>'
              . '<a class="btn btn-ghost" href="/about/#contact">Contact me</a></p>';
-    $header .= '<p class="proof"><span>Architect, global SaaS</span><span>PhD, Univ. of Warsaw</span>'
-             . '<span>Top 3% on Toptal</span><span>' . $count . ' essays so far</span></p>';
+    // the same four facts as /about/ and /blog/start/, in the shortest wording that fits a 2×2 grid
+    $header .= '<p class="proof"><span>12+ years in production</span><span>PhD, Univ. of Warsaw</span>'
+             . '<span>Top 3% on Toptal</span><span>Architect, global SaaS</span></p>';
     $header .= '</div>';
     $header .= '<aside class="hero-side">';
     $header .= '<span class="hero-side-k">What you get here</span>';
@@ -313,8 +314,8 @@ function render_start_page(array $posts): string
     $html .= '<img class="start-face" src="/myself.jpeg" alt="Bartosz Frąckowiak" width="76" height="76" loading="lazy" decoding="async">';
     $html .= eyebrow('Start here', true);
     $html .= '<h1 style="font-size:clamp(2.1rem,4.6vw,3rem)">' . $n . ' essays in. Here is the map.</h1>';
-    $html .= '<p>I\'m <strong>Bartosz Frąckowiak</strong> — solution architect, co-leading an AI transformation across several hundred engineers. Every week I publish one field note about systems, the people around them, and the corporate machine they form together. This page is the shortest path to the good stuff.</p>';
-    $html .= '<p class="proof" style="margin-top:1.1rem"><span>Solution Architect in global SaaS</span><span>PhD research, University of Warsaw</span><span>Top 3% on Toptal</span><span>' . $n . ' essays and counting</span></p>';
+    $html .= '<p>I\'m <strong>Bartosz Frąckowiak</strong>, a solution architect in Warsaw: software architecture, with the people left in. Twelve-plus years of distributed systems in production, a PhD on whether architecture can be proven, and these days an AI transformation across several hundred engineers, which I co-lead. Every essay here is about what sits between a system and the people around it. This page is the shortest path in.</p>';
+    $html .= '<p class="proof" style="margin-top:1.1rem"><span>12+ years in distributed systems</span><span>PhD research, University of Warsaw</span><span>Top 3% on Toptal</span><span>Architect at a global SaaS platform</span></p>';
     $html .= '</div>';
 
     // ---- the hook: if you read only one
@@ -344,6 +345,7 @@ function render_start_page(array $posts): string
         $total = array_sum(array_column($reads, 'minutes'));
         $html .= '<section class="path">';
         $html .= '<div class="path-info">';
+        $html .= door_art($d['art'] ?? '');
         $html .= '<span class="path-k">' . sprintf('%02d', $di + 1) . ' · ' . e($d['k']) . '</span>';
         $html .= '<h3>' . e($d['title']) . '</h3>';
         $html .= '<p>' . e($d['desc']) . '</p>';

@@ -1559,7 +1559,7 @@ if (($nlb = newsletter_box()) !== '') {
 }
 t_contains('Newest essays', render_404_page($posts), '404 lists newest essays, not signals');
 $start = render_start_page($posts);
-t_contains('co-leading', $start, 'start page says co-leading');
+t_contains('co-lead', $start, 'start page says co-lead');
 t_not_contains('currently leading', $start, 'start page no longer claims to lead alone');
 
 section('homepage: doors, most read, archive');
@@ -1649,5 +1649,29 @@ t_eq(['data-driven-theater', 'nobody-owns-the-sum'], array_column(related_posts(
 $auto = ['slug' => 'auto', 'tags' => ['Software Architecture'], 'publish_ts' => 1, 'related' => []];
 t_eq(3, count(related_posts($auto, $posts)), 'without a manual list, tags still fill the block');
 t_contains('Picked by the author', $pp, 'manually related essays are labelled as picked');
+
+
+section('one story about the author on three pages');
+$homeX = render_index($posts);
+$startX = render_start_page($posts);
+$aboutSrc = (string) file_get_contents(APP_ROOT . '/about/index.php');
+foreach (['12+ years', 'PhD', 'Top 3% on Toptal', 'global SaaS', 'people left'] as $fact) {
+    t_contains($fact, $homeX, "homepage tells: {$fact}");
+    t_contains($fact, $startX, "start page tells: {$fact}");
+    t_contains($fact, $aboutSrc, "about page tells: {$fact}");
+}
+t_not_contains('Fifteen years', $homeX, 'no competing years count on the homepage');
+t_not_contains(' — ', substr($startX, strpos($startX, 'start-intro'), 1500), 'start intro has no spaced em dash');
+
+section('doors carry a picture of what they are');
+$kinds = array_column(reading_paths(), 'art');
+t_eq(['architecture', 'ai', 'open'], $kinds, 'one door per kind: architecture, AI, built in the open');
+t_eq(3, substr_count($homeX, 'class="door-art'), 'every homepage door has an illustration');
+t_eq(3, substr_count($startX, 'class="door-art'), 'every start-page path has the same illustration');
+foreach (['Architecture', 'AI', 'Built in the open'] as $label) {
+    t_contains('aria-label="' . $label . '"', $homeX, "door picture is labelled {$label}");
+}
+t_contains('<svg', door_art('ai'), 'door art is an inline drawing');
+t_eq('', door_art('nope'), 'unknown door kind draws nothing');
 
 if (basename($_SERVER['SCRIPT_NAME'] ?? '') === 'unit.php') exit(t_summary());

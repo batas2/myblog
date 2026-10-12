@@ -396,6 +396,7 @@ function doors_block(array $posts): string
         $reads = array_values(array_filter(array_map(fn($s) => $by[$s] ?? null, $d['reads'])));
         if (!$reads) continue;
         $html .= '<section class="door">';
+        $html .= door_art($d['art'] ?? '');
         $html .= '<span class="k">' . sprintf('%02d', $i + 1) . ' · ' . e($d['k']) . '</span>';
         $html .= '<h3>' . e($d['title']) . '</h3>';
         $html .= '<p>' . e($d['desc']) . '</p>';
@@ -409,4 +410,36 @@ function doors_block(array $posts): string
         $html .= '</section>';
     }
     return $html . '</div>';
+}
+
+/**
+ * A small drawing that says what a reading path is before a word is read:
+ * boxes and arrows for architecture, a network of nodes for AI, a code bracket
+ * with a branch for the products built in the open. Inline SVG in currentColor,
+ * so it follows the theme; the accent is the one element the picture is about.
+ */
+function door_art(string $kind): string
+{
+    $label = ['architecture' => 'Architecture', 'ai' => 'AI', 'open' => 'Built in the open'][$kind] ?? null;
+    if ($label === null) return '';
+    $a = 'var(--accent)';
+    $svg = match ($kind) {
+        // three services and the boundary between two of them
+        'architecture' => '<rect x="14" y="22" width="52" height="34" rx="6"/><rect x="104" y="22" width="52" height="34" rx="6"/>'
+            . '<rect x="59" y="74" width="52" height="34" rx="6" stroke="' . $a . '"/>'
+            . '<path d="M66 39h38M40 56l26 18M130 56l-26 18"/><path d="M98 34l6 5-6 5" />'
+            . '<path d="M85 12v104" stroke="' . $a . '" stroke-dasharray="4 5"/>',
+        // a small network with one lit path through it
+        'ai' => '<circle cx="28" cy="34" r="7"/><circle cx="28" cy="64" r="7"/><circle cx="28" cy="94" r="7"/>'
+            . '<circle cx="85" cy="44" r="7"/><circle cx="85" cy="84" r="7" stroke="' . $a . '"/>'
+            . '<circle cx="142" cy="64" r="9" stroke="' . $a . '"/>'
+            . '<path d="M35 34l43 10M35 64l43-20M35 94l43-10M35 34l43 50M35 64l43 20M92 44l41 18"/>'
+            . '<path d="M35 94l43-10M92 84l41-18" stroke="' . $a . '"/>',
+        // the code sign, </>: source you can read
+        'open' => '<path d="M46 34l-24 30 24 30M124 34l24 30-24 30"/>'
+            . '<path d="M100 26L70 102" stroke="' . $a . '"/>',
+    };
+    return '<span class="door-art door-art-' . $kind . '" role="img" aria-label="' . e($label) . '">'
+         . '<svg viewBox="0 0 170 128" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+         . $svg . '</svg></span>';
 }
