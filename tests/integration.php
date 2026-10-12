@@ -428,10 +428,21 @@ t_eq(count($dates[1]), substr_count($log, 'class="sc-perma"'), 'every release ha
 t_eq(count($dates[1]), substr_count($log, '"@type":"ListItem"') - 3, 'every release is in the ItemList too');
 foreach ($dates[1] as $d) t_contains('"datePublished":"' . $d . '"', $log, "release {$d} is dated in the markup");
 
-// The project page shows the most recent releases and hands off to the full record.
+// The project page is shorter since 2026-10: no comparison table, no spec sheet, no
+// release summary. The full record stays one link away, from the repository section.
 t_contains('href="/stemma/changelog/"', $body, 'project page links its changelog');
-t_contains('id="changelog"', $body, 'project page carries the what-shipped summary');
-t_contains('datetime="' . $dates[1][0] . '"', $body, 'and the summary leads with the newest release');
+foreach (['Not a better canvas.', 'Technical specifications.', 'It is still being built.'] as $h) {
+    t_not_contains($h, $body, "project page no longer carries: {$h}");
+}
+foreach (['compare', 'specs', 'changelog'] as $id) {
+    t_not_contains('id="' . $id . '"', $body, "section #{$id} is gone");
+    t_not_contains('href="#' . $id . '"', $body, "and so is its table-of-contents entry");
+}
+// sections alternate plain and staged backgrounds; two staged ones in a row read as one block
+preg_match_all('#<section class="st-sec( st-stage)?#', $body, $secs);
+$prevStage = null; $alternates = true;
+foreach ($secs[1] as $stage) { if ($prevStage !== null && $stage !== '' && $prevStage !== '') $alternates = false; $prevStage = $stage; }
+t_assert($alternates, 'no two staged sections sit next to each other');
 
 /* ---------------- newsletter (self-hosted) ---------------- */
 section('newsletter');

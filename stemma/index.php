@@ -346,15 +346,6 @@ $extra .= <<<'CSS'
 .st-term .l-gap { height: 0.85rem; }
 .st-term .l-ok { color: var(--st-ok); }
 
-/* ---- what shipped: the last few releases, in front of the roadmap -------- */
-.st-ship { max-width: 50rem; margin: 3rem auto 0; }
-.st-ship li { display: grid; grid-template-columns: 8.5rem minmax(0, 1fr); gap: 1.8rem; padding: 1.4rem 0; border-bottom: 1px solid var(--line); }
-.st-ship li:last-child { border-bottom: 0; }
-.st-ship time { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.72rem; letter-spacing: 0.04em; color: var(--muted); padding-top: 0.28em; }
-.st-ship b { display: block; color: var(--ink); font-weight: 650; font-size: 1.02rem; letter-spacing: -0.015em; margin-bottom: 0.3rem; }
-.st-ship span { font-size: 0.92rem; color: var(--muted); line-height: 1.65; }
-.st-more { display: block; max-width: 50rem; margin: 2rem auto 0; text-align: center; }
-
 /* ---- reference tables ---------------------------------------------------- */
 /* min() so the track can still shrink below its ideal width on a phone, rather
    than forcing the page wider than the viewport. */
@@ -407,25 +398,6 @@ $extra .= <<<'CSS'
 .st-arrow { text-align: center; color: var(--faint); font-size: 0.8rem; line-height: 1; }
 
 
-/* ---- comparison ---------------------------------------------------------- */
-.st-tw { overflow-x: auto; margin-top: 3rem; }
-.st-cmp { width: 100%; border-collapse: collapse; font-size: 0.88rem; min-width: 720px; }
-.st-cmp th, .st-cmp td { text-align: left; padding: 0.85rem 1rem; border-bottom: 1px solid var(--line); vertical-align: top; }
-.st-cmp thead th { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
-.st-cmp thead th.st-us { color: var(--accent); }
-.st-cmp tbody th { font-weight: 600; color: var(--ink); width: 20%; }
-.st-cmp td { color: var(--muted); }
-.st-cmp td.st-us { color: var(--ink); font-weight: 600; background: color-mix(in srgb, var(--accent) 6%, transparent); }
-.st-cmp tbody tr:last-child th, .st-cmp tbody tr:last-child td { border-bottom: 0; }
-
-/* ---- tech specs ---------------------------------------------------------- */
-.st-specs { max-width: 62rem; margin: 3rem auto 0; }
-.st-specs > div { display: grid; grid-template-columns: 11rem 1fr; gap: 1.5rem; padding: 0.95rem 0; border-bottom: 1px solid var(--line); }
-.st-specs > div:last-child { border-bottom: 0; }
-.st-specs dt { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.63rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); padding-top: 0.28em; }
-.st-specs dd { font-size: 0.92rem; color: var(--body); line-height: 1.6; }
-.st-specs dd code { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.85em; color: var(--ink); }
-.st-specs dd em { font-style: normal; color: var(--muted); }
 
 /* ---- roadmap ------------------------------------------------------------- */
 .st-chip { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.58rem; letter-spacing: 0.09em; text-transform: uppercase; font-weight: 600; border-radius: 999px; padding: 0.3em 0.7em; border: 1px solid currentColor; white-space: nowrap; }
@@ -491,9 +463,6 @@ $extra .= <<<'CSS'
   .st-hero { padding-top: 3rem; }
   .st-hero-shot { margin-top: 2.2rem; }
   .st-layer { grid-template-columns: 1fr; gap: 0.3rem; }
-  .st-specs > div { grid-template-columns: 1fr; gap: 0.35rem; }
-  .st-ship li { grid-template-columns: 1fr; gap: 0.4rem; }
-  .st-ship time { padding-top: 0; }
   .st-code pre { font-size: 0.66rem; }
   .st-term pre { font-size: 0.6rem; }
   .st-plate img, .st-hero-shot img { border-radius: 10px; }
@@ -529,9 +498,6 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
       <li><a href="#views">The views</a></li>
       <li><a href="#books">Story books</a></li>
       <li><a href="#shape">The shape of it</a></li>
-      <li><a href="#compare">How it differs</a></li>
-      <li><a href="#specs">Specifications</a></li>
-      <li><a href="#changelog">What shipped</a></li>
       <li><a href="#roadmap">Roadmap</a></li>
       <li><a href="#questions">Questions</a></li>
       <li><a href="#repository">The repository</a></li>
@@ -1039,141 +1005,8 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
     </div>
   </section>
 
-  <!-- ==================== HOW IT DIFFERS ==================== -->
-  <section class="st-sec" id="compare">
-    <div class="wrap">
-      <div class="st-open reveal">
-        <?= eyebrow('How it differs') ?>
-        <h2 class="st-h2">Not a better canvas.</h2>
-        <p class="st-sub">
-          Three honest categories of tool already exist, and each is good at what it set out to do. This
-          is what changes when the model has nowhere to drift to.
-        </p>
-      </div>
-
-      <div class="st-tw reveal">
-        <table class="st-cmp">
-          <thead>
-            <tr>
-              <th scope="col">&nbsp;</th>
-              <th scope="col" class="st-us">Stemma</th>
-              <th scope="col">Canvas drawing tools</th>
-              <th scope="col">Model-as-language tools</th>
-              <th scope="col">Code analysers</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr><th scope="row">Source of truth</th><td class="st-us">Your source files</td><td>A separate document</td><td>A separate language beside the code</td><td>Your source files, read-only</td></tr>
-            <tr><th scope="row">Redesign in the picture</th><td class="st-us">Yes — the code follows</td><td>Yes, and nothing follows</td><td>Yes, and the code still doesn't follow</td><td>No</td></tr>
-            <tr><th scope="row">Drift</th><td class="st-us">Structurally impossible</td><td>Immediate and permanent</td><td>Slower, but there are still two artifacts</td><td>None, at the price of not designing</td></tr>
-            <tr><th scope="row">Reviewed in a pull request</th><td class="st-us">As a diff of the architecture</td><td>As an image somebody re-exported</td><td>As a diff of the description</td><td>Not applicable</td></tr>
-            <tr><th scope="row">Risk, ownership, questions</th><td class="st-us">First-class, anchored, versioned</td><td>A sticky note, if you're lucky</td><td>Limited</td><td>Absent by construction</td></tr>
-            <tr><th scope="row">Telling the story</th><td class="st-us">Narrated books that travel with the model</td><td>A slide deck, rebuilt by hand each time</td><td>Not addressed</td><td>Not addressed</td></tr>
-            <tr><th scope="row">Where a coding agent meets it</th><td class="st-us">In the repository it is already editing</td><td>Nowhere near it</td><td>A file beside the code, easy to ignore</td><td>After the fact, as a report</td></tr>
-          </tbody>
-        </table>
-      </div>
-
-      <p class="st-kick reveal" style="margin-top:2.4rem">
-        For a team the practical differences are narrow and concrete: an architecture review stops opening
-        with twenty minutes of establishing whether the picture is current; a module reaching across a
-        context boundary shows up in the diff a reviewer already reads; and a new architect has one file
-        and one canvas to read instead of a wiki space to excavate. There is nothing to procure — it runs
-        on a laptop, against a repository you already own, and nothing leaves it.
-      </p>
-    </div>
-  </section>
-
-  <!-- ==================== TECH SPECS ==================== -->
-  <section class="st-sec st-stage" id="specs">
-    <div class="wrap">
-      <div class="st-open reveal">
-        <?= eyebrow('Specifications') ?>
-        <h2 class="st-h2">Technical specifications.</h2>
-      </div>
-
-      <dl class="st-specs reveal">
-        <div><dt>Engine</dt><dd>.NET 10 · Roslyn. Loads a repository through <code>MSBuildWorkspace</code>, or a model-only folder through an <code>AdhocWorkspace</code>. All edits are <code>DocumentEditor</code> rewrites.</dd></div>
-        <div><dt>Host</dt><dd>ASP.NET Core 10 — REST for workspace, layout, views and violations; SignalR for the operation stream and delta broadcast.</dd></div>
-        <div><dt>Client</dt><dd>React 19 · Vite · <code>@xyflow/react</code> · zustand · Tailwind.</dd></div>
-        <div><dt>Requirements</dt><dd>A .NET 10 runtime. <em>A model-only workspace opens with no SDK installed, no restore and no NuGet — the metadata references come from the assemblies the process is already running on.</em></dd></div>
-        <div><dt>Model storage</dt><dd><code>Architecture/*.cs</code> and <code>Views/*.cs</code> in your Git working tree.</dd></div>
-        <div><dt>Presentation</dt><dd><code>stemma.layout.json</code>, committed beside the model: positions, node and edge styling, routing, notes, custom properties, free-form shapes, per-view layout choice.</dd></div>
-        <div><dt>Runtime database</dt><dd>None. The model lives in memory while a workspace is open; permanent storage is the files.</dd></div>
-        <div><dt>Operations</dt><dd>Add, rename and remove elements; re-parent; set attributes; add and remove links; set link attributes; set lifecycle; set ownership; restore — each with its own round-trip fixtures.</dd></div>
-        <div><dt>Views</dt><dd>Module map, dependency graph and concerns board built in; any number of saved custom views, each stored as code.</dd></div>
-        <div><dt>Layout</dt><dd>Architectural (by type), hierarchical, force-directed and manual — tunable per view, remembered per view. A manual move flips that view to custom. Or a declarative constraint — <code>grid</code>, <code>row</code>, <code>column</code>, <code>stack</code> — solved to coordinates and kept live, with a later drag recorded as an offset against it.</dd></div>
-        <div><dt>Canvas</dt><dd>Pan, zoom (0.05×–2.5×), minimap, snap to 20px grid, multi-select, align and distribute, undo and redo, six connection dots per node, draw.io-style edge docking, four routing modes, both-end markers.</dd></div>
-        <div><dt>Headless</dt><dd><code>stemma render</code> — a workspace and a view become an image with no browser open and no mouse; profile, palette, theme, format, scale, padding and transparency as flags; a short-lived backend per render, so renders are isolated and can run in parallel. <code>stemma validate</code> — dangling endpoints, missing view members, half-drawn links, duplicate ids, busy views, with <code>--json</code> for a caller acting on the answer.</dd></div>
-        <div><dt>Provenance</dt><dd>Every render writes a sibling <code>.manifest.json</code> fingerprinting the model, the view, the layout and the profile. <code>stemma render --check</code> re-computes it and exits non-zero when a committed image no longer matches its source.</dd></div>
-        <div><dt>Authoring as text</dt><dd>A published JSON Schema for <code>stemma.layout.json</code>, pointed at from every file written, plus a protocol reference covering the whole chain — vocabulary, view, sidecar, render command — with three worked examples. <em>Written for somebody who will never open the app.</em></dd></div>
-        <div><dt>Export</dt><dd>PNG · true vector SVG from the publication profile · draw.io (honouring the view and the layout) · Mermaid · multi-page PDF view-books · a single-file interactive HTML report that opens offline with no network requests.</dd></div>
-        <div><dt>Report</dt><dd>Audience modes (builder, stakeholder, reviewer), per-view layer toggles, element search, and element-anchored comments that export as a pack and import back into the workspace.</dd></div>
-        <div><dt>Story books</dt><dd>Ordered, audience-tagged sequences of pages; each page references a view and carries a title and a narrative. Present mode drives the canvas from the page, with prev/next, drag-to-reorder, in-place narrative editing and multi-page PDF export. Stored as <code>Concepts/view-book.stemma.yaml</code> beside the model.</dd></div>
-        <div><dt>Validation</dt><dd>Dangling references and architecture-rule violations surfaced inline on the canvas and in the status bar, and reported on the command line by <code>stemma validate</code>.</dd></div>
-        <div><dt>Diagnostics</dt><dd>A leveled, structured record of what the engine did — JSON lines under <code>~/.stemma/logs/</code>, capped at 20 MB and 14 days without being asked, level changeable while running. Shareable bundles are redacted by default. <em>There is no network sink and none can be configured: a log record contains your architecture.</em></dd></div>
-        <div><dt>Collaboration</dt><dd>Git. Branch, tag, blame, merge, revert, pull request. Live sync over SignalR for clients open on the same workspace; external file edits reconcile without clobbering in-flight work.</dd></div>
-        <div><dt>Fidelity</dt><dd>Every operation carries minimal, realistic and pathological round-trip fixtures. A failing fixture blocks the change, not the other way round.</dd></div>
-        <div><dt>Samples</dt><dd><code>samples/AuroraRail</code> — a fictional rail-ticketing platform: 66 elements, four saved views, three narrative books, exercising every part of the DSL. <code>samples/StemmaArchitecture</code> — Stemma modelling itself.</dd></div>
-        <div><dt>Licence</dt><dd>PolyForm Noncommercial 1.0.0 — source-available, <em>not</em> open source. Free for any noncommercial purpose: personal use, study, hobby projects, and use by charities, educational institutions, public research bodies and government. Commercial use of any kind needs a commercial licence.</dd></div>
-      </dl>
-    </div>
-  </section>
-
-  <!-- ==================== WHAT SHIPPED ====================
-       The three most recent releases only. The whole record lives at
-       /stemma/changelog/, which is the page that grows; this one stays the
-       length it is. -->
-  <section class="st-sec" id="changelog">
-    <div class="wrap">
-      <div class="st-open reveal">
-        <?= eyebrow('What shipped') ?>
-        <h2 class="st-h2">It is still being built.</h2>
-        <p class="st-sub">
-          The three most recent releases. A project page can claim anything about a side project;
-          dated releases are the only version of that claim you can check.
-        </p>
-      </div>
-
-      <ul class="st-ship reveal">
-        <li>
-          <time datetime="2026-08-08">8 Aug 2026</time>
-          <div>
-            <b>The headless half</b>
-            <span><span class="st-mono">stemma render</span> and <span class="st-mono">stemma validate</span>,
-              a publication profile, layout as a declarative constraint, a render manifest with
-              <span class="st-mono">--check</span>, true vector SVG, the
-              <span class="st-mono">Concept</span> and <span class="st-mono">Relation</span> kinds, a
-              published sidecar schema and the protocol reference — plus local-only diagnostics.</span>
-          </div>
-        </li>
-        <li>
-          <time datetime="2026-08-03">3 Aug 2026</time>
-          <div>
-            <b>In the open</b>
-            <span>The repository, PolyForm Noncommercial 1.0.0, and two workspaces worth reading first:
-              Aurora Rail, and Stemma's own architecture modelled in Stemma.</span>
-          </div>
-        </li>
-        <li>
-          <time datetime="2026-08-01">1 Aug 2026</time>
-          <div>
-            <b>Stemma, and a workspace with no solution in it</b>
-            <span>The rename from Verso, and model-only workspaces: a folder holding
-              <span class="st-mono">Architecture/</span> and nothing else opens with no MSBuild, no SDK,
-              no restore and no NuGet.</span>
-          </div>
-        </li>
-      </ul>
-
-      <p class="st-more reveal">
-        <a class="btn btn-ghost" href="/stemma/changelog/">The whole changelog, back to 4 May <?= arrow_icon() ?></a>
-      </p>
-    </div>
-  </section>
-
   <!-- ==================== ROADMAP ==================== -->
-  <section class="st-sec st-stage" id="roadmap">
+  <section class="st-sec" id="roadmap">
     <div class="wrap">
       <div class="st-open reveal">
         <?= eyebrow('Roadmap') ?>
@@ -1232,7 +1065,7 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
   <!-- ==================== QUESTIONS ====================
        The same answers are emitted as FAQPage in the head. If you edit one,
        edit the other — they are the same $faq array, so there is only one. -->
-  <section class="st-sec" id="questions">
+  <section class="st-sec st-stage" id="questions">
     <div class="wrap">
       <div class="st-open reveal">
         <?= eyebrow('Questions') ?>
@@ -1261,7 +1094,7 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
   </section>
 
   <!-- ==================== REPOSITORY ==================== -->
-  <section class="st-sec st-stage" id="repository">
+  <section class="st-sec" id="repository">
     <div class="wrap">
       <div class="st-open reveal">
         <?= eyebrow('Where to find it') ?>
