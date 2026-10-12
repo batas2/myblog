@@ -1569,8 +1569,17 @@ foreach ($paths as $d) t_eq(3, count($d['reads']), 'each path names three essays
 t_contains('class="doors"', $home, 'the three doors render on the homepage');
 t_contains(e($paths[0]['title']), $home, 'first door title on the homepage');
 t_contains(e($paths[0]['title']), $start, 'start page still renders the same doors');
-t_contains('Most read', $home, 'most-read block present');
-foreach (HOME_MOST_READ as $slug) t_contains('href="' . post_path($slug) . '"', $home, "most read links {$slug}");
+t_not_contains('Most read', $home, 'no most-read block on the homepage');
+t_assert(!function_exists('most_read_block'), 'the most-read component is gone with it');
+// the intro is two columns: who and what on the left, what a reader gets on the right
+t_contains('class="home-hero"', $home, 'hero wrapper present');
+t_contains('class="hero-main"', $home, 'hero left column');
+t_contains('class="hero-side"', $home, 'hero right column');
+$side = substr($home, strpos($home, 'class="hero-side"'));
+t_contains('class="home-promise"', substr($side, 0, 2000), 'the promise sits in the right column');
+$main = substr($home, strpos($home, 'class="hero-main"'), strpos($home, 'class="hero-side"') - strpos($home, 'class="hero-main"'));
+t_contains('Start here', $main, 'the buttons sit in the left column');
+t_contains('src="/myself.jpeg"', $main, 'the face sits in the left column');
 t_eq(HOME_LATEST_COUNT, 10, 'the homepage shows the latest ten');
 $latestBlock = substr($home, strpos($home, 'Latest ' . HOME_LATEST_COUNT));
 t_eq(0, substr_count($home, '<li class="arow">'), 'no text-only archive rows on the homepage');

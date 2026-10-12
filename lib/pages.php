@@ -126,28 +126,34 @@ function render_index(array $posts): string
     $extra .= ld_script(schema_blog()) . "\n" . ld_script(schema_item_list($posts));
 
     $count = count($posts);
+    // two columns on a desktop: who and what on the left, what a reader gets on the right;
+    // one column on a phone, the promise after the buttons
     $header  = '<div class="home-hero">';
-    $header .= '<img class="home-face" src="/myself.jpeg" alt="Bartosz Frąckowiak" width="72" height="72" decoding="async">';
-    $header .= eyebrow('Field Notes', true);
+    $header .= '<div class="hero-main">';
+    $header .= '<p class="hero-id"><img class="home-face" src="/myself.jpeg" alt="Bartosz Frąckowiak" width="56" height="56" decoding="async">'
+             . '<span>' . eyebrow('Field Notes', true) . '<span class="hero-by">by <a href="/about/">Bartosz Frąckowiak</a>, solution architect</span></span></p>';
     $header .= '<h1 style="font-size:clamp(2.2rem,5vw,3.2rem)">Field Notes</h1>';
     $header .= '<p class="home-lede">An architect\'s notebook. Fifteen years of designing systems, and what they taught me about the decisions behind the boxes and arrows: who owns a boundary, why a migration never starts, what changes when agents write the code.</p>';
+    $header .= '<p class="hero-actions">'
+             . '<a class="btn btn-primary" href="/blog/start/">Start here ' . arrow_icon() . '</a>'
+             . '<a class="btn btn-ghost" href="#newsletter">Subscribe by email</a>'
+             . '<a class="btn btn-ghost" href="/about/#contact">Contact me</a></p>';
+    $header .= '<p class="proof"><span>Architect, global SaaS</span><span>PhD, Univ. of Warsaw</span>'
+             . '<span>Top 3% on Toptal</span><span>' . $count . ' essays so far</span></p>';
+    $header .= '</div>';
+    $header .= '<aside class="hero-side">';
+    $header .= '<span class="hero-side-k">What you get here</span>';
     $header .= '<ul class="home-promise">'
              . '<li><b>Patterns you can use on Monday.</b> Decision records, review rules, diagrams people actually argue with, each one tried on a real system first.</li>'
              . '<li><b>The part nobody draws.</b> Ownership, handovers and incentives, the reasons a sound design still fails in a real company.</li>'
              . '<li><b>AI in engineering, minus the hype.</b> What happened when several hundred developers started working with agents, with the numbers I could get.</li>'
              . '</ul>';
-    $header .= '<p class="hero-actions">'
-             . '<a class="btn btn-primary" href="/blog/start/">Start here ' . arrow_icon() . '</a>'
-             . '<a class="btn btn-ghost" href="#newsletter">Subscribe by email</a>'
-             . '<a class="btn btn-ghost" href="/about/#contact">Contact me</a></p>';
-    $header .= '<p class="proof"><span>Solution architect in global SaaS</span><span>PhD research, University of Warsaw</span>'
-             . '<span>Top 3% on Toptal</span><span>' . $count . ' essays and counting</span></p>';
+    $header .= '</aside>';
     $header .= '</div>';
 
     $content  = featured_card($posts[0]);
     $content .= '<div class="home-section"><div class="section-head">' . eyebrow('Three doors')
               . '<h2>Pick where to start</h2></div>' . doors_block($posts) . '</div>';
-    $content .= '<div class="home-section">' . most_read_block($posts) . '</div>';
     // the newest essays after the featured one, with thumbnails; the rest live on /blog/archive/
     $latest = array_slice($posts, 1, HOME_LATEST_COUNT);
     $content .= '<div class="home-section"><div class="section-head">' . eyebrow('Latest ' . HOME_LATEST_COUNT)

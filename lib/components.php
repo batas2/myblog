@@ -410,14 +410,3 @@ function doors_block(array $posts): string
     }
     return $html . '</div>';
 }
-
-/** The essays readers stay on longest (HOME_MOST_READ), as rows. */
-function most_read_block(array $posts): string
-{
-    $by = array_column($posts, null, 'slug');
-    $picks = array_values(array_filter(array_map(fn($s) => $by[$s] ?? null, HOME_MOST_READ)));
-    if (!$picks) return '';
-    $html  = '<div class="section-head">' . eyebrow('Most read') . '<h2>Where readers stay longest</h2></div>';
-    $html .= log_rows($picks);
-    return $html;
-}

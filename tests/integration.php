@@ -206,7 +206,7 @@ $archivePage = (string) file_get_contents($SANDBOX . '/blog/archive/index.php');
 t_eq($pubN, substr_count($archivePage, '<li><a href="/blog/'), 'archive page = every published essay');
 t_not_contains('class="pcard', $index, 'no magazine grid on the homepage');
 t_contains('class="doors"', $index, 'three doors on the homepage');
-t_contains('Most read', $index, 'most-read block on the homepage');
+t_not_contains('Most read', $index, 'no most-read block on the homepage');
 t_not_contains('On Medium</h2>', $index, 'medium strip removed');
 
 /* ---------------- HTTP layer ---------------- */

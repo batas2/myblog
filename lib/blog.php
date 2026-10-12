@@ -83,20 +83,8 @@ const SERIES = [
     'turn-the-sequence-diagram-on-its-side'   => ['Diagrams', 3],
 ];
 
-/**
- * The homepage "Most read" block. Curated by hand from the admin Content tab
- * (engaged time, not pageviews): the build cannot read analytics.db, which is
- * gitignored and only lives on the server. Refresh it quarterly.
- */
 /** How many of the newest essays the homepage lists before linking the full archive. */
 const HOME_LATEST_COUNT = 10;
-
-const HOME_MOST_READ = [
-    'the-bottleneck-moved',
-    'mathematicians-vs-lawyers',
-    'prompt-driven-architecture',
-    'multi-agent-is-an-org-chart',
-];
 
 /* ---------------- urls & labels ---------------- */
 
