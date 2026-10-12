@@ -555,7 +555,9 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
         <p class="st-sub">
           The model has two faces, and both are the same files in Git. I built it like this because
           an architecture today has two audiences: the people who decide and build, and the agents
-          that write more and more of the code.
+          that write more and more of the code. The second audience is why I think architects should
+          write what agents read; the long version is
+          <a href="/blog/every-approval-is-a-missing-rule/">Every Approval Is a Missing Rule</a>.
         </p>
       </div>
       <div class="st-two reveal">
@@ -637,7 +639,7 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
             <h3>Target state lives in the model, not in a deck.</h3>
             <p><span class="st-mono">Lifecycle</span> marks a thing as current, target, to-adapt, to-be-created or
               deprecated, with a phase and validity dates. <span class="st-mono">Ownership</span> adds a squad, a
-              domain and RAPID roles. Both work on elements <em>and</em> on relationships, and the
+              domain and <a href="/blog/decisions-have-an-architecture-too/">RAPID roles</a>. Both work on elements <em>and</em> on relationships, and the
               relationships are usually where a migration plan goes wrong.</p>
           </div>
           <div class="st-note" data-g="risk">
@@ -645,7 +647,9 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
             <h3>Risks and questions are model elements.</h3>
             <p>A risk, an open question or an assumption is an element attached to what it is about. It shows
               as a dotted edge to its subject, it is versioned with it, and it appears on the Concerns board.
-              Not in a wiki page nobody opens.</p>
+              Not in a wiki page nobody opens. Why I treat
+              <a href="/blog/questions-are-an-architects-sharpest-tool/">open questions as a deliverable</a>
+              is a separate essay.</p>
           </div>
         </div>
       </div>
@@ -699,7 +703,9 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
         Everything else in the tool depends on this. A suite of small, realistic and deliberately nasty
         fixtures runs every operation and compares the diff byte by byte, and the codebase has one fixed
         rule about it: <strong>when the fidelity suite fails, the implementation is wrong, not the
-        test</strong>.
+        test</strong>. A diff that only says what changed is also what makes a change reviewable when
+        nobody remembers writing it, which I wrote about in
+        <a href="/blog/we-deleted-the-wrong-half-of-agile/">We Deleted the Wrong Half of Agile</a>.
       </p>
     </div>
   </section>
@@ -770,7 +776,9 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
           This is the text layer up close. A workspace is three text files with a vocabulary that is
           written down, so the canvas is <strong>one</strong> way to edit the model, not the only one. An
           agent with a shell writes the files, checks them and renders the picture. Nothing to install or
-          connect for this: it is how the tool works from the first commit.
+          connect for this: it is how the tool works from the first commit. It is the same idea as the
+          context repo in <a href="/blog/prompt-driven-architecture/">Prompt-Driven Architecture</a>:
+          the text is the asset, and the picture is a build artefact.
         </p>
       </div>
 
@@ -898,7 +906,9 @@ $ghIcon = '<svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path
         <p class="st-sub">
           This is the visual layer at work. Modelling the system is half of the job. The other half is
           forty minutes in front of the people who decide the budget, and usually that is a slide deck,
-          rebuilt by hand every quarter, which starts to drift from the model on the same day.
+          rebuilt by hand every quarter, which starts to drift from the model on the same day. And an
+          architecture nobody follows did not happen, which is the point of
+          <a href="/blog/adoption-is-the-deliverable/">Adoption Is the Deliverable</a>.
         </p>
       </div>
 

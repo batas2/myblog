@@ -16,7 +16,9 @@
 
 The model has two faces, and both are the same files in Git. I built it like this because an
 architecture today has two audiences: the people who decide and build, and the agents that write
-more and more of the code.
+more and more of the code. The second audience is why I think architects should write what agents
+read; the long version is
+[Every Approval Is a Missing Rule](https://bfrackowiak.pl/blog/every-approval-is-a-missing-rule/).
 
 **The visual layer is for people.** The canvas, the views and the story books. Here an architect, a
 team and the people who pay for the work look at the same picture and agree on it. Every edit on the
@@ -56,7 +58,9 @@ no lost comment.
 The ids never change, so every other reference still works; only display names and the local
 symbols Roslyn renamed move. Every operation has small, realistic and deliberately nasty round-trip
 fixtures, and the codebase has one fixed rule about them: when the fidelity suite fails, the
-implementation is wrong, not the test.
+implementation is wrong, not the test. A diff that only says what changed is also what makes a
+change reviewable when nobody remembers writing it:
+[We Deleted the Wrong Half of Agile](https://bfrackowiak.pl/blog/we-deleted-the-wrong-half-of-agile/).
 
 ## The vocabulary
 
@@ -70,7 +74,11 @@ moves. `new DataFlow("flow_ordered", "mod_order", "mod_auth", "OrderPlaced")` is
 `Relation`, the pair of `Concept`: an arrow that claims nothing more than its own label.
 
 **Metadata:** lifecycle (`current`, `target`, `to-be-created` and more) and ownership (squad,
-domain), so target state lives in the model and not in a deck nobody opens twice.
+domain, [RAPID roles](https://bfrackowiak.pl/blog/decisions-have-an-architecture-too/)), so target
+state lives in the model and not in a deck nobody opens twice. Risks and open questions sit on the
+same model; why I treat
+[open questions as a deliverable](https://bfrackowiak.pl/blog/questions-are-an-architects-sharpest-tool/)
+is a separate essay.
 
 **Views:** a module map, a dependency graph and a concerns board are built in, and any number of
 saved custom views live next to them, stored as code in `Views/*.cs`.
@@ -79,7 +87,9 @@ saved custom views live next to them, stored as code in `Views/*.cs`.
 
 A workspace is three text files with a vocabulary that is written down, so the canvas is *one* way
 to edit the model, not the only one. An agent with a filesystem and a shell writes the model; one
-command turns it into a picture.
+command turns it into a picture. It is the same idea as the context repo in
+[Prompt-Driven Architecture](https://bfrackowiak.pl/blog/prompt-driven-architecture/): the text is
+the asset, and the picture is a build artefact.
 
 A workspace is exactly:
 
@@ -170,7 +180,8 @@ Modelling the system is half of the job. The other half is getting a room to agr
 an ordered sequence of pages for one audience. Each page names a view and carries the narrative you
 would say while it is on the screen. Present mode drives the canvas from the page, so the
 walkthrough and the model move together. Books are stored as `Concepts/view-book.stemma.yaml` next
-to the model, so the deck cannot get stale either.
+to the model, so the deck cannot get stale either. An architecture nobody follows did not happen,
+which is the point of [Adoption Is the Deliverable](https://bfrackowiak.pl/blog/adoption-is-the-deliverable/).
 
 ## For people who will not install it
 

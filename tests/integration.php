@@ -463,6 +463,22 @@ t_not_contains(' — ', $md, 'no spaced em dash in the markdown mirror');
 // the contents rail keeps a wider gap to the text
 t_contains('- 196px', $body, 'the contents rail sits 72px from the column');
 
+// Essays linked where the paragraph they extend sits, not in a list at the end.
+$stemmaEssays = ['every-approval-is-a-missing-rule' => 'layers', 'decisions-have-an-architecture-too' => 'source',
+                 'questions-are-an-architects-sharpest-tool' => 'source', 'we-deleted-the-wrong-half-of-agile' => 'edit',
+                 'prompt-driven-architecture' => 'agents', 'adoption-is-the-deliverable' => 'books'];
+foreach ($stemmaEssays as $slug => $sec) {
+    $from = strpos($body, 'id="' . $sec . '"');
+    $to = strpos($body, '</section>', $from);
+    t_contains('href="/blog/' . $slug . '/"', substr($body, $from, $to - $from), "#{$sec} links /blog/{$slug}/");
+    t_contains('/blog/' . $slug . '/', $md, "the markdown twin links {$slug} too");
+}
+// every essay link on the project page lands on a published essay
+preg_match_all('~href="/blog/([a-z0-9-]+)/"~', $body, $linked);
+foreach (array_unique($linked[1]) as $slug) {
+    t_assert(is_file($SANDBOX . '/blog/' . $slug . '/index.php'), "project page link /blog/{$slug}/ resolves to a published essay");
+}
+
 /* ---------------- newsletter (self-hosted) ---------------- */
 section('newsletter');
 /* Every page a reader can land on and decide from carries the form itself. This is
