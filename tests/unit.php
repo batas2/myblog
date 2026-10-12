@@ -1681,4 +1681,12 @@ foreach (['Architecture', 'AI', 'Built in the open'] as $label) {
 t_contains('<svg', door_art('ai'), 'door art is an inline drawing');
 t_eq('', door_art('nope'), 'unknown door kind draws nothing');
 
+
+section('door label above the picture');
+$doorsHtml = doors_block($posts);
+foreach (explode('<section class="door">', $doorsHtml) as $i => $door) {
+    if ($i === 0) continue;
+    t_assert(strpos($door, 'class="k"') !== false && strpos($door, 'class="k"') < strpos($door, 'class="door-art'), "door {$i}: label sits above the picture");
+}
+
 if (basename($_SERVER['SCRIPT_NAME'] ?? '') === 'unit.php') exit(t_summary());

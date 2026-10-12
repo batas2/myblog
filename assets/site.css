@@ -1359,3 +1359,10 @@ main { overflow-x: clip; }
 .door-art svg { width: 150px; height: 100px; }
 .path-info .door-art { margin: 0 0 1rem; height: 96px; }
 .path-info .door-art svg { height: 84px; }
+
+/* door label first and readable at a glance, the title one step quieter */
+.door .k {
+  font-size: 0.78rem; font-weight: 600; letter-spacing: 0.12em; color: var(--accent-deep);
+}
+.door .door-art { margin: 0.2rem 0 0.5rem; }
+.door h3 { font-size: 0.98rem; line-height: 1.4; }

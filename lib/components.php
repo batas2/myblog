@@ -396,8 +396,8 @@ function doors_block(array $posts): string
         $reads = array_values(array_filter(array_map(fn($s) => $by[$s] ?? null, $d['reads'])));
         if (!$reads) continue;
         $html .= '<section class="door">';
-        $html .= door_art($d['art'] ?? '');
         $html .= '<span class="k">' . sprintf('%02d', $i + 1) . ' · ' . e($d['k']) . '</span>';
+        $html .= door_art($d['art'] ?? '');
         $html .= '<h3>' . e($d['title']) . '</h3>';
         $html .= '<p>' . e($d['desc']) . '</p>';
         $html .= '<ol>';
