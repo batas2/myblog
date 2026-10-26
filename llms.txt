@@ -25,6 +25,7 @@ For LLM ingestion: the complete blog content in one plain-text file is at https:
 
 Selected posts:
 
+- The Model Grades Its Own Homework: https://bfrackowiak.pl/blog/the-model-grades-its-own-homework/
 - Nobody Resisted: https://bfrackowiak.pl/blog/nobody-resisted/
 - Every Approval Is a Missing Rule: https://bfrackowiak.pl/blog/every-approval-is-a-missing-rule/
 - Turn the Sequence Diagram on Its Side: https://bfrackowiak.pl/blog/turn-the-sequence-diagram-on-its-side/
