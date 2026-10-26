@@ -32,6 +32,9 @@ require_once __DIR__ . '/lib/analytics.php';
 define('A_SEED', CONTENT_DIR . '/analytics.seed');
 
 header('Cache-Control: no-store');
+// crawlers find '/a.php' in the inline beacon script and fetch it; without this
+// Search Console files it under "crawled, not indexed" as if it were a page
+header('X-Robots-Tag: noindex, nofollow');
 
 // self-exclusion toggle for the site owner: /a.php?me=off stops this browser
 // from being counted (1-year cookie, auto-refreshed by admin/stats visits),
@@ -40,7 +43,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && in_array($_GET['me'] ?? '', ['off', 
     $off = $_GET['me'] === 'off';
     an_optout_cookie($off);
     header('Content-Type: text/plain; charset=UTF-8');
-    header('X-Robots-Tag: noindex, nofollow');
     exit($off ? "This browser is now excluded from analytics.\n" : "This browser is counted again.\n");
 }
 

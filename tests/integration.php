@@ -627,6 +627,11 @@ $beacon('Mozilla/5.0 (X11; Linux x86_64) TestChrome/126 Renderer',
     '{"p":"/headless/","r":"","l":"en-US","w":800,"tz":"UTC"}');
 [$code] = $beacon($chromeUa, '{"e":1,"p":"/blog/data-driven-theater/","d":42}');
 t_eq(204, $code, 'engagement beacon accepted');
+// Googlebot lifts /a.php out of the inline beacon script and fetches it with GET
+[$code, , , $aHdrs] = http_req('GET', "$BASE/a.php");
+t_eq(204, $code, 'plain GET of the beacon answers 204');
+t_assert((bool) array_filter($aHdrs, fn($h) => stripos($h, 'X-Robots-Tag:') === 0 && stripos($h, 'noindex') !== false),
+    'beacon tells crawlers not to index it');
 t_assert(is_file($SANDBOX . '/content/analytics.db'), 'analytics db created in sandbox');
 
 /* owner self-exclusion */

@@ -719,7 +719,7 @@ function render_llms_full(array $posts): string
 {
     $out = '# Field Notes by ' . cfg('author') . ": full content\n\n"
          . '> Weekly essays on software architecture, the people around it, and the corporate machine they form together. '
-         . 'Canonical HTML lives at ' . cfg('site_url') . '/blog/ and each essay also has a markdown mirror at its URL + index.md. '
+         . 'Canonical HTML lives at ' . cfg('site_url') . '/ and each essay also has a markdown mirror at its URL + index.md. '
          . "This file concatenates all essays for LLM ingestion.\n\n"
          // essays only — the project page is not an essay, so it is pointed at rather than inlined
          . 'Not included here: Stemma, the author\'s architecture modelling tool, documented at '

@@ -33,7 +33,7 @@ function render_rss(array $posts): string
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:dc="http://purl.org/dc/elements/1.1/">
   <channel>
     <title>Field Notes · Bartosz Frąckowiak</title>
-    <link>{$site}/blog/</link>
+    <link>{$site}/</link>
     <atom:link href="{$site}/feed.xml" rel="self" type="application/rss+xml"/>
     <description>Weekly essays on software architecture, the people around it, and the corporate machine they form together.</description>
     <language>en</language>

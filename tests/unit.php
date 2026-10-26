@@ -1264,6 +1264,9 @@ t_assert(simplexml_load_string($sm0) !== false, 'empty-archive sitemap is valid 
 $rssPost = ['slug' => 'cdata', 'title' => 'C', 'subtitle' => 's', 'html' => '<p>evil ]]> here</p>',
             'publish_ts' => 1700000000, 'publish_iso' => date('c', 1700000000), 'minutes' => 1, 'tags' => []];
 t_assert(simplexml_load_string(render_rss([$rssPost])) !== false, 'CDATA breakout escaped, feed stays valid');
+// /blog/ is a 301 to the root; pointing crawlers at it lands it in Search Console's redirect bucket
+t_contains('<link>https://bfrackowiak.pl/</link>', render_rss([$rssPost]), 'feed channel links the root, not the old listing URL');
+t_not_contains('bfrackowiak.pl/blog/ ', render_llms_full([$rssPost]), 'llms-full names the root as the canonical listing');
 
 // JSON-LD cannot be broken out of via a </script> in author content
 t_not_contains('</script></script>', ld_script(['x' => 'a</script>b']), 'HEX_TAG keeps </script> encoded');
