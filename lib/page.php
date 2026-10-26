@@ -5,8 +5,44 @@
 
 declare(strict_types=1);
 
+/*
+ * Response headers every HTML page sends. They used to live in .htaccess, but on
+ * the live host (nginx in front of Apache) those Header lines never reach a
+ * response — checked 2026-10-26 — so PHP sends them: hand-written pages through
+ * page_head(), generated pages through the prologue the build writes into them.
+ * The Stemma film is served from here, not embedded from a video platform, so
+ * nothing had to be opened up: default-src 'self' already covers media-src, and
+ * the footer's "no cookies, no trackers" stays literally true. HSTS stays
+ * without includeSubDomains, as it always was: the homelab answers on a subdomain.
+ */
+const SECURITY_HEADERS = [
+    'X-Content-Type-Options: nosniff',
+    'X-Frame-Options: SAMEORIGIN',
+    'Referrer-Policy: strict-origin-when-cross-origin',
+    'Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()',
+    'Strict-Transport-Security: max-age=31536000',
+    "Content-Security-Policy: default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; connect-src 'self'; frame-src 'self' https://challenges.cloudflare.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self'",
+];
+
+/** Sends SECURITY_HEADERS, leaving alone any a page already set (preview's DENY, no-referrer). */
+function send_security_headers(): void
+{
+    if (headers_sent()) return;
+    $set = array_map(fn(string $h): string => strtolower(strstr($h, ':', true)), headers_list());
+    foreach (SECURITY_HEADERS as $h) {
+        if (!in_array(strtolower(strstr($h, ':', true)), $set, true)) header($h);
+    }
+}
+
+/** The same set as a line of PHP for the top of a generated page, which runs no page_head() when served. */
+function security_headers_prologue(): string
+{
+    return '<?php ' . implode(' ', array_map(fn(string $h): string => 'header(' . var_export($h, true) . ');', SECURITY_HEADERS)) . " ?>\n";
+}
+
 function page_head(string $title, string $desc, string $canonical, string $extra = '', string $ogImage = ''): string
 {
+    send_security_headers();
     $t = e($title); $d = e($desc); $c = e($canonical);
     $og = e($ogImage !== '' ? $ogImage : (string) cfg('og_image'));
     $siteName = e((string) cfg('site_name'));

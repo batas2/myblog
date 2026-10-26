@@ -42,17 +42,8 @@ RedirectMatch 404 ^/(lib|tools|tests|docs|drafts|content|vendor|_archive|_remote
 </FilesMatch>
 
 # ---- security headers ---------------------------------------------------------
-<IfModule mod_headers.c>
-  Header always set X-Content-Type-Options "nosniff"
-  Header always set X-Frame-Options "SAMEORIGIN"
-  Header always set Referrer-Policy "strict-origin-when-cross-origin"
-  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
-  Header always set Strict-Transport-Security "max-age=31536000"
-  # The Stemma film is served from here, not embedded from a video platform, so
-  # nothing had to be opened up: default-src 'self' already covers media-src, and
-  # the footer's "no cookies, no trackers" stays literally true.
-  Header always set Content-Security-Policy "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; connect-src 'self'; frame-src 'self' https://challenges.cloudflare.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self'"
-</IfModule>
+# Sent from PHP, not from here: SECURITY_HEADERS in lib/page.php. On the live host
+# (nginx in front of Apache) Header lines in this file never reached a response.
 
 # ---- compression ----------------------------------------------------------------
 <IfModule mod_deflate.c>

@@ -258,6 +258,16 @@ t_eq(200, $code, 'tag page 200');
 t_eq(200, $code, 'start page 200');
 t_contains('Then pick your door', $body, 'start page doors served');
 t_contains('href="/blog/mathematicians-vs-lawyers/"', $body, 'start page hook served');
+// the live host never applies the Header lines in .htaccess, so every page sends its
+// own: generated ones from the build prologue, hand-written ones from page_head()
+$secNames = ['Content-Security-Policy', 'Strict-Transport-Security', 'X-Frame-Options',
+             'X-Content-Type-Options', 'Referrer-Policy', 'Permissions-Policy'];
+foreach (['/', '/blog/mathematicians-vs-lawyers/', '/blog/tag/software-architecture/', '/blog/start/',
+          '/blog/archive/', '/404.php', '/about/', '/services/', '/stemma/', '/stemma/changelog/'] as $path) {
+    [, , , $h] = http_req('GET', $BASE . $path);
+    $sent = array_filter($h, fn($line) => (bool) array_filter($secNames, fn($n) => stripos($line, "$n:") === 0));
+    t_eq(count($secNames), count($sent), "$path sends each security header once");
+}
 [$code, $body] = http_req('GET', "$BASE/services/");
 t_eq(200, $code, 'services page 200');
 t_contains('Architecture Health Check', $body, 'services page lists engagements');
@@ -1099,6 +1109,9 @@ t_assert((bool) array_filter($hdrs, fn($h) => stripos($h, 'X-Robots-Tag:') === 0
     'preview sends noindex');
 t_assert((bool) array_filter($hdrs, fn($h) => stripos($h, 'Cache-Control:') === 0 && stripos($h, 'no-store') !== false),
     'preview sends no-store');
+t_eq(['X-Frame-Options: DENY'], array_values(array_filter($hdrs, fn($h) => stripos($h, 'X-Frame-Options:') === 0)),
+    'page_head() leaves the stricter frame rule preview set');
+t_assert((bool) array_filter($hdrs, fn($h) => stripos($h, 'Content-Security-Policy:') === 0), 'preview still gets the CSP');
 
 [$code, $body] = $asAdmin('GET', "$BASE/preview.php?slug=itest-future-post");
 t_eq(200, $code, 'admin previews a scheduled post');

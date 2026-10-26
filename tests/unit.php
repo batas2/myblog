@@ -1136,6 +1136,16 @@ t_contains('href="/blog/start/"', $nf, '404 routes to start here');
 t_contains(e($posts[0]['title']), $nf, '404 shows the newest essay');
 t_contains('noindex', $nf, '404 is noindex');
 
+section('security headers');
+// a fresh process, so header() runs before any output exactly as on a served page
+$served = shell_exec(escapeshellarg(PHP_BINARY) . ' -r ' . escapeshellarg('?>' . security_headers_prologue() . '<!DOCTYPE html>') . ' 2>&1');
+t_eq('<!DOCTYPE html>', $served, 'the prologue prints nothing ahead of the page');
+foreach (SECURITY_HEADERS as $h) {
+    t_contains(var_export($h, true), security_headers_prologue(), 'prologue sends ' . strstr($h, ':', true));
+}
+t_contains("frame-ancestors 'self'", implode("\n", SECURITY_HEADERS), 'the CSP is part of the set');
+t_not_contains('includeSubDomains', implode("\n", SECURITY_HEADERS), 'HSTS stays off the subdomains (the homelab lives there)');
+
 section('fonts & theme');
 $head = page_head('T', 'D', 'https://x/');
 t_contains('property="og:locale" content="en_US"', $head, 'og locale set');
