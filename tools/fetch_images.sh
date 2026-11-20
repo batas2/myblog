@@ -57,6 +57,8 @@ declare -A Q=(
   [the-model-grades-its-own-homework]="exam marking red pen paper|grading papers red pen desk"
   # four levels, three cliffs: terraces cut into a slope, each one a level with a drop between
   [four-levels-three-cliffs]="Moray Inca terraces circular|agricultural terraces Peru Andes"
+  # fresh paint over a cracked wall: the optimism is the paint, the result is the wall
+  [the-company-promotes-optimism]="peeling paint wall|cracked wall paint"
 )
 
 TMP=$(mktemp -d)
