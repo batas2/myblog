@@ -69,6 +69,35 @@ const VC_FROZEN = [
     'the-automerger',
 ];
 
+/**
+ * Round 5, the cadence tier. Advisory: printed as `~`, never fails the run.
+ *
+ * Everything above catches what a draft contains. These catch how it moves, which is what was
+ * left once the vocabulary was clean: a paragraph that sets up and then lands on a short line,
+ * a fragment used as a drum hit, "It is not X. It is Y." written as two sentences so the
+ * contrast grep cannot see it. Each is fine once. The tell is the rate.
+ *
+ * The limits come from the one long text here that no model drafted,
+ * technical-leader-identity-disorder: 3% of its paragraphs end on a short sentence and it has
+ * 4 fragments per thousand words. The ghostwritten posts run 13-59% and 4-19. So the bar is his
+ * own hand with headroom, not a number from a style guide. They stay advisory because a rule
+ * every post passes the same way becomes the next fingerprint (HUMAN-VOICE-PLAN, 4.0-1).
+ */
+const VC_CADENCE = [
+    'punch-ending' => 25.0,   // % of multi-sentence paragraphs whose last sentence is <= 8 words
+    'fragments'    => 6.0,    // sentences of <= 4 words, per 1000 words
+    'neg-pair'     => 1,      // "It was not a wall. It was a queue." and "Not X. Y."
+    'bold-closer'  => 1,      // paragraphs whose last sentence is bold
+    'anaphora'     => 1,      // neighbouring sentences opening on the same two words
+    'disclaimer'   => 0,      // the "notes, not a study" paragraph
+];
+
+/** The ritual stake-lowering line. Eleven posts carried a variant of it by round 3. */
+const VC_DISCLAIMER = '(what follows is|this is) (a |an |one )[^.]{0,60}, (not|no) (a |an )?\w+'
+                    . '|\b(notes|observations|a count|a map|a field report), not (a |an )?(study|science|data|paper|standard|victory lap)'
+                    . '|private (notes|observations|opinion)[^.]{0,40}(not|no) (science|study)'
+                    . '|not science\b|no study behind';
+
 /* ---------------- helpers ---------------- */
 
 /** Every line of the file, 1-indexed, so hits can be reported where they live. */
@@ -114,11 +143,12 @@ function vc_prose(array $lines): string
         if ($inFence) continue;
         $t = trim($line);
         if ($t === '---') break;                              // meta block starts here
+        if (preg_match('/^## (Sources|References)\s*$/i', $t)) break;   // a reference list is not prose
         if ($t === '' || $t[0] === '#' || $t[0] === '>') continue;
         if (preg_match('/^!\[.*\]\(.*\)$/', $t)) continue;     // figure lines
         if (preg_match('/^\*\*(' . VC_META_KEYS . '):\*\*/', $t)) continue;
         if (preg_match('/^\*[^*]+\*$/', $t)) continue;         // the italic subtitle
-        $out[] = $t;
+        $out[] = trim((string) preg_replace('/<!--.*?-->/', '', $t));
     }
     return implode(' ', $out);
 }
@@ -148,6 +178,99 @@ function vc_rhythm(string $prose): array
         'cv'    => $mean > 0 ? $sd / $mean : 0.0,
         'short' => 100 * count(array_filter($w, fn(int $x): bool => $x <= 6)) / $n,
         'long'  => count(array_filter($w, fn(int $x): bool => $x >= 35)),
+    ];
+}
+
+/**
+ * Prose paragraphs, each as its list of sentences. Same exclusions as vc_prose(), plus list
+ * items and table rows: a bullet has no cadence to judge and a table cell is not a sentence.
+ */
+function vc_paragraphs(array $lines): array
+{
+    $paras = [];
+    $cur = [];
+    $inFence = false;
+    $flush = function () use (&$paras, &$cur): void {
+        if ($cur) $paras[] = implode(' ', $cur);
+        $cur = [];
+    };
+    foreach ($lines as $line) {
+        if (preg_match('/^```/', $line)) { $inFence = !$inFence; $flush(); continue; }
+        if ($inFence) continue;
+        $t = trim($line);
+        if ($t === '---') break;
+        if ($t === '') { $flush(); continue; }
+        if ($t[0] === '#' || $t[0] === '>' || $t[0] === '|') { $flush(); continue; }
+        if (preg_match('/^!\[.*\]\(.*\)$/', $t) || preg_match('/^([-*]|\d+\.) /', $t)) { $flush(); continue; }
+        if (preg_match('/^\*\*(' . VC_META_KEYS . '):\*\*/', $t) || preg_match('/^\*[^*]+\*$/', $t)) { $flush(); continue; }
+        $cur[] = $t;
+    }
+    $flush();
+
+    $out = [];
+    foreach ($paras as $p) {
+        $p = preg_replace('/\[([^\]]*)\]\([^)]*\)/', '$1', $p);
+        $p = trim((string) preg_replace('/<!--.*?-->/', '', (string) $p));   // the round-5 marker is not prose
+        $s = preg_split('/(?<=[.!?])(?:\*\*)?["\x{201D})]?\s+/u', (string) $p, -1, PREG_SPLIT_NO_EMPTY);
+        if ($s) $out[] = $s;
+    }
+    return $out;
+}
+
+/** Words in a sentence, markup ignored. Digits count: "40 people" is two words to a reader. */
+function vc_wc(string $s): int
+{
+    return (int) preg_match_all("/[A-Za-z0-9][A-Za-z0-9'\x{2019}%-]*/u", (string) preg_replace('/[*`_]/', '', $s));
+}
+
+/**
+ * The cadence tier: label => [ok, summary, hits]. See VC_CADENCE for why these are advisory.
+ */
+function vc_cadence(array $lines, int $words, float $shortPct = 0.0): array
+{
+    $paras = vc_paragraphs($lines);
+    $multi = array_values(array_filter($paras, fn(array $s): bool => count($s) >= 2));
+    $neg = '/\b(not|no|never|nobody|nothing|none)\b|n[\'\x{2019}]t\b/iu';
+
+    $punch = $frag = $pair = $closer = $ana = [];
+    foreach ($paras as $s) {
+        $last = $s[count($s) - 1];
+        if (count($s) >= 2 && vc_wc($last) <= 8) $punch[] = trim($last);
+        if (preg_match('/\*\*[^*]+[.!?]\*\*\s*$/', $last)) $closer[] = trim($last);
+        foreach ($s as $i => $x) {
+            $plain = (string) preg_replace('/[*`_]/', '', $x);
+            if (vc_wc($x) <= 4 && vc_wc($x) >= 1) $frag[] = trim($plain);
+            if (!isset($s[$i + 1])) continue;
+            $next = (string) preg_replace('/[*`_]/', '', $s[$i + 1]);
+
+            // "It was not a wall. It was a queue." — a short denial, then a short claim
+            // that opens on a pronoun and denies nothing. Also the fragment form "Not X. Y."
+            $denial = preg_match($neg, $plain) && vc_wc($plain) <= 18;
+            $claim = vc_wc($next) <= 14 && !preg_match($neg, $next)
+                  && preg_match('/^(It|That|They|This|These|Those|The|There|He|She|We|I|Everybody|Everyone)\b/', $next);
+            if (($denial && $claim) || (preg_match('/^Not\b/', $plain) && vc_wc($plain) <= 8 && !preg_match($neg, $next))) {
+                $pair[] = trim($plain) . ' ' . trim($next);
+            }
+
+            $a = array_slice(preg_split('/\s+/', trim($plain)), 0, 2);
+            $b = array_slice(preg_split('/\s+/', trim($next)), 0, 2);
+            if (count($a) === 2 && $a === $b) $ana[] = implode(' ', $a) . ' … / ' . implode(' ', $b) . ' …';
+        }
+    }
+
+    $punchPct = $multi ? 100 * count($punch) / count($multi) : 0.0;
+    $fragK = $words ? 1000 * count($frag) / $words : 0.0;
+    $disc = vc_grep($lines, '/' . VC_DISCLAIMER . '/i');
+    $L = VC_CADENCE;
+
+    return [
+        'punch-ending' => [$punchPct <= $L['punch-ending'], sprintf('%.0f%% of paragraphs end on a short line (≤%d%%)', $punchPct, $L['punch-ending']), $punch],
+        'fragments'    => [$fragK <= $L['fragments'], sprintf('%.1f fragments/1k (≤%d)', $fragK, $L['fragments']), $frag],
+        'neg-pair'     => [count($pair) <= $L['neg-pair'], count($pair) . ' denial-then-claim pairs (≤' . $L['neg-pair'] . ')', $pair],
+        'bold-closer'  => [count($closer) <= $L['bold-closer'], count($closer) . ' paragraphs close in bold (≤' . $L['bold-closer'] . ')', $closer],
+        'anaphora'     => [count($ana) <= $L['anaphora'], count($ana) . ' repeated sentence openings (≤' . $L['anaphora'] . ')', $ana],
+        'disclaimer'   => [!$disc, count($disc) . ' ritual disclaimer', $disc],
+        'drum'         => [$shortPct <= 22.0, sprintf('%.0f%% of sentences are ≤6 words (his own: 11-12%%)', $shortPct), []],
     ];
 }
 
@@ -186,6 +309,13 @@ function vc_check(string $file): array
     }
 
     $checks = [];
+
+    // Round 5: a paragraph the model wrote with no source sentence behind it is marked in the
+    // draft, and the mark comes off when the author has rewritten or accepted it. The renderer
+    // would print the marker as text, so one left behind is a failure twice over.
+    $marker = vc_grep($lines, '/<!--\s*M\s*-->/');
+    $checks['unclaimed'] = [!$marker, count($marker) . ' paragraph still marked <!-- M -->', $marker];
+
     $checks['em-dash'] = [!$emdash, count($emdash) . ' spaced em-dash outside a link title', $emdash];
 
     $banned = vc_words($lines, VC_BANNED);
@@ -218,11 +348,15 @@ function vc_check(string $file): array
     $checks['inline-header'] = [$inlineOk, count($inline) . ' in ' . count($runs) . ' run(s)', $inline];
 
     $checks['words'] = [$words >= 650 && $words <= 1500, "{$words} words (650–1500)", []];
-    $checks['cv'] = [$r['cv'] >= 0.60, sprintf('CV %.2f (≥0.60)', $r['cv']), []];
-    $checks['short'] = [$r['short'] >= 15, sprintf('%.0f%% ≤6w (≥15%%)', $r['short']), []];
+    // Recalibrated in round 5. The old floors (CV 0.60, 15% short) were set just under the
+    // ghostwritten corpus average, and the two texts he wrote himself fail both: CV 0.49-0.50,
+    // 11-12% short. A gate his own hand cannot pass was rewarding the model's drum. The floor now
+    // sits under his numbers, and too much short is reported by the cadence tier instead.
+    $checks['cv'] = [$r['cv'] >= 0.42, sprintf('CV %.2f (≥0.42)', $r['cv']), []];
+    $checks['short'] = [$r['short'] >= 7, sprintf('%.0f%% ≤6w (≥7%%)', $r['short']), []];
     $checks['long'] = [$r['long'] >= 1, "{$r['long']} sentence ≥35w (≥1)", []];
 
-    return ['checks' => $checks, 'rhythm' => $r, 'words' => $words];
+    return ['checks' => $checks, 'cadence' => vc_cadence($lines, $words, $r['short']), 'rhythm' => $r, 'words' => $words];
 }
 
 /* ---------------- run ---------------- */
@@ -237,6 +371,7 @@ sort($files);
 $failed = 0;
 $total = 0;
 $frozen = 0;
+$cadenced = 0;
 foreach ($files as $file) {
     $slug = preg_replace('/^\d{4}-\d{2}-\d{2}-/', '', basename($file, '.md'));
     if ($only && !in_array($slug, $only, true)) continue;
@@ -269,8 +404,25 @@ foreach ($files as $file) {
             }
         }
     }
+
+    // the cadence tier: reported, never counted as a failure
+    $soft = array_keys(array_filter($res['cadence'], fn(array $c): bool => !$c[0]));
+    if ($soft) {
+        $cadenced++;
+        printf("   ~ %-46s %s\n", '', implode(' · ', array_map(fn(string $k): string => $res['cadence'][$k][1], $soft)));
+        if ($detail) {
+            foreach ($soft as $k) {
+                foreach ($res['cadence'][$k][2] as $key => $hit) {
+                    printf("       %-14s %s\n", $k, mb_strimwidth((is_int($key) && $k === 'disclaimer' ? "L{$key}: " : '') . $hit, 0, 150, '…'));
+                }
+            }
+        }
+    }
 }
 
 printf("\n%d/%d editable posts clean%s\n", $total - $failed, $total,
     $frozen ? " ({$frozen} frozen: already published elsewhere)" : '');
+if ($cadenced) {
+    printf("%d of them carry a cadence note (~). Advisory: --detail quotes the lines.\n", $cadenced);
+}
 exit($failed ? 1 : 0);
