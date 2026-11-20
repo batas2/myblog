@@ -745,6 +745,23 @@ t_assert(an_looks_automated(['tz' => 'Europe/Berlin', 'screen' => 'phone', 'os' 
 t_assert(!an_looks_automated(['tz' => 'Europe/Warsaw', 'screen' => 'tablet', 'os' => 'macOS', 'lang' => 'pl']), 'an iPad presents as macOS on a tablet screen and stays counted');
 t_assert(!an_looks_automated(['tz' => 'Europe/Warsaw', 'screen' => 'phone', 'os' => 'Android', 'lang' => 'pl']), 'a phone OS on a phone screen is a phone');
 t_assert(!an_looks_automated(['tz' => 'Europe/Warsaw', 'screen' => 'laptop', 'os' => 'Linux', 'lang' => 'pl']), 'a desktop OS on a desktop screen is a desktop');
+// the clock and the address disagree about the continent: a proxy pool, or a renderer in somebody's datacenter
+$auto = fn(array $o): bool => an_looks_automated(array_merge(['tz' => 'Europe/Warsaw', 'country' => 'PL', 'screen' => 'desktop', 'os' => 'Windows', 'lang' => 'en'], $o));
+t_assert($auto(['country' => 'US', 'tz' => 'Asia/Bangkok']), 'a US address on a Bangkok clock is a proxy exit');
+t_assert($auto(['country' => 'IE', 'tz' => 'America/Los_Angeles', 'os' => 'Android']), 'an Irish address on a California clock is a preview renderer');
+t_assert($auto(['country' => 'VE', 'tz' => 'Asia/Rangoon']), 'a deprecated alias still names its continent');
+t_assert(!$auto(['country' => 'PL', 'tz' => 'Europe/London']), 'same continent is a VPN exit or a commuter, not a contradiction');
+t_assert(!$auto(['country' => 'US', 'tz' => 'Pacific/Honolulu']), 'Hawaii is in the US');
+t_assert(!$auto(['country' => 'ES', 'tz' => 'Atlantic/Canary']), 'the Canaries are in Spain');
+t_assert(!$auto(['country' => 'RU', 'tz' => 'Asia/Novosibirsk']), 'a country on two continents accepts both');
+t_assert(!$auto(['country' => 'IN', 'tz' => 'Asia/Calcutta']), 'the alias Chrome still reports for India matches');
+t_assert(!$auto(['country' => '', 'tz' => 'Asia/Bangkok']), 'no country, no contradiction');
+t_assert(!$auto(['country' => 'EU', 'tz' => 'Asia/Bangkok']), 'a registry pseudo-code has no zones to disagree with');
+t_assert(!$auto(['country' => 'PL', 'tz' => 'Etc/GMT-2']), 'an Etc offset names no continent');
+// a Windows PC never has a tablet-width display; an emulated viewport does
+t_assert($auto(['country' => 'US', 'tz' => 'America/Los_Angeles', 'screen' => 'tablet']), 'Windows on a tablet-width screen is an emulated viewport');
+t_assert(!$auto(['screen' => 'tablet', 'os' => 'Linux']), 'an Android tablet asks for the desktop site as Linux and stays counted');
+t_assert(!$auto(['screen' => 'tablet', 'os' => 'ChromeOS']), 'a Chromebook tablet stays counted');
 
 // campaign tags map back to the platform that hid its own referrer
 t_eq('blogs', an_utm_group('medium'), 'utm medium tag = blogs');
@@ -850,7 +867,7 @@ $xrec = fn(array $o) => an_record($xdb, array_merge([
 $xrec([]);                                                        // a reader
 $xrec(['visitor' => 'h1', 'tz' => 'UTC', 'lang' => 'en']);        // headless, judged on the way in
 $xrec(['visitor' => 'h2', 'tz' => 'UTC', 'lang' => 'en']);
-$xrec(['visitor' => 'h3', 'os' => 'macOS', 'screen' => 'phone', 'tz' => 'Asia/Shanghai', 'lang' => 'en']);   // emulated phone under a desktop UA
+$xrec(['visitor' => 'h3', 'os' => 'macOS', 'screen' => 'phone', 'tz' => 'Asia/Shanghai', 'country' => 'CN', 'lang' => 'en']);   // emulated phone under a desktop UA
 t_eq(1, an_summary($xdb, $since)['pv'], 'automation is written but never counted');
 t_eq(4, (int) $xdb->query('SELECT COUNT(*) FROM hits')->fetchColumn(), 'and is still on disk to look at');
 t_eq(4, count(an_recent($xdb, 30)), 'recent activity shows the filtered rows');
@@ -878,6 +895,13 @@ t_eq(AN_COUNTED, (int) $xdb->query("SELECT excl FROM hits WHERE visitor = 'h1'")
 $xdb->exec("UPDATE hits SET screen = 'tablet' WHERE visitor = 'h3'");
 an_reclassify($xdb);
 t_eq(AN_COUNTED, (int) $xdb->query("SELECT excl FROM hits WHERE visitor = 'h3'")->fetchColumn(), 'a tablet-sized screen on a Mac UA is an iPad, counted again');
+// history written under an older rule: the rescan has to read the country too, dry first
+$xrec(['visitor' => 'p1', 'country' => 'US', 'tz' => 'Asia/Bangkok', 'excl' => AN_COUNTED]);
+t_eq(1, an_reclassify($xdb, false), 'a dry rescan counts the row the clock/address rule now catches');
+t_eq(AN_COUNTED, (int) $xdb->query("SELECT excl FROM hits WHERE visitor = 'p1'")->fetchColumn(), 'and writes nothing');
+t_eq(1, an_reclassify($xdb), 'the real rescan re-judges it');
+t_eq(AN_AUTOMATED, (int) $xdb->query("SELECT excl FROM hits WHERE visitor = 'p1'")->fetchColumn(), 'as automated');
+$xdb->exec("DELETE FROM hits WHERE visitor = 'p1'");
 
 // the activity list follows the dashboard range: an old row is history, not "recent"
 $xrec(['visitor' => 'old', 'day' => '2020-01-01', 'ts' => 1577836800]);

@@ -6,8 +6,9 @@
  * numbers, and neither can be caught by the user-agent filter in a.php:
  *
  *   automated — headless browsers that run the beacon from a UTC-clocked
- *               server, or emulate a phone-sized screen under a desktop user
- *               agent. an_looks_automated() judges these at write time; here
+ *               server, emulate a phone (or, on Windows, tablet) sized screen
+ *               under a desktop user agent, or report a clock on another
+ *               continent than their address. an_looks_automated() judges these at write time; here
  *               --rescan re-judges every row when that rule changes.
  *   owner     — your own browsing from a device that never opened the
  *               dashboard (the bfx cookie only lands in browsers that did) and
@@ -93,13 +94,8 @@ if (!isset($opts['rescan']) && !isset($opts['owner']) && !isset($opts['restore']
 if (!empty($opts['rescan'])) {
     if (!$apply) {
         // count the disagreements without writing any of them
-        $rows = $db->query('SELECT tz, screen, lang, os, excl FROM hits')->fetchAll(PDO::FETCH_ASSOC);
-        $changed = 0;
-        foreach ($rows as $r) {
-            if ((int) $r['excl'] === AN_OWNER) continue;
-            if ((int) $r['excl'] !== (an_looks_automated($r) ? AN_AUTOMATED : AN_COUNTED)) $changed++;
-        }
-        printf("%d of %d rows would change verdict — re-run with --apply\n", $changed, count($rows));
+        $total = (int) $db->query('SELECT COUNT(*) FROM hits')->fetchColumn();
+        printf("%d of %d rows would change verdict — re-run with --apply\n", an_reclassify($db, false), $total);
         exit(0);
     }
     printf("%d rows re-judged\n", an_reclassify($db));

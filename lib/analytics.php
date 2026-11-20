@@ -219,15 +219,54 @@ function an_is_bot(string $ua): bool
  * phone screen. That is the trade, and it is reversible: excluded rows are
  * kept, counted separately in admin → System, and an_reclassify() re-runs
  * this rule over all history whenever it changes.
+ *
+ * Two more contradictions, added 2026-11-20 after a month in which ~60 of 86
+ * counted pageviews were automation:
+ *
+ * The clock and the address name different continents. A US address on an
+ * Asia/Bangkok clock, an Irish one on America/Los_Angeles: a residential
+ * proxy pool walking the archive one post per IP, and Meta's preview renderer.
+ * The comparison is by continent (the zone's first segment against every zone
+ * the country has), so a commuter, a VPN exit in the next country and the
+ * deprecated aliases browsers still send (Asia/Calcutta) all pass. The cost is
+ * a reader on a VPN exit on another continent, or a traveller whose laptop
+ * kept the home clock.
+ *
+ * Windows on a tablet-width screen (600–1099 px). A PC display that narrow in
+ * CSS pixels is a scaling setting nobody uses; an emulated viewport is how the
+ * 2026-11-16 datacenter-proxy cluster came. Linux and ChromeOS stay counted,
+ * because an Android tablet asks for the desktop site as Linux and a
+ * Chromebook tablet is that width, and macOS stays because that is an iPad.
  */
 const AN_DESKTOP_OS = ['Windows', 'macOS', 'Linux', 'ChromeOS'];
+
+/** Continent of an IANA zone ('Europe/Warsaw' → 'Europe'), '' for Etc/… and bare abbreviations. */
+function an_tz_region(string $tz): string
+{
+    $region = strstr($tz, '/', true);
+    return ($region === false || strcasecmp($region, 'Etc') === 0) ? '' : $region;
+}
+
+/** False only when the zone's continent is one the country has no zone on; unknowns pass. */
+function an_tz_fits_country(string $tz, string $cc): bool
+{
+    static $regions = [];
+    $region = an_tz_region($tz);
+    if ($region === '' || !preg_match('/^[A-Z]{2}$/', $cc)) return true;
+    if (!isset($regions[$cc])) {
+        $zones = DateTimeZone::listIdentifiers(DateTimeZone::PER_COUNTRY, $cc);
+        $regions[$cc] = array_unique(array_map('an_tz_region', $zones));
+    }
+    return !$regions[$cc] || in_array($region, $regions[$cc], true);
+}
 
 function an_looks_automated(array $r): bool
 {
     $tz = strtoupper(trim((string) ($r['tz'] ?? '')));
     if ($tz !== '' && in_array($tz, ['UTC', 'ETC/UTC', 'GMT', 'ETC/GMT', 'UCT', 'ZULU'], true)) return true;
     if (($r['screen'] ?? '') === 'phone' && in_array($r['os'] ?? '', AN_DESKTOP_OS, true)) return true;
-    if ($tz !== '') return false;
+    if (($r['screen'] ?? '') === 'tablet' && ($r['os'] ?? '') === 'Windows') return true;
+    if ($tz !== '') return !an_tz_fits_country(trim((string) $r['tz']), strtoupper((string) ($r['country'] ?? '')));
     return ($r['screen'] ?? '') === '' && ($r['lang'] ?? '') === '';
 }
 
@@ -235,11 +274,11 @@ function an_looks_automated(array $r): bool
  * Re-apply an_looks_automated() to every stored row. An AN_OWNER verdict is
  * left alone — that one came from a human — but automated/counted is decided
  * fresh, so relaxing the rule brings traffic back instead of losing it for
- * good. Returns how many verdicts changed.
+ * good. Returns how many verdicts changed — or, with $apply false, would.
  */
-function an_reclassify(PDO $db): int
+function an_reclassify(PDO $db, bool $apply = true): int
 {
-    $rows = $db->query('SELECT rowid AS rid, tz, screen, lang, os, excl FROM hits')->fetchAll(PDO::FETCH_ASSOC);
+    $rows = $db->query('SELECT rowid AS rid, tz, screen, lang, os, country, excl FROM hits')->fetchAll(PDO::FETCH_ASSOC);
     $set = $db->prepare('UPDATE hits SET excl = ? WHERE rowid = ?');
     $changed = 0;
     // the migration calls this from inside the beacon's request; own the
@@ -250,7 +289,7 @@ function an_reclassify(PDO $db): int
         if ((int) $r['excl'] === AN_OWNER) continue;
         $want = an_looks_automated($r) ? AN_AUTOMATED : AN_COUNTED;
         if ((int) $r['excl'] === $want) continue;
-        $set->execute([$want, $r['rid']]);
+        if ($apply) $set->execute([$want, $r['rid']]);
         $changed++;
     }
     if ($own) $db->commit();
