@@ -59,6 +59,8 @@ declare -A Q=(
   [four-levels-three-cliffs]="Moray Inca terraces circular|agricultural terraces Peru Andes"
   # fresh paint over a cracked wall: the optimism is the paint, the result is the wall
   [the-company-promotes-optimism]="peeling paint wall|cracked wall paint"
+  # a rubber stamp: the model stamps whatever it is handed, one status higher than it came in
+  [one-step-more-certain]="stamp approved|rubber stamp"
 )
 
 TMP=$(mktemp -d)
