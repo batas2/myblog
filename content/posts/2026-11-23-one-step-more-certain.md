@@ -1,78 +1,89 @@
 # One Step More Certain
 
-*I checked nine months of my own architecture documents for the optimism of AI models. The optimism was mine. The model added the certainty.*
+*I checked nine months of my architecture documents for AI optimism. The optimism came from my prompts and our plans. The model made it sound certain.*
 
-I am a solution architect in a global SaaS platform. In practice my job is mostly documents. Before several squads build something together, somebody has to write down how the parts will fit, which options we rejected and why, and what we still do not know. So I write solution designs, decision records and lists of questions for the product people, and I draw diagrams for all of it.
+Last week I wrote that [models promote optimism](/blog/the-company-promotes-optimism/): they give the pleasant answer more often than the true one, and many studies confirm it. After I published it, one question did not leave me alone. If this is true, I should see it in my own work. Since March a model has written the first draft of almost every architecture document I made.
 
-Since March almost every one of these documents starts with an AI model. I give it the product requirements, the Slack thread and the source code, I write a prompt, and I get a draft that I correct. I keep everything in one folder, and each piece of work has its prompt saved next to the result. I described this setup in [Prompt-Driven Architecture](/blog/prompt-driven-architecture/).
+I am a solution architect in a global SaaS platform, and my job is mostly writing. Before several squads build something together, somebody has to write down how the parts will fit. So I write solution designs, decision records (one page per decision: the options we had and why we chose one) and lists of open questions for the product team. For each of them I give a model the requirements and the code, I write a prompt and I correct the draft. I keep every prompt next to its result, so nine months later I could check all of it. I described the setup in [Prompt-Driven Architecture](/blog/prompt-driven-architecture/).
 
-Last week I wrote that [models promote optimism](/blog/the-company-promotes-optimism/): they give the pleasant answer more often than the true one, and many studies confirm it. After I published it, one thing did not leave me alone. If this is true, then it should be visible in my own folder, because the same models wrote the first draft of most of my architecture this year. So I went to check.
+I will give the result first. I did not find an optimistic model. I found a model that takes what I give it and returns it **one step more certain**. My opinion comes back as a decision, and a plan comes back as a fact. The optimism was already in the input: in my own prompts and in the plans of the company. The doubts were in the documents too, but usually on the last page, and most of them never got a written answer.
 
-I will give the result first, because the rest of the text only explains it. I did not find an optimistic model. I found a model that takes whatever I give it and returns it **one step more certain**. My opinion comes back as a decision, and a plan comes back as a fact. The optimism was already in what I gave it, in the plans of the company and in my own prompts, and the model made it look settled.
+By "more certain" I mean the status of a statement. Every sentence in an architecture document has one, even when nobody writes it down. In practice it is a ladder with five levels:
+
+opinion → proposal → decision → built → checked in production
+
+The team reads the status to know what to do next. While a sentence is a proposal, people discuss it and somebody owns it. When it becomes a decision, the squads build it and nobody asks about it again. So when a sentence goes one level up without a reason, the questions about it stop.
+
+In numbers, this is what I found:
+
+- In 16 cases a statement went at least one level up when a model copied it into a new document, and I found no decision in between.
+- In 17 of 17 prompts where I wrote my own solution or a hard constraint into the question, it came back as the design.
+- Of about 490 open questions in our question lists, only 38 have a written answer anywhere.
 
 ## What I checked
 
-The folder has more than a thousand files from nine months: 66 diagrams, around 140 decks and exported documents, and 308 text documents that can be read and compared. There are 36 saved prompts. I added my side project, an architecture modeling tool that I build in the evenings with coding agents. It has 301 commits, 31 decision records and 28 bug records, and it is useful here because the agents wrote almost all of it.
+The folder has 308 text documents from March to November. A model drafted 220 of them from one of my 36 saved prompts. For every document I asked two questions. What did it claim? And what do we know today from a later document, from the code or from production? It was too much to read by hand, so a model did the reading in four separate passes, without knowing what I expected. Still, a model counted everything below, and this is the weak point of the review. I come back to it at the end.
 
-For every document I asked two questions. What did it claim? And what do we know today, from a later document, from the code, or from production? It is too much to read by hand, so a model did the reading, in four separate passes that did not know my expectations. I come back to this at the end, because it is a weak point.
+I expected optimistic language, but there is almost none: the phrase "quick win" appears in 2 of the 220 drafts. Read alone, each document looks careful.
 
-The first result was a surprise. I expected happy language, and it is not there. In 220 documents that came from my prompts, the phrase "quick win" appears in 2. The word "assumption" appears in 80 and "open question" in 44. Most designs have a section about risks. If somebody reads one of these documents alone, it looks careful.
+## How a statement moves up
 
-## One sentence in four documents
+The problem shows up only when you follow one statement from document to document. Here is the clearest of the sixteen cases, one recommendation about how to model the relationship between two companies on our platform:
 
-The problem is visible only when you follow one sentence through time. Here is the clearest example.
+| When | Document | What it said about the recommendation |
+|---|---|---|
+| May | Decision document | "Status: Open / Needs Further Discussion" |
+| A week later | Solution design, drafted with a model | Listed under "Confirmed decisions" |
+| Three weeks later | Questions for the product team | Listed under "Already decided, please don't reopen" |
+| End of July | New solution design | It "was never ratified", so in fact nobody had decided it |
 
-In May we had a decision document about how to model the relationship between two companies in our network. Its header said "Status: Open / Needs Further Discussion". One week later I asked a model for a design in the same area, and the design listed this recommendation under the heading "Confirmed decisions". Three weeks after that, a list of questions for the product team had a section "Already decided, please don't reopen", and the same recommendation was in it. At the end of July a new design said that the recommendation "was never ratified", and the code went a different way.
+The text of the recommendation stayed the same in all four documents. Its status went from open to decided while it was copied from one document to the next, and in the end we built something different.
 
-Nobody lied in this story, and the content of the sentence did not change between the documents. What changed was its status. Every statement in architecture has one, even when we do not write it: somebody's opinion, a proposal, a decision, something built, something checked in the running system. In my folder the status went up one level almost every time a model copied a sentence into a new document. I found sixteen cases of this kind.
+Other examples are a bit embarrassing. For an AI assistant for our customers, the model drafted fifteen decision records in one day. All fifteen were marked "Accepted" on the day they were written, before anybody except me had read them. Four months later about six were reversed or dropped. In another proposal I added a confidence field to every example file, with four values to choose from. The model chose "Fact" in 19 of 30 files, and 9 of those described something that did not exist yet.
 
-Some of them are a bit embarrassing. For an AI assistant the model drafted fifteen decision records in one day, and all fifteen were marked "Accepted" on the day they were written, before anybody outside the session had read them. Four months later about six were reversed or dropped. In another piece of work I added a confidence field to every file, with four values to choose from. The model chose "Fact" in 19 of 30 files, and 9 of those described a state that did not exist yet.
+This is not only my folder. When ten models summarised scientific papers, their summaries were [nearly five times more likely](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC12042776/) to contain broad generalisations than summaries written by people. They lost qualifiers like "in this group" or "probably" first. In a design document, a lost "probably" is exactly how "proposed" becomes "accepted".
 
-And here is the detail that changed my thesis. It works in the other direction too. In March a model read only our documents, without the code, and produced a list of twelve gaps with the label "delivery cannot proceed without resolution". We delivered in May. So I cannot call this optimism. The model was equally sure about good news and bad news, and the direction always came from the input. In a company most of the input is plans, and plans are optimistic, so the output looks optimistic.
+## It works with bad news too
 
-There is a study that shows the same mechanism at a smaller scale. When ten models summarised scientific papers, their summaries were [nearly five times more likely](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC12042776/) to contain broad generalisations than summaries written by people. The first thing a summary loses is the qualifier, the "in this group" or "probably". In architecture the qualifier is the whole difference between "proposed" and "accepted".
+In March a model read only our documents, without the code, and made a list of twelve gaps with the label "delivery cannot proceed without resolution". We delivered in May, and none of the twelve stopped us. This changed my thesis. The model was as sure about bad news as about good news, so "optimism" is the wrong word. Whether the answer sounds good or bad depends on what the model gets and what it is asked, and the model adds only the certainty. In a company most of the input is plans, and plans are optimistic, so the output looks optimistic.
 
-## Where the optimism came from
+## The optimism came from my prompts
 
-So if the model does not bring the optimism, who does? This part was not pleasant to read, because the answer is me.
+So who brings the optimism? This part was not pleasant to read, because the answer is me.
 
-In 17 prompts I had written my own solution, or hard constraints, into the question. In 17 of 17 that solution came back. For a feature with saved filters I put two constraints into the prompt, and they returned as ADR-001 and ADR-002, in the format of a decision that somebody had analysed. In another prompt I wrote "in my opinion that make sense". The design agreed with me. It did have one objection, and it put the objection into the list of open decisions as number 3. The Slack reply that I prepared from this design did not mention it at all.
+In 17 of my 36 saved prompts I had written my own solution or a hard constraint into the question, and every time it came back. Once I wrote in a prompt, word for word, "in my opinion that make sense". The model agreed with me. It had one objection, and it put it as number 3 in the list of open decisions. Then I prepared a Slack reply from this design, and the objection was not in it at all.
 
-The model was not passive, and this is the interesting part. In one area it pushed back in 8 of 11 outputs. But it always pushed back against somebody else: a product document, an old diagram, a claim from another team. It did not question the premise of the prompt even once. When I asked openly, for example "give me two or three options and I will choose", the result was different. In 5 cases of 5 the output contradicted a position that I had already taken somewhere else.
+The model did push back, but always against somebody else, for example against a product document or an old diagram. It never questioned the assumption in my prompt. I also had prompts where I asked openly, like "give me two or three options and I will choose". In all 5 of them the answer went against an opinion that I had already given somewhere else. So the model is able to disagree with me. It just did not do it when my opinion was already in the prompt.
 
-Researchers at the UK AI Security Institute showed this spring that most of the flattery disappears when you [ask the model a question](https://www.aisi.gov.uk/blog/ask-dont-tell-reducing-sycophancy-in-large-language-models-2) and do not give it your own statement. I linked that result last week. My prompts from July show that I was not doing it myself.
+Researchers at the UK AI Security Institute showed this spring that most of this agreement goes away when you [ask the model a question](https://www.aisi.gov.uk/blog/ask-dont-tell-reducing-sycophancy-in-large-language-models-2) instead of giving it your opinion. My prompts from July, a few months later, still started with my opinion.
 
-## The doubts were on the last page
+## The risks were on the last page
 
-Then where was the truth during all this time? In most cases it was in the same document. It was at the end.
+On average the first section about risks or open questions starts after about three quarters of a design. Partly this is our own fault. The solution design template in our company has twelve sections and none of them is for risks. So the model adds the risk section where it always goes, at the end. A reader with ten minutes reads the summary and the diagram and never gets there.
 
-The first heading about risks or open questions sits, on average, between 73 and 84% of the length of a design. This is partly our own fault: the solution design template in our company has twelve sections, and none of them is for risks or open questions, so the model adds the section in the place where it always goes. A reader who has ten minutes reads the summary and the diagram and never arrives there.
+You can see the cost in the July design of the AI assistant. The first delivery was planned for the turn of Q3 and Q4. The risk table started 93% of the way into the file, and two risks in it had high impact and high probability: the frontend platform was not ready, and there were no people to build it. In November the project was on hold, for exactly these two reasons. I could follow five flagged risks from a design to the end of the project, and all five happened. Five is a small number, but it is enough to show that the risks were known.
 
-The July design of the assistant shows how much this costs. It planned the first delivery for the border of Q3 and Q4. Its own risk table, at 93% of the file, rated two risks as high impact and high probability: the frontend platform is not ready, and there are no people to build it. In November the project was on hold, for these two reasons. I could follow five flagged risks from the document to the end of the story, and all five happened.
+The safeguards were written down too. In the designs 78 of them (a monitoring job or a load test, for example) ended up in the risk section or in "phase 2". I can confirm that 8 were built. For the other 70 I found no proof, but some of them may exist without a trace in the documents.
 
-So the doubts were correct, and almost nothing was done with them.
+![What happened to what was written down. My own solution always came back, every risk I could follow happened, and few questions or safeguards have a written trace of what happened next.](/assets/img/posts/one-step-more-certain/what-happened-to-what-was-written.png)
 
-![What happened to what was written down. The solution from my prompt always came back, the flagged risks I could follow all happened, and almost no question or safeguard was acted on.](/assets/img/posts/one-step-more-certain/what-happened-to-what-was-written.png)
+## What corrected a design
 
-The 48 question lists in the folder contain about 490 questions, and 38 of them have an answer recorded anywhere. The designs moved 78 safeguards (a monitoring job, a cleanup, a load test) into the risk section or into "phase 2", and I can confirm 8 of them as built. For 29 there is no trace in any document, so some of them may exist.
+In nine months I found only three things that corrected a design: reading the code, running a test, and a written answer from a person. I did not find a case where another document did it.
 
-My side project showed the same thing from the other side. When an agent wrote "not yet wired" or "deferred" in its status notes, it was correct everywhere I could check. The problem was the notes like "shipped end to end": in one case every operation failed in the running application two and a half weeks later. I traced 18 false claims that something works, and no test that existed at that moment caught any of them.
-
-## What changed a design
-
-If the documents repeated each other and became more certain with every copy, then what corrected them? In nine months I find only a short list: somebody read the code, somebody ran a test, or a person answered a question in writing.
-
-The best example is one test. In July a decision record for the assistant said that no model writes SQL queries. In November the new design relaxed this rule, with a note that nobody objected. Then a colleague tried it, and the generated query returned a company from outside the network of the buyer who was asking. Three days later the design said again that no model writes SQL for buyers. The written rule did not survive one round of planning, and one test result brought it back in three days.
+The best example is one test. In July a decision record for the AI assistant said that no model writes SQL queries. In November the rule was relaxed in the new design, with a note that nobody had objected. Then a colleague tried it, and the generated query returned a company from outside the buyer's own network, so data this buyer should not see. Three days later the rule was back in the design: no model writes SQL for buyers.
 
 ## What I do now
 
-I changed three things, and none of them is about a better model.
+Since then I work with three rules.
 
-First, the status of a sentence can be raised only by a person or by the code. The model may copy a status from the source, but it may not promote it, and "Accepted" on a decision record now needs a name of somebody who accepted. In my modeling tool I learned the same lesson: the rules that survived are the ones written as checks that can fail, and the rules written as sentences were broken without anybody noticing.
+1. Only a person or the running code can move a sentence up the ladder. The model may copy a status from the source but it may not raise it. "Accepted" on a decision record now needs the name of the person who accepted it.
+2. I ask before I tell. When I have an opinion, I put it into the prompt as a hypothesis and ask the model to attack it.
+3. Risks go to the top of the document, and each one gets an owner and a date.
 
-Second, I ask before I tell. When I have an opinion, I put it into the prompt as a hypothesis and ask the model to attack it. Third, the risks go to the top of the document, and each one gets an owner and a date, because a risk on the last page is read by nobody who decides.
+Now back to the weak point from the start. A model did the counting, so by my own ladder these numbers are still proposals. I will check the 17 prompts and the 78 safeguards by hand, and if the numbers move, I will correct them here.
 
-To be fair to my own rule, I have to say one more thing. This review was also done by a model, so its numbers have the status of a proposal. I will check 17 of 17 and 8 of 78 by hand, and if they move, I will correct them here. And there is one result I cannot explain yet. My documents from autumn are clearly more careful than the ones from spring, and I do not know if I learned something or if the models changed ;)
+And there is one result I cannot explain yet. My documents from autumn look more careful than the ones from spring. I do not know if I learned something or if the models changed ;)
 
 ## Sources
 
@@ -81,8 +92,10 @@ To be fair to my own rule, I have to say one more thing. This review was also do
 
 ---
 
-**Scores:** tension=7 originality=6 personal=8 contrarian=7 substance=8 punch=5 trend=8
-**Scored:** 2026-11-22 rubric=v1 model=claude-fable-5-2
+**Updated:** 2026-11-23 11:30
+
+**Scores:** tension=7 originality=6 personal=8 contrarian=7 substance=8 punch=6 trend=8
+**Scored:** 2026-11-23 rubric=v1 model=claude-opus-5-5
 
 **Related:** the-company-promotes-optimism, prompt-driven-architecture, the-model-grades-its-own-homework
 
