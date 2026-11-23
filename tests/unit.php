@@ -1641,7 +1641,7 @@ t_contains('class="series-nav"', $nav, 'series nav renders for a series post');
 t_contains('aria-current="page"', $nav, 'series nav marks the current part');
 t_contains('The Bottleneck Moved', $nav, 'series nav lists the sibling part');
 t_eq('', series_nav('mathematicians-vs-lawyers', $allPosts), 'no series nav outside a series');
-t_contains('Reviewability, part 1', $home, 'archive rows carry the series label');
+t_contains('Reviewability, part 1', $arch, 'archive rows carry the series label');
 $bySlug = array_column($allPosts, null, 'slug');
 t_contains('class="series-nav"', render_post($bySlug['the-bottleneck-moved'], null, null, $posts), 'post page carries the series nav');
 
