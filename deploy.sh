@@ -574,6 +574,23 @@ echo -e "${BOLD}Deploying bfrackowiak.pl${NC}"
 echo -e "  target: ${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}"
 echo -e "  mode:   $([ ${#RSYNC_MODE[@]} -eq 0 ] && echo 'live' || echo 'dry-run')$([ ${#DELETE_FLAG[@]} -eq 0 ] || echo ', clean (deletes stale remote files)')$([ "${VERBOSE}" -eq 1 ] && echo ', verbose')"
 
+# --- what the next CI deploy would undo ---
+# CI deploys main from the repository. Whatever goes up from here that main does not carry
+# is replaced by the next pipeline run, silently. Say so; deploying it is still allowed.
+if [ "${DEPLOY_CI:-0}" != "1" ] && git -C "${LOCAL_DIR}" rev-parse --git-dir >/dev/null 2>&1; then
+  if [ -n "$(git -C "${LOCAL_DIR}" status --porcelain 2>/dev/null)" ]; then
+    warn "uncommitted changes: the next CI deploy will replace this deploy"
+  fi
+  if git -C "${LOCAL_DIR}" remote get-url origin >/dev/null 2>&1; then
+    if timeout 10 git -C "${LOCAL_DIR}" fetch -q origin main >/dev/null 2>&1; then
+      git -C "${LOCAL_DIR}" merge-base --is-ancestor HEAD origin/main 2>/dev/null \
+        || warn "HEAD is not in main on origin: the next CI deploy will replace this deploy"
+    else
+      note "could not reach origin to check whether HEAD is pushed"
+    fi
+  fi
+fi
+
 # --- sanity: config must exist (endpoints read it at runtime) ---
 if [ ! -f "${LOCAL_DIR}config.php" ]; then
   die "Missing config.php — copy config.example.php and fill it in."
@@ -708,10 +725,34 @@ if [ ${#RSYNC_MODE[@]} -eq 0 ]; then
 
   BACKUP_SIZE="$(du -h "${BACKUP_ARCHIVE}" | cut -f1)"
   BACKUP_HINT=" — backup: ${BACKUP_ARCHIVE}"
-  step_done "Backup saved (${BACKUP_SIZE}, ${BACKUP_FILES} files)"
+  # From the laptop the archive moves to the home server (HOME_BACKUP_TARGET in deploy.env), where
+  # the CI's own backups live too. If that fails it stays here: a backup is never lost to a hop.
+  if [ "${DEPLOY_CI:-0}" != "1" ] && [ -n "${HOME_BACKUP_TARGET:-}" ]; then
+    if rsync -a -e "ssh -o ConnectTimeout=5 -o BatchMode=yes" "${BACKUP_ARCHIVE}" "${HOME_BACKUP_TARGET}" >"${LOG_DIR}/homebackup.log" 2>&1; then
+      rm -f "${BACKUP_ARCHIVE}"
+      BACKUP_HINT=" — backup: ${HOME_BACKUP_TARGET%/}/${TIMESTAMP}.tar.gz"
+      step_done "Backup saved (${BACKUP_SIZE}, ${BACKUP_FILES} files) → ${HOME_BACKUP_TARGET}"
+    else
+      warn "could not copy the backup to ${HOME_BACKUP_TARGET}: kept here, ${BACKUP_ARCHIVE}"
+      step_done "Backup saved (${BACKUP_SIZE}, ${BACKUP_FILES} files)"
+    fi
+  else
+    step_done "Backup saved (${BACKUP_SIZE}, ${BACKUP_FILES} files)"
+  fi
 fi
 
 # --- 5. deploy ---
+# build.txt: which commit is live, since when, deployed by whom. The smoke checks compare it with
+# the commit the pipeline deployed. Written into the tree only for a real deploy.
+if [ ${#RSYNC_MODE[@]} -eq 0 ]; then
+  BUILD_SHA="${DEPLOY_SHA:-}"
+  if [ -z "${BUILD_SHA}" ]; then
+    BUILD_SHA="$(git -C "${LOCAL_DIR}" rev-parse HEAD 2>/dev/null || echo unknown)"
+    [ -z "$(git -C "${LOCAL_DIR}" status --porcelain 2>/dev/null)" ] || BUILD_SHA="${BUILD_SHA}-dirty"
+  fi
+  printf 'sha=%s\ndeployed=%s\nby=%s\n' "${BUILD_SHA}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    "$([ "${DEPLOY_CI:-0}" = "1" ] && echo ci || echo laptop)" > "${LOCAL_DIR}build.txt"
+fi
 step "Syncing to ${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}"
 
 # What ships: index.php, comments.php, a.php, stats.php, admin.php, .htaccess,
@@ -724,6 +765,11 @@ RSYNC_LOG="${LOG_DIR}/sync.log"
 run "${RSYNC_LOG}" rsync -az "${RSYNC_PROGRESS[@]}" --stats --itemize-changes "${RSYNC_MODE[@]}" "${DELETE_FLAG[@]}" "${GEOIP_PROTECT[@]}" \
   --exclude='.git/' \
   --exclude='.gitignore' \
+  --exclude='/.gitea/' \
+  --exclude='/.githooks/' \
+  --exclude='/.superpowers/' \
+  --exclude='/ci/' \
+  --exclude='/content/outlines/' \
   --exclude='.claude/' \
   --exclude='deploy.sh' \
   --exclude='deploy.env' \

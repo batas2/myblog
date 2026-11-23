@@ -77,7 +77,8 @@ function dp_sandbox(string $name, bool $helper = true): array
     // the server starts with a built site, as if deployed before
     [$rc, $out] = dp_sh('cd ' . escapeshellarg($local) . ' && php tools/build.php');
     if ($rc !== 0) throw new RuntimeException("sandbox build failed: {$out}");
-    [$rc, $out] = dp_sh('rsync -a --exclude=content/analytics.db --exclude=deploy.env ' . escapeshellarg($local . '/') . ' ' . escapeshellarg($docroot . '/'));
+    [$rc, $out] = dp_sh('rsync -a --exclude=content/analytics.db --exclude=deploy.env --exclude=/ci/ --exclude=/.githooks/ '
+        . '--exclude=/.gitea/ --exclude=/content/outlines/ ' . escapeshellarg($local . '/') . ' ' . escapeshellarg($docroot . '/'));
     if ($rc !== 0) throw new RuntimeException("server seed failed: {$out}");
     file_put_contents("{$docroot}/content/analytics.db", 'REMOTE');
     if ($helper) dp_install_helper($rhome);
@@ -480,5 +481,66 @@ if ($rrsync === '') {
     $r = dp_run($s, ['install-remote'], $env);
     t_assert($r['rc'] !== 0, 'the CI key cannot install into ~/bin');
 }
+
+/* ---------------- build marker, warnings, where backups go, what never ships ---------------- */
+section('push extras');
+
+$s = dp_sandbox('extras');
+$r = dp_run($s, ['push'], ['DEPLOY_SHA' => 'abc123']);
+t_eq(0, $r['rc'], 'push with a given sha');
+dp_show($r);
+$build = (string) @file_get_contents($s['docroot'] . '/build.txt');
+t_contains("sha=abc123\n", $build, 'build.txt carries the sha');
+t_contains("by=laptop\n", $build, 'build.txt says who deployed');
+t_assert((bool) preg_match('/^deployed=\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/m', $build), 'build.txt carries the UTC time');
+
+foreach (['.gitea/workflows/x.yml', 'ci/gate-patterns.txt', 'content/outlines/a.md'] as $f) {
+    @mkdir(dirname($s['local'] . '/' . $f), 0755, true);
+    file_put_contents($s['local'] . '/' . $f, "private\n");
+}
+$r = dp_run($s, ['push']);
+t_eq(0, $r['rc'], 'push with private dirs present');
+foreach (['.gitea', 'ci', '.githooks', 'content/outlines'] as $d) {
+    t_assert(!file_exists($s['docroot'] . '/' . $d), "private dirs never shipped: {$d}");
+}
+
+// a git checkout: warnings about what the next CI deploy would undo
+$git = 'cd ' . escapeshellarg($s['local']) . ' && git -c user.email=t@example.com -c user.name=t ';
+dp_sh($git . 'init -q -b main && ' . $git . 'add -A && ' . $git . 'commit -qm base');
+dp_sh('git init -q --bare ' . escapeshellarg("{$DP_TMP}/extras/origin.git"));
+dp_sh($git . 'remote add origin ' . escapeshellarg("{$DP_TMP}/extras/origin.git") . ' && ' . $git . 'push -q origin main');
+$r = dp_run($s, ['push']);
+t_eq(0, $r['rc'], 'clean pushed checkout deploys');
+t_not_contains('uncommitted changes', $r['out'], 'no warning for a clean tree');
+t_not_contains('HEAD is not in main on origin', $r['out'], 'no warning when HEAD is in origin/main');
+t_assert((bool) preg_match('/^sha=[0-9a-f]{40}$/m', (string) file_get_contents($s['docroot'] . '/build.txt')), 'without DEPLOY_SHA the marker carries HEAD');
+
+file_put_contents($s['local'] . '/robots.txt', "# dirty\n", FILE_APPEND);
+$r = dp_run($s, ['push']);
+t_eq(0, $r['rc'], 'dirty tree still deploys');
+t_contains('uncommitted changes: the next CI deploy will replace this deploy', $r['out'], 'dirty tree warns');
+t_assert((bool) preg_match('/^sha=[0-9a-f]{40}-dirty$/m', (string) file_get_contents($s['docroot'] . '/build.txt')), 'a dirty deploy is marked dirty');
+
+dp_sh($git . 'commit -qam local-only');
+$r = dp_run($s, ['push']);
+t_contains('HEAD is not in main on origin: the next CI deploy will replace this deploy', $r['out'], 'unpushed HEAD warns');
+$r = dp_run($s, ['push'], ['DEPLOY_CI' => '1']);
+t_not_contains('the next CI deploy will replace', $r['out'], 'CI does not warn about itself');
+
+// where the archive goes
+$home = "{$DP_TMP}/extras/home-backups";
+@mkdir($home, 0755, true);
+file_put_contents($s['local'] . '/deploy.env', "HOME_BACKUP_TARGET=\"{$home}/\"\n", FILE_APPEND);
+array_map('unlink', glob($s['local'] . '/_remote-backup/*.tar.gz') ?: []);
+$r = dp_run($s, ['push']);
+t_eq(0, $r['rc'], 'push with a home backup target');
+t_eq(1, count(glob("{$home}/*.tar.gz") ?: []), 'backup goes home');
+t_eq([], glob($s['local'] . '/_remote-backup/*.tar.gz') ?: [], 'and leaves no local copy');
+
+file_put_contents($s['local'] . '/deploy.env', str_replace("{$home}/", 'nobody@unreachable.invalid:backups/', (string) file_get_contents($s['local'] . '/deploy.env')));
+$r = dp_run($s, ['push']);
+t_eq(0, $r['rc'], 'an unreachable home does not stop the deploy');
+t_eq(1, count(glob($s['local'] . '/_remote-backup/*.tar.gz') ?: []), 'backup stays local when home is down');
+t_contains('kept here', $r['out'], 'and says where it is');
 
 exit(t_summary());
