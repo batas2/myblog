@@ -1,6 +1,3 @@
-# secrets — copy config.example.php to config.php and fill in
-/config.php
-
 # generated output (php tools/build.php recreates all of it)
 blog/
 feed.xml
@@ -26,11 +23,6 @@ _remote-backup/
 # runtime data pulled by deploy.sh --pull-logs (analytics, subscribers, comments)
 _remote-logs/
 
-# private notes and old files
-docs/
-_archive/
-Refernce/
-
 # local noise
 .DS_Store
 *.log
@@ -39,27 +31,12 @@ content/newsletter.lock
 content/.sessions/
 content/.buildlock
 
-# never publish: unpublished essays and working drafts.
-# Exceptions, all on the same reasoning — an artifact you cannot remake is a
-# dead end, so whatever produced it is versioned. deploy.sh still excludes
-# drafts/ entirely, so none of it is served.
-#   diagrams/    the .drawio sources behind the PNGs in assets/img/posts/
-#   stemma-film/ the capture → render → encode pipeline behind assets/video/;
-#                the encoded films are the only other copy that exists
-#   social/      the copy actually posted to LinkedIn et al, with the URL it
-#                went out on — the record the weekly impressions check needs
-drafts/*
-!drafts/diagrams/
-!drafts/stemma-film/
-!drafts/social/
-
-# deployment target (per-machine, holds the SSH coordinates)
-deploy.env
-
 # render intermediates: the .drawio beside them is the editable source
 drafts/diagrams/**/*.svg
 
-# review notes are pulled from the live site, never committed as a build artifact
-content/review/
-content/.sync-state
+# briefs that tools/review_export.php writes from content/review/
 drafts/review/
+
+# deploy bookkeeping
+content/.sync-state
+/build.txt

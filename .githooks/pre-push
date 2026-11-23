@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# This repository carries secrets (config.php, deploy.env) and private notes.
+# The public copy on GitHub is produced by CI from a filtered export, never by a
+# direct push from a working copy. Enable with: git config core.hooksPath .githooks
+url="${2:-}"
+if [[ "${url}" =~ github\.com ]]; then
+  echo "pre-push: this repository is never pushed to GitHub directly." >&2
+  echo "pre-push: the public history is published by CI from a filtered export." >&2
+  exit 1
+fi
+exit 0
