@@ -388,4 +388,97 @@ $r = dp_run($s, ['push']);
 t_eq(0, $r['rc'], 'a lock older than 15 minutes is taken over');
 t_assert(!is_dir("{$s['docroot']}/content/.deploylock"), 'and released afterwards');
 
+/* ---------------- blog-gate: the forced command of the CI key ---------------- */
+section('gate');
+
+$g = "{$DP_TMP}/gate";
+$groot = "{$g}/home/domains/bfrackowiak.pl";
+@mkdir("{$groot}/public_html/content/posts", 0755, true);
+$rec = "{$g}/recorded";
+$recorder = "{$g}/recorder";
+file_put_contents($recorder, "#!/usr/bin/env bash\nprintf '%s|%s\\n' \"\${SSH_ORIGINAL_COMMAND:-}\" \"\$*\" >> " . escapeshellarg($rec) . "\n");
+chmod($recorder, 0755);
+
+/** run blog-gate with $cmd as SSH_ORIGINAL_COMMAND; returns [rc, what the recorder saw, gate log] */
+$gate = function (string $cmd) use ($ROOT, $g, $groot, $rec, $recorder): array {
+    @unlink($rec);
+    @unlink("{$g}/gate.log");
+    $p = proc_open(escapeshellarg("{$ROOT}/ci/remote/blog-gate") . ' 2>&1', [0 => ['file', '/dev/null', 'r'], 1 => ['pipe', 'w']], $pipes, $g, [
+        'PATH' => getenv('PATH'), 'HOME' => "{$g}/home", 'SSH_ORIGINAL_COMMAND' => $cmd,
+        'BLOG_GATE_ROOT' => $groot, 'BLOG_GATE_RRSYNC' => $recorder, 'BLOG_REMOTE_BIN' => $recorder,
+        'BLOG_GATE_LOG' => "{$g}/gate.log",
+    ]);
+    $out = stream_get_contents($pipes[1]);
+    fclose($pipes[1]);
+    $rc = proc_close($p);
+    return [$rc, trim((string) @file_get_contents($rec)), trim((string) @file_get_contents("{$g}/gate.log")), $out];
+};
+
+[$rc, $seen] = $gate("rsync --server -logDtprze.iLsfxCIvu . {$groot}/public_html/");
+t_eq(0, $rc, 'rsync into the docroot passes');
+t_eq("rsync --server -logDtprze.iLsfxCIvu . public_html/|{$groot}", $seen, 'absolute path rewritten relative to the root, rrsync pinned to the root');
+[$rc, $seen] = $gate("rsync --server --sender -logDtprze.iLsfx . {$groot}/public_html/content/posts/");
+t_eq("rsync --server --sender -logDtprze.iLsfx . public_html/content/posts/|{$groot}", $seen, 'reading posts passes');
+[$rc, $seen] = $gate("rsync --server -logDtprze.iLsfxCIvu --delete . {$groot}/public_html/content/posts/");
+t_eq(0, $rc, 'the posts mirror (--delete) passes');
+
+foreach ([
+    "rsync --server . {$g}/home/.ssh/"                         => 'rsync outside the root',
+    "rsync --server . {$groot}/public_html/../../.ssh/"        => 'rsync with a traversal',
+    "rsync --server . /etc/"                                   => 'rsync to /etc',
+    'blog-remote hashes; rm -rf ~'                             => 'a command chained after the helper',
+    'blog-remote $(id)'                                        => 'a substitution',
+    'blog-remote hashes | sh'                                  => 'a pipe',
+    'bash'                                                     => 'a shell',
+    ''                                                         => 'an interactive login',
+    'scp -t /tmp'                                              => 'scp',
+    "blog-remote cleanup {$groot}/public_html/content/../x"    => 'a traversal in a helper argument',
+    'blog-remote hashes extra args'                            => 'more than one helper argument',
+    "rsync --server . {$groot}/public_html/\nbash"             => 'a newline',
+] as $cmd => $what) {
+    [$rc, $seen, $log, $out] = $gate($cmd);
+    t_eq(1, $rc, "refused: {$what}");
+    t_eq('', $seen, "nothing ran: {$what}");
+    t_contains('blog-gate: command not allowed', $out, "says so: {$what}");
+    t_assert($log !== '', "logged: {$what}");
+}
+
+[$rc, $seen] = $gate('~/bin/blog-remote hashes');
+t_eq('|hashes', $seen, 'the helper runs with its subcommand');
+[$rc, $seen] = $gate("blog-remote cleanup {$groot}/public_html/content/.logpull.1");
+t_eq("|cleanup {$groot}/public_html/content/.logpull.1", $seen, 'the helper runs with its one argument');
+[$rc, $seen] = $gate('~/bin/blog-remote lock ci');
+t_eq('|lock ci', $seen, 'lock passes');
+
+/* ---------------- a whole deploy through the gate ---------------- */
+section('deploy through the gate');
+
+$rrsync = trim((string) shell_exec('command -v rrsync 2>/dev/null'));
+if ($rrsync === '') {
+    echo "  skipped: rrsync missing\n";
+} else {
+    $s = dp_sandbox('gated');
+    $env = ['DEPLOY_CI' => '1', 'FAKE_FORCED_COMMAND' => "{$ROOT}/ci/remote/blog-gate", 'BLOG_GATE_RRSYNC' => $rrsync,
+            'DEPLOY_BACKUP_DIR' => "{$DP_TMP}/gated/backups"];
+    file_put_contents($s['local'] . '/robots.txt', "# through the gate\n", FILE_APPEND);
+    $r = dp_run($s, ['push'], $env);
+    t_eq(0, $r['rc'], 'push through restricted key');
+    dp_show($r);
+    t_contains('# through the gate', (string) @file_get_contents($s['docroot'] . '/robots.txt'), 'the change arrived');
+    t_eq('', trim((string) @file_get_contents($s['rhome'] . '/blog-gate.log')), 'the gate refused nothing');
+    t_eq(1, count(glob("{$DP_TMP}/gated/backups/*.tar.gz") ?: []), 'CI backup goes to DEPLOY_BACKUP_DIR');
+    t_eq([], glob($s['local'] . '/_remote-backup/*.tar.gz') ?: [], 'and not into the checkout');
+    t_not_contains("\033[", $r['out'], 'no colour codes in CI output');
+    t_assert(is_file($s['docroot'] . '/content/.sync-state'), 'the marker was written through the gate');
+    t_assert(!is_dir($s['docroot'] . '/content/.deploylock'), 'the lock was released through the gate');
+
+    $r = dp_run($s, ['status'], $env);
+    t_eq(0, $r['rc'], 'status through the gate');
+    $r = dp_run($s, ['data'], $env);
+    t_eq(0, $r['rc'], 'data through the gate');
+    dp_show($r);
+    $r = dp_run($s, ['install-remote'], $env);
+    t_assert($r['rc'] !== 0, 'the CI key cannot install into ~/bin');
+}
+
 exit(t_summary());

@@ -40,7 +40,9 @@ HELPER_HEADER="# blog-remote 1 ${REMOTE_DIR%/}"
 remote_helper() {
   "${SSH_CMD[@]}" -p "${SSH_PORT}" -o ConnectTimeout=15 "${SSH_USER}@${SSH_HOST}" "${REMOTE_HELPER} $*"
 }
-BACKUP_DIR="${LOCAL_DIR}_remote-backup"
+# CI keeps its backups outside the throwaway checkout (a mounted directory on the build host)
+BACKUP_DIR="${DEPLOY_BACKUP_DIR:-${LOCAL_DIR}_remote-backup}"
+BACKUP_DIR="${BACKUP_DIR%/}"
 TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
 BACKUP_STAGE="${BACKUP_DIR}/${TIMESTAMP}"
 BACKUP_ARCHIVE="${BACKUP_DIR}/${TIMESTAMP}.tar.gz"
@@ -49,6 +51,11 @@ LOGS_STAGE="${LOGS_DIR}/${TIMESTAMP}"
 
 # --- colors ---
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; BOLD='\033[1m'; NC='\033[0m'
+# DEPLOY_CI=1: run by the pipeline. Plain output for the job log; ~/bin on the server is out of
+# reach of the CI key, so the helper is never installed from there.
+if [ "${DEPLOY_CI:-0}" = "1" ] || [ -n "${NO_COLOR:-}" ]; then
+  RED=''; GREEN=''; YELLOW=''; BLUE=''; BOLD=''; NC=''
+fi
 
 # --- output helpers ---
 STEP_NUM=0
@@ -265,6 +272,7 @@ maybe_install_remote() {
 }
 
 if [ "${CMD}" = "install-remote" ]; then
+  [ "${DEPLOY_CI:-0}" != "1" ] || die "install-remote runs from a machine with a full key: the CI key cannot write ~/bin on the server."
   install_remote
   VERSION_LINE="$(remote_helper version 2>&1 || true)"
   [ "# ${VERSION_LINE}" = "${HELPER_HEADER}" ] || die "installed, but the server answers '${VERSION_LINE}' instead of '${HELPER_HEADER#\# }'"
