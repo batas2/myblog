@@ -54,12 +54,15 @@ function dp_sandbox(string $name, bool $helper = true): array
     @mkdir($local, 0755, true);
     @mkdir($docroot, 0755, true);
 
-    [$rc, $out] = dp_sh('rsync -a --exclude=.git/ --exclude=_remote-backup/ --exclude=_remote-logs/ --exclude=.superpowers/ '
+    // '/.git' without a slash: in a git worktree .git is a file pointing at the real repository,
+    // and a sandbox that keeps it runs every git command against that repository
+    [$rc, $out] = dp_sh('rsync -a --exclude=/.git --exclude=_remote-backup/ --exclude=_remote-logs/ --exclude=.superpowers/ '
         . '--exclude=.claude/ --exclude=blog/ --exclude=content/comments/ --exclude=content/analytics.db* '
         . '--exclude=content/newsletter.db* --exclude=content/scores.db* --exclude=content/geoip.dat '
         . '--exclude=content/.sync-state --exclude=build.txt '
         . escapeshellarg($ROOT . '/') . ' ' . escapeshellarg($local . '/'));
     if ($rc !== 0) throw new RuntimeException("sandbox copy failed: {$out}");
+    if (file_exists("{$local}/.git")) throw new RuntimeException('sandbox still linked to the real repository');
 
     // never the real secrets or the real server: example config, fake target
     copy("{$local}/config.example.php", "{$local}/config.php");
@@ -164,7 +167,7 @@ function dp_clone(array $s, string $name): array
     global $DP_TMP;
     $local = "{$DP_TMP}/{$name}/local";
     @mkdir($local, 0755, true);
-    [$rc, $out] = dp_sh('rsync -a --exclude=content/.sync-state --exclude=_remote-backup/ --exclude=_remote-logs/ '
+    [$rc, $out] = dp_sh('rsync -a --exclude=/.git --exclude=content/.sync-state --exclude=_remote-backup/ --exclude=_remote-logs/ '
         . escapeshellarg($s['local'] . '/') . ' ' . escapeshellarg($local . '/'));
     if ($rc !== 0) throw new RuntimeException("clone failed: {$out}");
     return ['local' => $local, 'rhome' => $s['rhome'], 'docroot' => $s['docroot']];
@@ -503,9 +506,16 @@ t_eq(0, $r['rc'], 'push with private dirs present');
 foreach (['.gitea', 'ci', '.githooks', 'content/outlines'] as $d) {
     t_assert(!file_exists($s['docroot'] . '/' . $d), "private dirs never shipped: {$d}");
 }
+// a deploy from a git worktree: .git is a file there, and must stay home as well
+file_put_contents($s['local'] . '/.git', "gitdir: /nowhere\n");
+$r = dp_run($s, ['push']);
+t_assert(!file_exists($s['docroot'] . '/.git'), 'a .git file never ships');
+unlink($s['local'] . '/.git');
 
 // a git checkout: warnings about what the next CI deploy would undo
-$git = 'cd ' . escapeshellarg($s['local']) . ' && git -c user.email=t@example.com -c user.name=t ';
+if (file_exists($s['local'] . '/.git')) throw new RuntimeException('refusing to run git in a sandbox linked to the real repository');
+// GIT_CEILING_DIRECTORIES: never let a git command climb out of the sandbox looking for a repository
+$git = 'cd ' . escapeshellarg($s['local']) . ' && GIT_CEILING_DIRECTORIES=' . escapeshellarg(dirname($s['local'])) . ' git -c user.email=t@example.com -c user.name=t ';
 dp_sh($git . 'init -q -b main && ' . $git . 'add -A && ' . $git . 'commit -qm base');
 dp_sh('git init -q --bare ' . escapeshellarg("{$DP_TMP}/extras/origin.git"));
 dp_sh($git . 'remote add origin ' . escapeshellarg("{$DP_TMP}/extras/origin.git") . ' && ' . $git . 'push -q origin main');
@@ -542,5 +552,33 @@ $r = dp_run($s, ['push']);
 t_eq(0, $r['rc'], 'an unreachable home does not stop the deploy');
 t_eq(1, count(glob($s['local'] . '/_remote-backup/*.tar.gz') ?: []), 'backup stays local when home is down');
 t_contains('kept here', $r['out'], 'and says where it is');
+
+/* ---------------- smoke checks from deploy.sh ---------------- */
+section('deploy smoke');
+
+$s = dp_sandbox('smoke');
+$port = 8800 + (getmypid() % 90);
+$srv = proc_open(['php', '-S', "127.0.0.1:{$port}", '-t', $s['docroot']], [1 => ['file', '/dev/null', 'w'], 2 => ['file', '/dev/null', 'w']], $pp);
+register_shutdown_function(fn() => @proc_terminate($srv));
+for ($i = 0; $i < 50 && !@fsockopen('127.0.0.1', $port); $i++) usleep(100000);
+$url = "http://127.0.0.1:{$port}";
+
+$r = dp_run($s, ['smoke', $url, '--local']);
+t_eq(0, $r['rc'], 'deploy.sh smoke passes against a healthy copy');
+dp_show($r);
+t_contains('smoke: all blocking checks passed', $r['out'], 'and says so');
+
+$r = dp_run($s, ['push'], ['DEPLOY_SMOKE' => '1', 'SMOKE_URL' => $url, 'SMOKE_LOCAL' => '1', 'DEPLOY_SHA' => 'feed123']);
+t_eq(0, $r['rc'], 'push ends with smoke checks of what it deployed');
+dp_show($r);
+t_assert((bool) preg_match('/PASS build_sha\s+live feed123, expected feed123/', $r['out']), 'the smoke checks compare the live commit');
+
+$r = dp_run($s, ['push'], ['DEPLOY_SMOKE' => '1', 'SMOKE_URL' => 'http://127.0.0.1:1', 'SMOKE_LOCAL' => '1']);
+t_eq(1, $r['rc'], 'a push whose smoke checks fail exits 1');
+t_contains('deployed, but the smoke checks failed', $r['out'], 'and says what happened');
+
+$r = dp_run($s, ['status', '--sha=x']);
+t_eq(1, $r['rc'], '--sha belongs to smoke only');
+@proc_terminate($srv);
 
 exit(t_summary());

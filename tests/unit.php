@@ -1716,4 +1716,102 @@ foreach (explode('<section class="door">', $doorsHtml) as $i => $door) {
     t_assert(strpos($door, 'class="k"') !== false && strpos($door, 'class="k"') < strpos($door, 'class="door-art'), "door {$i}: label sits above the picture");
 }
 
+/* ---------------- smoke checks: the live site after a deploy ---------------- */
+section('smoke');
+require_once dirname(__DIR__) . '/tools/smoke.php';
+
+/** a site that answers every smoke check correctly; $over replaces single responses by path */
+function smoke_fake(string $base, array $over = []): callable
+{
+    $ok = fn(string $body = 'ok', array $h = []) => ['status' => 200, 'headers' => $h, 'body' => $body, 'cert_days' => 60];
+    $sec = ['content-security-policy' => "default-src 'self'", 'x-content-type-options' => 'nosniff',
+            'referrer-policy' => 'strict-origin-when-cross-origin', 'strict-transport-security' => 'max-age=31536000'];
+    $feed = '<?xml version="1.0"?><rss version="2.0"><channel><link>' . $base . '/</link>'
+          . '<item><title>Newest</title><link>' . $base . '/blog/newest/</link></item></channel></rss>';
+    $map = [
+        '/'                        => $ok('<html>home</html>', $sec),
+        '/blog/'                   => ['status' => 301, 'headers' => ['location' => $base . '/'], 'body' => '', 'cert_days' => 60],
+        '/blog/archive/'           => $ok(),
+        '/feed.xml'                => $ok($feed),
+        '/blog/newest/'            => $ok(),
+        '/sitemap.xml'             => $ok('<?xml version="1.0"?><urlset><url><loc>' . $base . '/</loc></url></urlset>'),
+        '/content/score-notes.json'=> ['status' => 403, 'headers' => [], 'body' => 'denied', 'cert_days' => 60],
+        '/config.php'              => ['status' => 403, 'headers' => [], 'body' => 'denied', 'cert_days' => 60],
+        '/.git/HEAD'               => ['status' => 403, 'headers' => [], 'body' => '', 'cert_days' => 60],
+        '/deploy.env'              => ['status' => 403, 'headers' => [], 'body' => '', 'cert_days' => 60],
+        '/admin.php'               => $ok('<input type="password">'),
+        '/build.txt'               => $ok("sha=abc123\ndeployed=2026-11-23T10:00:00Z\nby=ci\n"),
+    ];
+    foreach ($over as $path => $resp) $map[$path] = $resp;
+    $host = parse_url($base, PHP_URL_HOST);
+    return function (string $url) use ($map, $base, $host): array {
+        if (str_starts_with($url, 'http://' . $host) && !str_starts_with($base, 'http://')) {
+            return $map['http:/'] ?? ['status' => 301, 'headers' => ['location' => $base . '/'], 'body' => '', 'cert_days' => null];
+        }
+        $path = substr($url, strlen($base)) ?: '/';
+        if (str_starts_with($path, '/__smoke-')) return $map['404'] ?? ['status' => 404, 'headers' => [], 'body' => 'nope', 'cert_days' => 60];
+        return $map[$path] ?? ['status' => 500, 'headers' => [], 'body' => "unexpected {$path}", 'cert_days' => 60];
+    };
+}
+$byName = fn(array $results) => array_column($results, null, 'name');
+$blocking = fn(array $results) => array_values(array_map(fn($r) => $r['name'], array_filter($results, fn($r) => !$r['ok'] && $r['blocking'])));
+
+$B = 'https://example.test';
+$res = smoke_run($B, 'abc123', false, smoke_fake($B));
+t_eq([], $blocking($res), 'a healthy site passes every blocking check');
+t_eq(['home', 'blog', 'archive', 'feed', 'newest', 'sitemap', 'not_found', 'content_denied', 'config_silent', 'git_hidden',
+      'deploy_env_hidden', 'https_redirect', 'headers', 'cert', 'admin', 'build_sha'], array_column($res, 'name'), 'every check runs, in order');
+
+$res = smoke_run($B, 'abc123', false, smoke_fake($B, ['/' => ['status' => 200, 'headers' => ['x-content-type-options' => 'nosniff'], 'body' => 'home', 'cert_days' => 60]]));
+t_eq(['headers'], $blocking($res), 'missing CSP fails the headers check');
+t_contains('content-security-policy', $byName($res)['headers']['detail'], 'and names the header');
+
+$res = smoke_run($B, 'abc123', false, smoke_fake($B, ['404' => ['status' => 200, 'headers' => [], 'body' => 'home', 'cert_days' => 60]]));
+t_eq(['not_found'], $blocking($res), 'a missing page answering 200 fails');
+
+$res = smoke_run($B, 'def456', false, smoke_fake($B));
+t_eq(['build_sha'], $blocking($res), 'another commit live fails build_sha');
+
+$res = smoke_run($B, null, false, smoke_fake($B));
+t_assert(!isset($byName($res)['build_sha']), 'no sha given, no build_sha check');
+
+$res = smoke_run($B, 'abc123', false, smoke_fake($B, ['/' => ['status' => 200, 'headers' => [
+    'content-security-policy' => 'x', 'x-content-type-options' => 'nosniff', 'referrer-policy' => 'x', 'strict-transport-security' => 'x'], 'body' => 'home', 'cert_days' => 10]]));
+$cert = $byName($res)['cert'];
+t_assert(!$cert['ok'] && !$cert['blocking'], 'a certificate with 10 days left warns without blocking');
+t_eq([], $blocking($res), 'and blocks nothing');
+
+$res = smoke_run($B, 'abc123', false, smoke_fake($B, ['/blog/' => ['status' => 301, 'headers' => ['location' => 'https://evil.test/'], 'body' => '', 'cert_days' => 60]]));
+t_eq(['blog'], $blocking($res), 'a redirect off the site fails');
+
+$res = smoke_run($B, 'abc123', false, smoke_fake($B, ['/config.php' => ['status' => 200, 'headers' => [], 'body' => "<?php return ['secret' => 'x'];", 'cert_days' => 60]]));
+t_eq(['config_silent'], $blocking($res), 'config.php with a body fails');
+
+$res = smoke_run($B, 'abc123', false, smoke_fake($B, ['/feed.xml' => ['status' => 200, 'headers' => [], 'body' => '<rss><channel>', 'cert_days' => 60]]));
+t_eq(['feed', 'newest'], $blocking($res), 'a broken feed fails, and with it the newest post');
+
+$L = 'http://127.0.0.1:8099';
+$res = smoke_run($L, null, true, smoke_fake($L, ['/' => ['status' => 200, 'headers' => [
+    'content-security-policy' => 'x', 'x-content-type-options' => 'nosniff', 'referrer-policy' => 'x'], 'body' => 'home', 'cert_days' => null]]));
+$names = array_column($res, 'name');
+foreach (['https_redirect', 'cert', 'content_denied', 'git_hidden', 'deploy_env_hidden'] as $skip) {
+    t_assert(!in_array($skip, $names, true), "--local skips {$skip}");
+}
+t_eq([], $blocking($res), '--local does not ask for HSTS');
+t_assert(!in_array('not_found', $names, true), '--local skips not_found (php -S serves index.php for any path)');
+
+// a restored copy still carries the production site_url: its feed and redirects point there
+$seen = [];
+$prodFeed = '<?xml version="1.0"?><rss version="2.0"><channel><item><link>https://bfrackowiak.pl/blog/newest/</link></item></channel></rss>';
+$inner = smoke_fake($L, [
+    '/' => ['status' => 200, 'headers' => ['content-security-policy' => 'x', 'x-content-type-options' => 'nosniff', 'referrer-policy' => 'x'], 'body' => 'home', 'cert_days' => null],
+    '/feed.xml' => ['status' => 200, 'headers' => [], 'body' => $prodFeed, 'cert_days' => null],
+    '/blog/' => ['status' => 301, 'headers' => ['location' => 'https://bfrackowiak.pl/'], 'body' => '', 'cert_days' => null],
+]);
+$recording = function (string $url) use ($inner, &$seen) { $seen[] = $url; return $inner($url); };
+$res = smoke_run($L, null, true, $recording);
+t_eq([], $blocking($res), '--local accepts a copy whose links name the production site');
+t_assert(in_array("{$L}/blog/newest/", $seen, true), '--local fetches the newest post from the copy');
+t_assert(!in_array('https://bfrackowiak.pl/blog/newest/', $seen, true), '--local never calls the live site');
+
 if (basename($_SERVER['SCRIPT_NAME'] ?? '') === 'unit.php') exit(t_summary());

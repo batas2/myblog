@@ -80,6 +80,7 @@ RSYNC_MODE=()
 SKIP_GEOIP=0
 VERBOSE=0
 FORCE_PUSH=0
+SMOKE_ARGS=()
 CMD=""
 
 usage() {
@@ -100,6 +101,10 @@ COMMANDS
               the server, changes nothing on it.
   status      Say whether both sides hold the same post sources and notes. Reads
               only; useful when you cannot remember whether you pulled.
+  smoke [url] [--sha=<commit>] [--local]
+              Check the live site (or url): pages, feed, sitemap, 404s, files that
+              must stay hidden, security headers, certificate, and with --sha the
+              commit in build.txt. push runs it at the end (DEPLOY_SMOKE=0 skips).
   install-remote
               Copy ci/remote/* into ~/bin on the server. push, pull and data do it
               on their own; run it by hand after changing those scripts when you
@@ -151,7 +156,7 @@ HELPTEXT
 # The old flag spellings still work, because muscle memory is a real cost.
 for arg in "$@"; do
   case "$arg" in
-    push|pull|data|status|install-remote|help)
+    push|pull|data|status|install-remote|smoke|help)
       [ -z "${CMD}" ] || die "Two commands given (${CMD}, ${arg}) — pick one."
       CMD="${arg}" ;;
     --pull)       CMD="pull";   echo "note: --pull is now 'deploy.sh pull'" >&2 ;;
@@ -163,6 +168,7 @@ for arg in "$@"; do
     -v|--verbose) VERBOSE=1 ;;
     --force)      FORCE_PUSH=1 ;;
     -h|--help)    CMD="help" ;;
+    --sha=*|--local|http://*|https://*) SMOKE_ARGS+=("$arg") ;;
     *) echo "Unknown argument: ${arg}" >&2; echo "Run ./deploy.sh help for the reference." >&2; exit 2 ;;
   esac
 done
@@ -176,6 +182,22 @@ if [ "${CMD}" != "push" ]; then
   [ ${#DELETE_FLAG[@]} -eq 0 ] || die "--delete applies to push, not to ${CMD}."
   [ "${SKIP_GEOIP}" -eq 0 ]    || die "--no-geoip applies to push, not to ${CMD}."
   [ "${FORCE_PUSH}" -eq 0 ]    || die "--force applies to push, not to ${CMD}."
+fi
+[ "${CMD}" = "smoke" ] || [ ${#SMOKE_ARGS[@]} -eq 0 ] || die "${SMOKE_ARGS[0]} applies to smoke, not to ${CMD}."
+
+# --- smoke: is the live site up, in one piece, and the commit we think it is? ---
+# tools/smoke.php does the work; the URL defaults to SMOKE_URL (deploy.env) or the live site.
+run_smoke() {
+  local args=("$@")
+  [ "${SMOKE_LOCAL:-0}" != "1" ] || args+=(--local)
+  local has_url=0 a
+  for a in "${args[@]}"; do case "${a}" in http://*|https://*) has_url=1 ;; esac; done
+  [ "${has_url}" -eq 1 ] || args=("${SMOKE_URL:-https://bfrackowiak.pl}" "${args[@]}")
+  php "${LOCAL_DIR}tools/smoke.php" "${args[@]}"
+}
+if [ "${CMD}" = "smoke" ]; then
+  run_smoke "${SMOKE_ARGS[@]}"
+  exit $?
 fi
 
 # --- quiet-by-default plumbing ---
@@ -763,7 +785,7 @@ step "Syncing to ${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}"
 # What never ships: docs, drafts, tests, archives, backups, git, runtime data.
 RSYNC_LOG="${LOG_DIR}/sync.log"
 run "${RSYNC_LOG}" rsync -az "${RSYNC_PROGRESS[@]}" --stats --itemize-changes "${RSYNC_MODE[@]}" "${DELETE_FLAG[@]}" "${GEOIP_PROTECT[@]}" \
-  --exclude='.git/' \
+  --exclude='/.git' \
   --exclude='.gitignore' \
   --exclude='/.gitea/' \
   --exclude='/.githooks/' \
@@ -857,11 +879,16 @@ if [ ${#RSYNC_MODE[@]} -eq 0 ]; then
 else
   echo -e "${GREEN}${BOLD}Dry run done — nothing was touched.${NC}"
 fi
-echo -e "Post-deploy checks:"
-echo -e "  curl -s -o /dev/null -w '%{http_code}' https://bfrackowiak.pl/"
-echo -e "  curl -s -o /dev/null -w '%{http_code}' https://bfrackowiak.pl/blog/"
-echo -e "  stats: https://bfrackowiak.pl/stats.php?key=<STATS_KEY>"
-echo -e "  admin: https://bfrackowiak.pl/admin.php"
+
+# --- 7. smoke checks of what just went live ---
+if [ ${#RSYNC_MODE[@]} -eq 0 ] && [ "${DEPLOY_SMOKE:-1}" != "0" ]; then
+  echo
+  echo -e "${BOLD}Smoke checks${NC}"
+  if ! run_smoke "--sha=${BUILD_SHA}" | sed 's/^/  /'; then
+    echo -e "${RED}✗ deployed, but the smoke checks failed${BACKUP_HINT}.${NC}"
+    exit 1
+  fi
+fi
 
 # --- scheduled-posts reminder ---
 # A scheduled post only goes live when tools/build.php runs on the server after
