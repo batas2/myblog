@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+# ci/remote/blog-remote — the one program deploy.sh runs on the server.
+#
+# Every remote step of a deploy that is not rsync goes through a subcommand
+# here, so the key CI deploys with can be pinned (ci/remote/blog-gate) to rsync
+# and this script, and to nothing else. Installed into ~/bin by
+# `./deploy.sh install-remote`. Runs on FreeBSD and Linux: POSIX tools only.
+#
+#   version             "blog-remote <version> <docroot>"
+#   hashes              header, then "<md5>  <path>" per post source and review note
+#   sync-state-read     header, then the marker of the last agreed post sources
+#   sync-state-write    stdin becomes that marker (atomic)
+#   snapshot            consistent copies of the runtime databases; prints "dir <path>"
+#   cleanup <path>      removes a snapshot directory, and nothing else
+set -euo pipefail
+
+VERSION=1
+DOCROOT="${BLOG_DOCROOT:-${HOME}/domains/bfrackowiak.pl/public_html}"
+DOCROOT="${DOCROOT%/}"
+HERE="$(cd "$(dirname "$0")" && pwd)"
+
+fail() { local code="$1"; shift; echo "blog-remote: $*" >&2; exit "${code}"; }
+header() { echo "# blog-remote ${VERSION} ${DOCROOT}"; }
+need_docroot() { [ -d "${DOCROOT}" ] || fail 3 "docroot missing: ${DOCROOT}"; cd "${DOCROOT}"; }
+
+cmd="${1:-}"
+[ $# -eq 0 ] || shift
+
+case "${cmd}" in
+  version)
+    echo "blog-remote ${VERSION} ${DOCROOT}"
+    ;;
+  hashes)
+    need_docroot
+    header
+    # same selection and format as sync_hashes_local() in deploy.sh
+    { find content/posts content/review -type f \( -name '*.md' -o -name '*.json' \) 2>/dev/null || true; } \
+      | sort | xargs -r md5sum
+    ;;
+  sync-state-read)
+    need_docroot
+    header
+    [ ! -f content/.sync-state ] || cat content/.sync-state
+    ;;
+  sync-state-write)
+    need_docroot
+    tmp="content/.sync-state.tmp.$$"
+    cat > "${tmp}"
+    mv "${tmp}" content/.sync-state
+    echo ok
+    ;;
+  snapshot)
+    need_docroot
+    dir="${DOCROOT}/content/.logpull.$(date +%Y%m%d-%H%M%S)-$$"
+    mkdir "${dir}"
+    echo "dir ${dir}"
+    php "${HERE}/blog-snapshot.php" "${DOCROOT}" "${dir}"
+    ;;
+  cleanup)
+    target="${1:-}"
+    case "${target}" in
+      "${DOCROOT}"/content/.logpull.*) ;;
+      *) fail 2 "refusing to remove ${target:-nothing}: not a snapshot directory" ;;
+    esac
+    suffix="${target#"${DOCROOT}/content/.logpull."}"
+    [[ "${suffix}" =~ ^[A-Za-z0-9-]+$ ]] || fail 2 "refusing to remove ${target}: not a snapshot directory"
+    rm -rf -- "${target}"
+    echo ok
+    ;;
+  *)
+    fail 1 "unknown command: ${cmd:-none}"
+    ;;
+esac

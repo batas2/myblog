@@ -31,6 +31,15 @@ source "${ENV_FILE}"
 # A string for rsync -e, an array for direct calls.
 SSH_RSH="${DEPLOY_SSH:-ssh}"
 read -r -a SSH_CMD <<< "${SSH_RSH}"
+
+# Everything a deploy does on the server, apart from rsync, is a subcommand of one
+# program installed in ~/bin there (ci/remote/blog-remote). That is what lets the
+# CI key be pinned to rsync and that program (ci/remote/blog-gate).
+REMOTE_HELPER='~/bin/blog-remote'
+HELPER_HEADER="# blog-remote 1 ${REMOTE_DIR%/}"
+remote_helper() {
+  "${SSH_CMD[@]}" -p "${SSH_PORT}" -o ConnectTimeout=15 "${SSH_USER}@${SSH_HOST}" "${REMOTE_HELPER} $*"
+}
 BACKUP_DIR="${LOCAL_DIR}_remote-backup"
 TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
 BACKUP_STAGE="${BACKUP_DIR}/${TIMESTAMP}"
@@ -84,6 +93,10 @@ COMMANDS
               the server, changes nothing on it.
   status      Say whether both sides hold the same post sources and notes. Reads
               only; useful when you cannot remember whether you pulled.
+  install-remote
+              Copy ci/remote/* into ~/bin on the server. push, pull and data do it
+              on their own; run it by hand after changing those scripts when you
+              only deploy from CI, whose key cannot write there.
   help        This.
 
 OPTIONS
@@ -126,7 +139,7 @@ HELPTEXT
 # The old flag spellings still work, because muscle memory is a real cost.
 for arg in "$@"; do
   case "$arg" in
-    push|pull|data|status|help)
+    push|pull|data|status|install-remote|help)
       [ -z "${CMD}" ] || die "Two commands given (${CMD}, ${arg}) — pick one."
       CMD="${arg}" ;;
     --pull)       CMD="pull";   echo "note: --pull is now 'deploy.sh pull'" >&2 ;;
@@ -164,8 +177,7 @@ LOG_DIR="$(mktemp -d)"
 REMOTE_SNAP=""
 cleanup() {
   rm -rf "${LOG_DIR}"
-  [ -z "${REMOTE_SNAP}" ] || "${SSH_CMD[@]}" -p "${SSH_PORT}" -o ConnectTimeout=10 \
-    "${SSH_USER}@${SSH_HOST}" "rm -rf '${REMOTE_SNAP}'" >/dev/null 2>&1 || true
+  [ -z "${REMOTE_SNAP}" ] || remote_helper cleanup "${REMOTE_SNAP}" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
 RSYNC_PROGRESS=()
@@ -208,10 +220,41 @@ sync_hashes_local() {
   ( cd "${LOCAL_DIR}" && find content/posts content/review -type f \( -name '*.md' -o -name '*.json' \) 2>/dev/null \
     | sort | xargs -r md5sum 2>/dev/null ) || true
 }
-sync_hashes_remote() {
-  "${SSH_CMD[@]}" -p "${SSH_PORT}" -o ConnectTimeout=15 "${SSH_USER}@${SSH_HOST}" \
-    "cd '${REMOTE_DIR}' 2>/dev/null && find content/posts content/review -type f \( -name '*.md' -o -name '*.json' \) 2>/dev/null | sort | xargs -r md5sum 2>/dev/null" || true
+# The server's side of the same list, into REMOTE_H. No answer, or an answer from a
+# helper that is not the expected version for this docroot, stops everything: an
+# empty list would read as "nothing on the server", and the guard would wave the
+# push through over whatever is really there.
+remote_hashes() {
+  local out
+  out="$(remote_helper hashes 2>/dev/null)" || true
+  [ "$(printf '%s\n' "${out}" | head -1)" = "${HELPER_HEADER}" ] || helper_missing "${out}"
+  REMOTE_H="$(printf '%s\n' "${out}" | tail -n +2)"
 }
+helper_missing() {
+  local got
+  got="$(printf '%s\n' "${1:-}" | head -1)"
+  die "remote helper missing or outdated: run ./deploy.sh install-remote (expected '${HELPER_HEADER}', got '${got:-nothing}')"
+}
+install_remote() {
+  run "${LOG_DIR}/install.log" rsync -a --chmod=F755 -e "${SSH_RSH} -p ${SSH_PORT}" \
+    "${LOCAL_DIR}ci/remote/" "${SSH_USER}@${SSH_HOST}:bin/" \
+    || fail_with_log "${LOG_DIR}/install.log" "Installing the remote helper into ~/bin failed."
+}
+# push, pull and data keep the helper current on their own. Not in CI (its key
+# cannot write ~/bin) and not on a dry run (which writes nothing anywhere).
+maybe_install_remote() {
+  [ "${DEPLOY_CI:-0}" != "1" ] || return 0
+  [ ${#RSYNC_MODE[@]} -eq 0 ] || return 0
+  install_remote
+}
+
+if [ "${CMD}" = "install-remote" ]; then
+  install_remote
+  VERSION_LINE="$(remote_helper version 2>&1 || true)"
+  [ "# ${VERSION_LINE}" = "${HELPER_HEADER}" ] || die "installed, but the server answers '${VERSION_LINE}' instead of '${HELPER_HEADER#\# }'"
+  echo -e "${GREEN}${BOLD}Remote helper installed:${NC} ${VERSION_LINE}"
+  exit 0
+fi
 sync_state_write() { sync_hashes_local > "${SYNC_STATE}" 2>/dev/null || true; }
 
 # --- status: which side is ahead, and nothing else ---------------------------
@@ -223,9 +266,8 @@ if [ "${CMD}" = "status" ]; then
   echo -e "  server: ${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}"
   echo
 
-  REMOTE_H="$(sync_hashes_remote)"
+  remote_hashes
   LOCAL_H="$(sync_hashes_local)"
-  [ -n "${REMOTE_H}" ] || warn "the server returned nothing — check SSH and REMOTE_DIR"
 
   SAME=0; AHEAD_LOCAL=0; AHEAD_REMOTE=0; ONLY_LOCAL=0
   AHEAD_REMOTE_LIST=""; AHEAD_LOCAL_LIST=""; ONLY_LOCAL_LIST=""
@@ -289,6 +331,7 @@ if [ "${CMD}" = "pull" ]; then
   [ "${DRY}" -eq 0 ] || echo -e "  mode:   dry-run (nothing is written)"
   echo
 
+  maybe_install_remote
   step "Downloading content/posts and content/review"
   run "${LOG_DIR}/pullreview.log" rsync -az "${RSYNC_PROGRESS[@]}" --itemize-changes "${RSYNC_MODE[@]}" \
     --include='/content/' \
@@ -352,59 +395,17 @@ if [ "${CMD}" = "data" ]; then
   # in, and rsyncing the three files one after another still races the live
   # beacon. VACUUM INTO writes a single consistent copy while readers and
   # writers carry on, so the server builds the snapshot and we fetch that.
+  maybe_install_remote
   step "Snapshotting databases on the server"
   if [ "${DRY}" -eq 1 ]; then
     step_done "Skipped (dry run) — the server is never written to anyway"
   else
-    cat > "${LOG_DIR}/snapshot.php" <<'SNAPSHOT_PHP'
-<?php
-// Piped to the server's php CLI by deploy.sh --pull-logs. Writes a consistent
-// copy of each runtime database into $argv[1] and reports one line per file.
-$dest = $argv[1] ?? '';
-if ($dest === '' || !is_dir($dest)) {
-    fwrite(STDERR, "snapshot destination is not a directory: {$dest}\n");
-    exit(1);
-}
-$open = static function (string $src): PDO {
-    $db = new PDO('sqlite:' . $src, null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
-    // the live site is writing to these; wait rather than fail on a busy lock
-    $db->exec('PRAGMA busy_timeout=10000');
-    return $db;
-};
-foreach (['analytics.db', 'newsletter.db', 'scores.db'] as $name) {
-    $src = 'content/' . $name;
-    if (!is_file($src)) { echo "skip {$name} — not on the server\n"; continue; }
-    $out = $dest . '/' . $name;
-    $method = '';
-    try {
-        $db = $open($src);
-        $db->exec('VACUUM INTO ' . $db->quote($out));
-        $method = 'vacuum';
-    } catch (Throwable $e) {
-        // VACUUM INTO needs SQLite 3.27+. Older hosts get the next best thing:
-        // fold the WAL back into the main file, then copy it. A checkpoint is
-        // routine maintenance the database does on its own anyway.
-        try {
-            $db = $open($src);
-            $db->exec('PRAGMA wal_checkpoint(TRUNCATE)');
-            $db = null;
-            if (!copy($src, $out)) throw new RuntimeException('copy failed');
-            $method = 'checkpoint+copy';
-        } catch (Throwable $e2) {
-            echo "fail {$name} — {$e2->getMessage()}\n";
-            continue;
-        }
-    }
-    printf("ok %s %d %s\n", $name, (int) filesize($out), $method);
-}
-SNAPSHOT_PHP
-    REMOTE_SNAP_PATH="${REMOTE_DIR}/content/.logpull.${TIMESTAMP}"
-    run "${LOG_DIR}/snapmk.log" "${SSH_CMD[@]}" -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" "mkdir -p '${REMOTE_SNAP_PATH}'" \
-      || fail_with_log "${LOG_DIR}/snapmk.log" "Could not create the snapshot directory on the server."
-    REMOTE_SNAP="${REMOTE_SNAP_PATH}"   # armed: cleanup() removes it from here on
-
-    run "${LOG_DIR}/snapshot.log" bash -c \
-      "${SSH_RSH} -p ${SSH_PORT} '${SSH_USER}@${SSH_HOST}' \"cd '${REMOTE_DIR}' && php -- '${REMOTE_SNAP}'\" < '${LOG_DIR}/snapshot.php'" \
+    # blog-remote creates content/.logpull.<ts>, prints "dir <path>" and one ok|fail|skip
+    # line per database (ci/remote/blog-snapshot.php)
+    SNAP_RC=0
+    run "${LOG_DIR}/snapshot.log" remote_helper snapshot || SNAP_RC=$?
+    REMOTE_SNAP="$(sed -n 's/^dir //p' "${LOG_DIR}/snapshot.log" | head -1)"   # armed: cleanup() removes it
+    [ "${SNAP_RC}" -eq 0 ] && [ -n "${REMOTE_SNAP}" ] \
       || fail_with_log "${LOG_DIR}/snapshot.log" "Snapshot failed on the server — nothing was pulled."
 
     SNAP_OK="$(grep -c '^ok ' "${LOG_DIR}/snapshot.log" || true)"
@@ -593,8 +594,9 @@ fi
 
 # --- 3b. refuse to overwrite a server that is ahead ---
 # Cheap: one ssh, a few dozen md5s. Runs before the backup so a refusal costs nothing.
+maybe_install_remote
 step "Checking the server is not ahead"
-REMOTE_H="$(sync_hashes_remote)"
+remote_hashes
 LOCAL_H="$(sync_hashes_local)"
 CONFLICTS=""
 if [ -n "${REMOTE_H}" ]; then

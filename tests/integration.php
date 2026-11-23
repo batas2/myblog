@@ -53,7 +53,7 @@ function sbx_php(string $code): string
 
 /* ---------------- sandbox + fixtures + build ---------------- */
 section('sandbox build');
-exec('rsync -a --exclude=_remote-backup/ --exclude=_archive/ --exclude=docs/ --exclude=tests/ '
+exec('rsync -a --exclude=_remote-backup/ --exclude=_remote-logs/ --exclude=.superpowers/ --exclude=_archive/ --exclude=docs/ --exclude=tests/ '
    . '--exclude=.claude/ --exclude=.git/ --exclude=content/comments/ --exclude=content/analytics.db '
    . '--exclude=content/analytics.seed --exclude=content/geoip.dat --exclude=content/newsletter.db --exclude=content/newsletter.db-* '
    . '--exclude=content/scores.db --exclude=content/scores.db-* --exclude=blog/ '

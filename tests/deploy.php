@@ -16,6 +16,14 @@ declare(strict_types=1);
 
 require __DIR__ . '/bootstrap.php';
 
+// deploy.sh runs the test suite before it deploys. Run from here, that suite would
+// include this file again, in a fresh sandbox, forever. dp_run() sets the marker
+// (and DEPLOY_SKIP_TESTS); a suite that finds it stops here.
+if (getenv('BFX_DEPLOY_TEST_NESTED') === '1') {
+    echo "tests/deploy.php: refusing to run inside a deploy started by tests/deploy.php\n";
+    exit(0);
+}
+
 $ROOT = dirname(__DIR__);
 $DP_TMP = sys_get_temp_dir() . '/bfrackowiak-deploy-' . getmypid();
 const FAKE_SSH = __DIR__ . '/fixtures/fake-ssh';
@@ -33,9 +41,10 @@ function dp_sh(string $cmd): array
 
 /**
  * A laptop copy of the repo and a fake server home with a seeded docroot.
+ * $helper: install ci/remote/* into the server's ~/bin, as a set-up server has.
  * @return array{local:string, rhome:string, docroot:string}
  */
-function dp_sandbox(string $name): array
+function dp_sandbox(string $name, bool $helper = true): array
 {
     global $ROOT, $DP_TMP;
     $base = "{$DP_TMP}/{$name}";
@@ -71,6 +80,7 @@ function dp_sandbox(string $name): array
     [$rc, $out] = dp_sh('rsync -a --exclude=content/analytics.db --exclude=deploy.env ' . escapeshellarg($local . '/') . ' ' . escapeshellarg($docroot . '/'));
     if ($rc !== 0) throw new RuntimeException("server seed failed: {$out}");
     file_put_contents("{$docroot}/content/analytics.db", 'REMOTE');
+    if ($helper) dp_install_helper($rhome);
 
     return ['local' => $local, 'rhome' => $rhome, 'docroot' => $docroot];
 }
@@ -91,6 +101,7 @@ function dp_run(array $s, array $args, array $env = []): array
         'LANG'              => 'C.UTF-8',
         'DEPLOY_SSH'        => FAKE_SSH,
         'DEPLOY_SKIP_TESTS' => '1',
+        'BFX_DEPLOY_TEST_NESTED' => '1',
         'DEPLOY_SMOKE'      => '0',
         'FAKE_REMOTE_HOME'  => $s['rhome'],
     ], $env);
@@ -102,6 +113,53 @@ function dp_run(array $s, array $args, array $env = []): array
     fclose($pipes[1]);
     $rc = proc_close($p);
     return ['rc' => $rc, 'out' => (string) $out];
+}
+
+/** copy ci/remote/* into a server home's ~/bin, the way install-remote does */
+function dp_install_helper(string $rhome): void
+{
+    global $ROOT;
+    @mkdir("{$rhome}/bin", 0755, true);
+    foreach (glob("{$ROOT}/ci/remote/*") ?: [] as $f) {
+        copy($f, "{$rhome}/bin/" . basename($f));
+        chmod("{$rhome}/bin/" . basename($f), 0755);
+    }
+}
+
+/**
+ * Run ci/remote/blog-remote directly with a docroot of our choosing.
+ * @return array{rc:int, out:string}
+ */
+function br_run(string $docroot, array $args, string $stdin = ''): array
+{
+    global $ROOT;
+    $line = escapeshellarg("{$ROOT}/ci/remote/blog-remote") . ' ' . implode(' ', array_map('escapeshellarg', $args)) . ' 2>&1';
+    $p = proc_open($line, [0 => ['pipe', 'r'], 1 => ['pipe', 'w']], $pipes, null,
+        ['PATH' => getenv('PATH'), 'HOME' => getenv('HOME'), 'BLOG_DOCROOT' => $docroot]);
+    fwrite($pipes[0], $stdin);
+    fclose($pipes[0]);
+    $out = stream_get_contents($pipes[1]);
+    fclose($pipes[1]);
+    return ['rc' => proc_close($p), 'out' => (string) $out];
+}
+
+/** a WAL-mode sqlite database with a hits table of $rows rows, written but not checkpointed */
+function dp_wal_db(string $path, int $rows): PDO
+{
+    $db = new PDO('sqlite:' . $path, null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+    $db->exec('PRAGMA journal_mode=WAL');
+    $db->exec('PRAGMA wal_autocheckpoint=0');
+    $db->exec('CREATE TABLE hits (day TEXT, excl INTEGER DEFAULT 0)');
+    for ($i = 0; $i < $rows; $i++) $db->exec("INSERT INTO hits (day) VALUES ('2026-11-2{$i}')");
+    return $db;   // keep it open: the rows stay in the -wal file
+}
+
+/** on an unexpected failure, show the tail of what deploy.sh said */
+function dp_show(array $r, int $expect = 0): void
+{
+    if ($r['rc'] === $expect) return;
+    $lines = explode("\n", trim($r['out']));
+    echo '      │ ' . implode("\n      │ ", array_slice($lines, -12)) . "\n";
 }
 
 /** every file under a directory with size and mtime, for before/after comparisons */
@@ -124,11 +182,111 @@ t_eq([], glob($s['local'] . '/_remote-backup/*.tar.gz') ?: [], 'dry-run writes n
 file_put_contents($s['local'] . '/robots.txt', "# changed locally\n", FILE_APPEND);
 $r = dp_run($s, ['push']);
 t_eq(0, $r['rc'], 'push to fake remote succeeds');
-if ($r['rc'] !== 0) echo $r['out'], "\n";
+dp_show($r);
 t_contains('# changed locally', (string) @file_get_contents($s['docroot'] . '/robots.txt'), 'local change arrived on the server');
 t_assert(is_file($s['docroot'] . '/blog/index.php'), 'built site is on the server');
 t_eq('REMOTE', file_get_contents($s['docroot'] . '/content/analytics.db'), 'runtime db never overwritten');
 t_eq(1, count(glob($s['local'] . '/_remote-backup/*.tar.gz') ?: []), 'push archived the server first');
 t_eq(0, dp_run($s, ['status'])['rc'], 'status in step after push');
+
+/* ---------------- blog-remote: the one program deploy.sh runs on the server ---------------- */
+section('blog-remote');
+
+$d = "{$DP_TMP}/br/public_html";
+@mkdir("{$d}/content/posts", 0755, true);
+@mkdir("{$d}/content/review", 0755, true);
+file_put_contents("{$d}/content/posts/2026-01-01-a.md", "# A\n");
+file_put_contents("{$d}/content/posts/2026-01-02-b.md", "# B\n");
+file_put_contents("{$d}/content/review/b.json", '{"notes":[]}');
+file_put_contents("{$d}/content/posts/ignored.txt", "not a post");
+
+$r = br_run($d, ['version']);
+t_eq("blog-remote 1 {$d}", trim($r['out']), 'version names itself and its docroot');
+
+$r = br_run($d, ['hashes']);
+t_eq(0, $r['rc'], 'hashes succeeds');
+$lines = explode("\n", trim($r['out']));
+t_eq("# blog-remote 1 {$d}", $lines[0], 'hashes starts with the header');
+t_eq([
+    md5_file("{$d}/content/posts/2026-01-01-a.md") . '  content/posts/2026-01-01-a.md',
+    md5_file("{$d}/content/posts/2026-01-02-b.md") . '  content/posts/2026-01-02-b.md',
+    md5_file("{$d}/content/review/b.json") . '  content/review/b.json',
+], array_slice($lines, 1), 'one md5 line per post and review note, sorted, nothing else');
+
+$r = br_run("{$DP_TMP}/br/nope", ['hashes']);
+t_assert($r['rc'] !== 0, 'hashes fails when the docroot is missing');
+
+$state = "abc  content/posts/2026-01-01-a.md\ndef  content/review/b.json\n";
+$r = br_run($d, ['sync-state-write'], $state);
+t_eq("ok", trim($r['out']), 'sync-state-write acknowledges');
+$r = br_run($d, ['sync-state-read']);
+t_eq("# blog-remote 1 {$d}\n" . $state, $r['out'], 'sync-state-read returns what was written, after the header');
+t_eq([], glob("{$d}/content/.sync-state.*") ?: [], 'no temp file left behind');
+
+@mkdir("{$d}/content/.logpull.1", 0755, true);
+t_eq(2, br_run($d, ['cleanup', '/etc'])['rc'], 'cleanup refuses /etc');
+t_eq(2, br_run($d, ['cleanup', "{$d}/content/posts"])['rc'], 'cleanup refuses the posts directory');
+t_eq(2, br_run($d, ['cleanup', "{$d}/content/.logpull.1/../posts"])['rc'], 'cleanup refuses a traversal');
+t_assert(is_dir("{$d}/content/posts") && is_file("{$d}/content/posts/2026-01-01-a.md"), 'refused cleanups deleted nothing');
+t_eq(0, br_run($d, ['cleanup', "{$d}/content/.logpull.1"])['rc'], 'cleanup accepts a snapshot directory');
+t_assert(!is_dir("{$d}/content/.logpull.1"), 'snapshot directory removed');
+
+$live = dp_wal_db("{$d}/content/analytics.db", 3);
+$r = br_run($d, ['snapshot']);
+t_eq(0, $r['rc'], 'snapshot succeeds');
+preg_match('/^dir (\S+)$/m', $r['out'], $m);
+$snapDir = $m[1] ?? '';
+t_assert(str_starts_with($snapDir, "{$d}/content/.logpull."), 'snapshot reports its directory inside content/');
+t_contains('ok analytics.db', $r['out'], 'snapshot reports the analytics copy');
+if (is_file($snapDir . '/analytics.db')) {
+    $copy = new PDO('sqlite:' . $snapDir . '/analytics.db');
+    t_eq(3, (int) $copy->query('SELECT COUNT(*) FROM hits')->fetchColumn(), 'copy holds the rows still in the WAL');
+    t_eq('ok', $copy->query('PRAGMA integrity_check')->fetchColumn(), 'copy passes integrity_check');
+    $copy = null;
+} else {
+    t_assert(false, 'snapshot wrote analytics.db');
+}
+$live = null;
+
+t_eq(1, br_run($d, ['rm', '-rf', '/'])['rc'], 'unknown subcommand refused');
+
+/* ---------------- deploy.sh talks to the server only through the helper ---------------- */
+section('deploy via helper');
+
+// a non-post change: with no sync marker yet, a changed post would (rightly) read as a server edit
+$s = dp_sandbox('nohelper', false);
+file_put_contents($s['local'] . '/robots.txt', "# changed locally\n", FILE_APPEND);
+$remoteRobots = $s['docroot'] . '/robots.txt';
+$beforeRobots = md5_file($remoteRobots);
+$r = dp_run($s, ['push'], ['DEPLOY_CI' => '1']);
+t_eq(1, $r['rc'], 'missing helper fails loudly');
+t_contains('remote helper missing', $r['out'], 'the message names the helper');
+t_eq($beforeRobots, md5_file($remoteRobots), 'nothing was pushed');
+
+@mkdir($s['rhome'] . '/bin', 0755, true);
+file_put_contents($s['rhome'] . '/bin/blog-remote', "#!/usr/bin/env bash\necho '# blog-remote 0 {$s['docroot']}'\n");
+chmod($s['rhome'] . '/bin/blog-remote', 0755);
+$r = dp_run($s, ['push'], ['DEPLOY_CI' => '1']);
+t_eq(1, $r['rc'], 'outdated helper fails loudly');
+t_contains('remote helper missing', $r['out'], 'the same message for an old helper');
+t_eq($beforeRobots, md5_file($remoteRobots), 'still nothing pushed');
+
+$r = dp_run($s, ['push']);
+t_eq(0, $r['rc'], 'a laptop push installs the helper and deploys');
+dp_show($r);
+t_assert(is_file($s['rhome'] . '/bin/blog-remote') && str_contains(file_get_contents($s['rhome'] . '/bin/blog-remote'), 'BLOG_DOCROOT'), 'the real helper replaced the old one');
+t_eq(md5_file($s['local'] . '/robots.txt'), md5_file($remoteRobots), 'the change arrived');
+
+$s = dp_sandbox('data');
+unlink($s['docroot'] . '/content/analytics.db');
+$live = dp_wal_db($s['docroot'] . '/content/analytics.db', 3);
+$r = dp_run($s, ['data']);
+t_eq(0, $r['rc'], 'data succeeds');
+dp_show($r);
+$pulled = glob($s['local'] . '/_remote-logs/*/content/analytics.db') ?: [];
+t_eq(1, count($pulled), 'data pulled the analytics snapshot');
+if ($pulled) t_eq(3, (int) (new PDO('sqlite:' . $pulled[0]))->query('SELECT COUNT(*) FROM hits')->fetchColumn(), 'snapshot carries every row');
+t_eq([], glob($s['docroot'] . '/content/.logpull.*') ?: [], 'no snapshot directory left on the server');
+$live = null;
 
 exit(t_summary());
