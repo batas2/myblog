@@ -210,6 +210,52 @@ t_not_contains('Most read', $index, 'no most-read block on the homepage');
 t_not_contains('On Medium</h2>', $index, 'medium strip removed');
 
 /* ---------------- HTTP layer ---------------- */
+section('site check');
+/** run tools/site_check.php against the sandbox: [rc, output] */
+$siteCheck = function () use ($ROOT, $SANDBOX): array {
+    exec(PHP_BINARY . ' ' . escapeshellarg($ROOT . '/tools/site_check.php') . ' ' . escapeshellarg($SANDBOX) . ' 2>&1', $o, $rc);
+    return [$rc, implode("\n", $o)];
+};
+[$rc, $out] = $siteCheck();
+t_eq(0, $rc, 'the built sandbox passes the site check');
+if ($rc !== 0) echo preg_replace('/^/m', '      │ ', $out), "\n";
+t_not_contains('ERROR', $out, 'no errors reported');
+
+$page = $SANDBOX . '/blog/itest-past-post/index.php';
+$orig = file_get_contents($page);
+file_put_contents($page, $orig . '<a href="/blog/nie-ma/">broken</a>');
+[$rc, $out] = $siteCheck();
+t_eq(1, $rc, 'a broken internal link fails the site check');
+t_contains('ERROR links', $out, 'reported as a links error');
+t_contains('/blog/nie-ma/', $out, 'naming the link');
+file_put_contents($page, $orig);
+
+preg_match('#<meta property="og:image" content="https?://[^/"]+(/[^"]+)"#', $orig, $m);
+$og = $SANDBOX . ($m[1] ?? '/nope');
+t_assert(is_file($og), 'the fixture post has an og:image file');
+rename($og, $og . '.moved');
+[$rc, $out] = $siteCheck();
+t_eq(1, $rc, 'a missing og:image fails the site check');
+t_contains('ERROR post_meta', $out, 'reported as post_meta');
+rename($og . '.moved', $og);
+
+$smFile = $SANDBOX . '/sitemap.xml';
+$smOrig = file_get_contents($smFile);
+file_put_contents($smFile, str_replace('</urlset>', '<url><loc>https://bfrackowiak.pl/blog/itest-future-post/</loc></url></urlset>', $smOrig));
+[$rc, $out] = $siteCheck();
+t_eq(1, $rc, 'a scheduled post in the sitemap fails the site check');
+t_contains('ERROR unpublished', $out, 'reported as unpublished');
+t_contains('itest-future-post', $out, 'naming the post');
+file_put_contents($smFile, $smOrig);
+
+$feedOrig = file_get_contents($SANDBOX . '/feed.xml');
+file_put_contents($SANDBOX . '/feed.xml', $feedOrig . '<broken');
+[$rc, $out] = $siteCheck();
+t_contains('ERROR xml', $out, 'a feed that does not parse is an xml error');
+file_put_contents($SANDBOX . '/feed.xml', $feedOrig);
+[$rc, $out] = $siteCheck();
+t_eq(0, $rc, 'restored sandbox passes again');
+
 section('http server');
 /* The port is derived from the pid, so two runs can collide: `php -S` then loses
    the bind, dies silently under nohup, and every request lands on the *other*
