@@ -16,16 +16,21 @@ set -euo pipefail
 # deploy.env.example and fill in your host. Required vars:
 #   SSH_USER, SSH_HOST, SSH_PORT, REMOTE_DIR
 LOCAL_DIR="$(cd "$(dirname "$0")" && pwd)/"
-if [ ! -f "${LOCAL_DIR}deploy.env" ]; then
-  echo "Missing deploy.env — copy deploy.env.example and fill in your SSH target." >&2
+ENV_FILE="${DEPLOY_ENV_FILE:-${LOCAL_DIR}deploy.env}"
+if [ ! -f "${ENV_FILE}" ]; then
+  echo "Missing ${ENV_FILE} — copy deploy.env.example and fill in your SSH target." >&2
   exit 1
 fi
 # shellcheck source=deploy.env.example
-source "${LOCAL_DIR}deploy.env"
+source "${ENV_FILE}"
 : "${SSH_USER:?deploy.env must set SSH_USER}"
 : "${SSH_HOST:?deploy.env must set SSH_HOST}"
 : "${SSH_PORT:=22}"
 : "${REMOTE_DIR:?deploy.env must set REMOTE_DIR}"
+# The ssh command, with any options it needs (CI passes a key: "ssh -i … -o IdentitiesOnly=yes").
+# A string for rsync -e, an array for direct calls.
+SSH_RSH="${DEPLOY_SSH:-ssh}"
+read -r -a SSH_CMD <<< "${SSH_RSH}"
 BACKUP_DIR="${LOCAL_DIR}_remote-backup"
 TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
 BACKUP_STAGE="${BACKUP_DIR}/${TIMESTAMP}"
@@ -159,7 +164,7 @@ LOG_DIR="$(mktemp -d)"
 REMOTE_SNAP=""
 cleanup() {
   rm -rf "${LOG_DIR}"
-  [ -z "${REMOTE_SNAP}" ] || ssh -p "${SSH_PORT}" -o ConnectTimeout=10 \
+  [ -z "${REMOTE_SNAP}" ] || "${SSH_CMD[@]}" -p "${SSH_PORT}" -o ConnectTimeout=10 \
     "${SSH_USER}@${SSH_HOST}" "rm -rf '${REMOTE_SNAP}'" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
@@ -204,7 +209,7 @@ sync_hashes_local() {
     | sort | xargs -r md5sum 2>/dev/null ) || true
 }
 sync_hashes_remote() {
-  ssh -p "${SSH_PORT}" -o ConnectTimeout=15 "${SSH_USER}@${SSH_HOST}" \
+  "${SSH_CMD[@]}" -p "${SSH_PORT}" -o ConnectTimeout=15 "${SSH_USER}@${SSH_HOST}" \
     "cd '${REMOTE_DIR}' 2>/dev/null && find content/posts content/review -type f \( -name '*.md' -o -name '*.json' \) 2>/dev/null | sort | xargs -r md5sum 2>/dev/null" || true
 }
 sync_state_write() { sync_hashes_local > "${SYNC_STATE}" 2>/dev/null || true; }
@@ -292,7 +297,7 @@ if [ "${CMD}" = "pull" ]; then
     --include='/content/review/' \
     --include='/content/review/*.json' \
     --exclude='*' \
-    -e "ssh -p ${SSH_PORT}" \
+    -e "${SSH_RSH} -p ${SSH_PORT}" \
     "${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}/" \
     "${LOCAL_DIR}" \
     || fail_with_log "${LOG_DIR}/pullreview.log" "Downloading posts and review notes failed."
@@ -394,12 +399,12 @@ foreach (['analytics.db', 'newsletter.db', 'scores.db'] as $name) {
 }
 SNAPSHOT_PHP
     REMOTE_SNAP_PATH="${REMOTE_DIR}/content/.logpull.${TIMESTAMP}"
-    run "${LOG_DIR}/snapmk.log" ssh -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" "mkdir -p '${REMOTE_SNAP_PATH}'" \
+    run "${LOG_DIR}/snapmk.log" "${SSH_CMD[@]}" -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" "mkdir -p '${REMOTE_SNAP_PATH}'" \
       || fail_with_log "${LOG_DIR}/snapmk.log" "Could not create the snapshot directory on the server."
     REMOTE_SNAP="${REMOTE_SNAP_PATH}"   # armed: cleanup() removes it from here on
 
     run "${LOG_DIR}/snapshot.log" bash -c \
-      "ssh -p ${SSH_PORT} '${SSH_USER}@${SSH_HOST}' \"cd '${REMOTE_DIR}' && php -- '${REMOTE_SNAP}'\" < '${LOG_DIR}/snapshot.php'" \
+      "${SSH_RSH} -p ${SSH_PORT} '${SSH_USER}@${SSH_HOST}' \"cd '${REMOTE_DIR}' && php -- '${REMOTE_SNAP}'\" < '${LOG_DIR}/snapshot.php'" \
       || fail_with_log "${LOG_DIR}/snapshot.log" "Snapshot failed on the server — nothing was pulled."
 
     SNAP_OK="$(grep -c '^ok ' "${LOG_DIR}/snapshot.log" || true)"
@@ -420,7 +425,7 @@ SNAPSHOT_PHP
 
   if [ "${DRY}" -eq 0 ]; then
     run "${LOG_DIR}/pulldb.log" rsync -az "${RSYNC_PROGRESS[@]}" \
-      -e "ssh -p ${SSH_PORT}" \
+      -e "${SSH_RSH} -p ${SSH_PORT}" \
       "${SSH_USER}@${SSH_HOST}:${REMOTE_SNAP}/" \
       "${LOGS_STAGE}/content/" \
       || fail_with_log "${LOG_DIR}/pulldb.log" "Downloading the database snapshots failed."
@@ -436,7 +441,7 @@ SNAPSHOT_PHP
     --include='/content/comments/' \
     --include='/content/comments/*.json' \
     --exclude='*' \
-    -e "ssh -p ${SSH_PORT}" \
+    -e "${SSH_RSH} -p ${SSH_PORT}" \
     "${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}/" \
     "${LOGS_STAGE}/" \
     || fail_with_log "${LOG_DIR}/pullfiles.log" "Downloading the logs and comments failed."
@@ -458,7 +463,7 @@ SNAPSHOT_PHP
     # -L: on MyDevil ~/domains/<domain>/logs/access is a symlink into the host's
     # log tree; follow it, or the pull brings a dangling link instead of the logs
     if run "${LOG_DIR}/pullsrv.log" rsync -azL "${RSYNC_PROGRESS[@]}" "${RSYNC_MODE[@]}" \
-      -e "ssh -p ${SSH_PORT}" \
+      -e "${SSH_RSH} -p ${SSH_PORT}" \
       "${SSH_USER}@${SSH_HOST}:${REMOTE_LOG_DIR}/" \
       "${LOGS_STAGE}/server-logs/"; then
       step_done "Server logs downloaded"
@@ -523,12 +528,16 @@ fi
 
 # --- 1. tests ---
 step "Running test suite"
-run "${LOG_DIR}/tests.log" php "${LOCAL_DIR}tests/run.php" \
-  || fail_with_log "${LOG_DIR}/tests.log" "Test suite failed — nothing was deployed."
-# run.php prints one tally per script (unit, integration) and no grand total
-TEST_TALLY="$(grep -oE 'PASS: [0-9]+ +FAIL: [0-9]+' "${LOG_DIR}/tests.log" \
-  | awk '{p += $2} END {if (NR) printf "%d checks", p}' || true)"
-step_done "Tests passed${TEST_TALLY:+ — ${TEST_TALLY}}"
+if [ "${DEPLOY_SKIP_TESTS:-0}" = "1" ]; then
+  step_done "Skipped (DEPLOY_SKIP_TESTS=1: the caller ran them)"
+else
+  run "${LOG_DIR}/tests.log" php "${LOCAL_DIR}tests/run.php" \
+    || fail_with_log "${LOG_DIR}/tests.log" "Test suite failed — nothing was deployed."
+  # run.php prints one tally per script (unit, integration) and no grand total
+  TEST_TALLY="$(grep -oE 'PASS: [0-9]+ +FAIL: [0-9]+' "${LOG_DIR}/tests.log" \
+    | awk '{p += $2} END {if (NR) printf "%d checks", p}' || true)"
+  step_done "Tests passed${TEST_TALLY:+ — ${TEST_TALLY}}"
+fi
 
 # --- 2. build ---
 step "Building site (php tools/build.php)"
@@ -624,7 +633,7 @@ if [ ${#RSYNC_MODE[@]} -eq 0 ]; then
   mkdir -p "${BACKUP_STAGE}"
 
   run "${LOG_DIR}/backup.log" rsync -az "${RSYNC_PROGRESS[@]}" \
-    -e "ssh -p ${SSH_PORT}" \
+    -e "${SSH_RSH} -p ${SSH_PORT}" \
     "${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}/" \
     "${BACKUP_STAGE}/" \
     || fail_with_log "${LOG_DIR}/backup.log" "Remote backup failed — nothing was deployed."
@@ -688,7 +697,7 @@ run "${RSYNC_LOG}" rsync -az "${RSYNC_PROGRESS[@]}" --stats --itemize-changes "$
   --exclude='content/scores.db-*' \
   --exclude='*.log' \
   --exclude='.DS_Store' \
-  -e "ssh -p ${SSH_PORT}" \
+  -e "${SSH_RSH} -p ${SSH_PORT}" \
   "${LOCAL_DIR}" \
   "${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}" \
   || fail_with_log "${RSYNC_LOG}" "Sync failed — the remote may be half-updated${BACKUP_HINT}."
@@ -723,7 +732,7 @@ fi
 step "Mirroring content/posts (clearing renamed leftovers)"
 POSTS_LOG="${LOG_DIR}/posts.log"
 run "${POSTS_LOG}" rsync -az --delete --itemize-changes "${RSYNC_MODE[@]}" \
-  -e "ssh -p ${SSH_PORT}" \
+  -e "${SSH_RSH} -p ${SSH_PORT}" \
   "${LOCAL_DIR}content/posts/" \
   "${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}/content/posts/" \
   || fail_with_log "${POSTS_LOG}" "content/posts mirror failed${BACKUP_HINT}."
