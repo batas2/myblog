@@ -784,7 +784,11 @@ step "Syncing to ${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}"
 # content/geoip.dat (offline IP→country db) and content/.htaccess.
 # What never ships: docs, drafts, tests, archives, backups, git, runtime data.
 RSYNC_LOG="${LOG_DIR}/sync.log"
-run "${RSYNC_LOG}" rsync -az "${RSYNC_PROGRESS[@]}" --stats --itemize-changes "${RSYNC_MODE[@]}" "${DELETE_FLAG[@]}" "${GEOIP_PROTECT[@]}" \
+# A CI checkout is fresh: every file has a new mtime, and rsync's quick check would resend all
+# of them. Compare by content there.
+RSYNC_CMP=()
+[ "${DEPLOY_CI:-0}" != "1" ] || RSYNC_CMP=(--checksum)
+run "${RSYNC_LOG}" rsync -az "${RSYNC_CMP[@]}" "${RSYNC_PROGRESS[@]}" --stats --itemize-changes "${RSYNC_MODE[@]}" "${DELETE_FLAG[@]}" "${GEOIP_PROTECT[@]}" \
   --exclude='/.git' \
   --exclude='.gitignore' \
   --exclude='/.gitea/' \
@@ -860,7 +864,7 @@ fi
 # pipeline lists it twice. Mirror that directory exactly, every deploy.
 step "Mirroring content/posts (clearing renamed leftovers)"
 POSTS_LOG="${LOG_DIR}/posts.log"
-run "${POSTS_LOG}" rsync -az --delete --itemize-changes "${RSYNC_MODE[@]}" \
+run "${POSTS_LOG}" rsync -az "${RSYNC_CMP[@]}" --delete --itemize-changes "${RSYNC_MODE[@]}" \
   -e "${SSH_RSH} -p ${SSH_PORT}" \
   "${LOCAL_DIR}content/posts/" \
   "${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}/content/posts/" \

@@ -581,4 +581,17 @@ $r = dp_run($s, ['status', '--sha=x']);
 t_eq(1, $r['rc'], '--sha belongs to smoke only');
 @proc_terminate($srv);
 
+/* ---------------- CI compares by content, not by date ---------------- */
+section('ci checksum');
+
+$s = dp_sandbox('checksum');
+dp_run($s, ['push']);
+$ci = dp_clone($s, 'checksum-ci');
+dp_sh('find ' . escapeshellarg($ci['local']) . ' -type f -exec touch {} +');   // a fresh checkout: every mtime is new
+$r = dp_run($ci, ['push'], ['DEPLOY_CI' => '1']);
+t_eq(0, $r['rc'], 'CI push from a fresh checkout');
+dp_show($r);
+preg_match('/Synced \((\d+) files transferred/', $r['out'], $m);
+t_assert(isset($m[1]) && (int) $m[1] <= 3, 'a fresh checkout sends only what changed (got ' . ($m[1] ?? '?') . ' files)');
+
 exit(t_summary());

@@ -5,6 +5,7 @@
  *        php tests/run.php unit     (unit only)
  *        php tests/run.php int      (integration only)
  *        php tests/run.php deploy   (deploy.sh against a fake server)
+ *        php tests/run.php ci       (the pipeline's scripts in ci/)
  */
 
 declare(strict_types=1);
@@ -21,6 +22,7 @@ echo "########## bfrackowiak.pl test suite ##########\n";
 if ($which === 'all' || $which === 'unit') $run('unit.php');
 if ($which === 'all' || $which === 'int')  $run('integration.php');
 if ($which === 'all' || $which === 'deploy') $run('deploy.php');
+if ($which === 'all' || $which === 'ci')     $run('ci.php');
 
 echo $fail === 0 ? "\n########## SUITE GREEN ##########\n" : "\n########## SUITE FAILED ##########\n";
 exit($fail);
