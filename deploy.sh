@@ -210,6 +210,12 @@ LOG_DIR="$(mktemp -d)"
 # a copy of the analytics database sitting in the docroot.
 REMOTE_SNAP=""
 LOCK_HELD=0
+# Uncommitted changes that matter to a deploy: everything except the private material that is
+# never shipped (drafts, notes, references), where work in progress is normal.
+shipped_changes() {
+  git -C "${LOCAL_DIR}" status --porcelain -- . ':(exclude)drafts' ':(exclude)docs' \
+    ':(exclude)_archive' ':(exclude)Refernce' 2>/dev/null
+}
 cleanup() {
   rm -rf "${LOG_DIR}"
   [ -z "${REMOTE_SNAP}" ] || remote_helper cleanup "${REMOTE_SNAP}" >/dev/null 2>&1 || true
@@ -600,7 +606,7 @@ echo -e "  mode:   $([ ${#RSYNC_MODE[@]} -eq 0 ] && echo 'live' || echo 'dry-run
 # CI deploys main from the repository. Whatever goes up from here that main does not carry
 # is replaced by the next pipeline run, silently. Say so; deploying it is still allowed.
 if [ "${DEPLOY_CI:-0}" != "1" ] && git -C "${LOCAL_DIR}" rev-parse --git-dir >/dev/null 2>&1; then
-  if [ -n "$(git -C "${LOCAL_DIR}" status --porcelain 2>/dev/null)" ]; then
+  if [ -n "$(shipped_changes)" ]; then
     warn "uncommitted changes: the next CI deploy will replace this deploy"
   fi
   if git -C "${LOCAL_DIR}" remote get-url origin >/dev/null 2>&1; then
@@ -770,7 +776,7 @@ if [ ${#RSYNC_MODE[@]} -eq 0 ]; then
   BUILD_SHA="${DEPLOY_SHA:-}"
   if [ -z "${BUILD_SHA}" ]; then
     BUILD_SHA="$(git -C "${LOCAL_DIR}" rev-parse HEAD 2>/dev/null || echo unknown)"
-    [ -z "$(git -C "${LOCAL_DIR}" status --porcelain 2>/dev/null)" ] || BUILD_SHA="${BUILD_SHA}-dirty"
+    [ -z "$(shipped_changes)" ] || BUILD_SHA="${BUILD_SHA}-dirty"
   fi
   printf 'sha=%s\ndeployed=%s\nby=%s\n' "${BUILD_SHA}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
     "$([ "${DEPLOY_CI:-0}" = "1" ] && echo ci || echo laptop)" > "${LOCAL_DIR}build.txt"

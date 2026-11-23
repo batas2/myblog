@@ -525,6 +525,12 @@ t_not_contains('uncommitted changes', $r['out'], 'no warning for a clean tree');
 t_not_contains('HEAD is not in main on origin', $r['out'], 'no warning when HEAD is in origin/main');
 t_assert((bool) preg_match('/^sha=[0-9a-f]{40}$/m', (string) file_get_contents($s['docroot'] . '/build.txt')), 'without DEPLOY_SHA the marker carries HEAD');
 
+@mkdir($s['local'] . '/drafts', 0755, true);
+file_put_contents($s['local'] . '/drafts/konspekt-x.md', "an outline in progress\n");
+$r = dp_run($s, ['push']);
+t_not_contains('uncommitted changes', $r['out'], 'work in progress that never ships (drafts/) raises no warning');
+t_assert((bool) preg_match('/^sha=[0-9a-f]{40}$/m', (string) file_get_contents($s['docroot'] . '/build.txt')), 'and does not mark the deploy dirty');
+
 file_put_contents($s['local'] . '/robots.txt', "# dirty\n", FILE_APPEND);
 $r = dp_run($s, ['push']);
 t_eq(0, $r['rc'], 'dirty tree still deploys');
