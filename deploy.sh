@@ -113,18 +113,23 @@ OPTIONS
 
 THE WRITING ROUND TRIP
   Both sides can write content/posts now: review.php edits post sources in place
-  and stores margin notes beside them. So every pull and every successful push
-  records what the two sides agreed on, and a push stops when the server has
-  moved on since. The loop is:
+  and stores margin notes beside them. So every successful push records on the
+  server what the two sides agreed on, and a push from any machine (this one or
+  CI) stops, with exit code 3, when the server has moved on since. The loop is:
 
       read the post on the site, leave notes, fix small things
       ./deploy.sh pull            posts and notes come home, briefs are written
       claude code                 works from drafts/review/, resolves each note
       ./deploy.sh                 the result and the history go back up
+                                  (or commit and push: CI deploys main)
 
 WHAT IS NEVER TOUCHED ON THE SERVER
   content/comments/*.json, content/analytics.db, content/analytics.seed,
   content/newsletter.db, content/scores.db, content/.sessions/
+
+EXIT CODES
+  0 done   1 failed   2 bad arguments   3 the server is ahead (pull first)
+  4 another deploy holds the lock on the server
 
 EXAMPLES
   ./deploy.sh                     build and deploy
@@ -175,9 +180,11 @@ LOG_DIR="$(mktemp -d)"
 # on every exit path, including the failing ones, so a dead deploy never leaves
 # a copy of the analytics database sitting in the docroot.
 REMOTE_SNAP=""
+LOCK_HELD=0
 cleanup() {
   rm -rf "${LOG_DIR}"
   [ -z "${REMOTE_SNAP}" ] || remote_helper cleanup "${REMOTE_SNAP}" >/dev/null 2>&1 || true
+  [ "${LOCK_HELD}" -eq 0 ] || remote_helper unlock >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
 RSYNC_PROGRESS=()
@@ -213,6 +220,9 @@ fail_with_log() { dump_log "$1"; die "$2"; }
 #
 # So every pull and every successful push records what both sides agreed on. A file whose remote
 # hash differs from local AND from that record changed on the server since, and the push stops.
+# The marker lives on the server (content/.sync-state there), written by every successful push
+# from any machine, so the laptop and CI measure against the same record. A marker left on this
+# machine by the old deploy.sh is read once, when the server has none yet.
 SYNC_STATE="${LOCAL_DIR}content/.sync-state"
 
 # md5 of every post source and review note, one "hash  path" per line, sorted.
@@ -235,6 +245,12 @@ helper_missing() {
   got="$(printf '%s\n' "${1:-}" | head -1)"
   die "remote helper missing or outdated: run ./deploy.sh install-remote (expected '${HELPER_HEADER}', got '${got:-nothing}')"
 }
+# The right helper, for this docroot, answering on the server — or a stop that says so.
+check_helper() {
+  local v
+  v="$(remote_helper version 2>/dev/null || true)"
+  [ "# ${v}" = "${HELPER_HEADER}" ] || helper_missing "${v}"
+}
 install_remote() {
   run "${LOG_DIR}/install.log" rsync -a --chmod=F755 -e "${SSH_RSH} -p ${SSH_PORT}" \
     "${LOCAL_DIR}ci/remote/" "${SSH_USER}@${SSH_HOST}:bin/" \
@@ -255,7 +271,34 @@ if [ "${CMD}" = "install-remote" ]; then
   echo -e "${GREEN}${BOLD}Remote helper installed:${NC} ${VERSION_LINE}"
   exit 0
 fi
-sync_state_write() { sync_hashes_local > "${SYNC_STATE}" 2>/dev/null || true; }
+sync_state_write() {
+  sync_hashes_local | remote_helper sync-state-write >/dev/null \
+    || warn "could not record the sync marker on the server — the next push may ask for a pull"
+}
+# The agreed hashes into KNOWN_H: the server's marker, or this machine's old one as a fallback.
+known_hashes() {
+  local out
+  out="$(remote_helper sync-state-read 2>/dev/null)" || true
+  [ "$(printf '%s\n' "${out}" | head -1)" = "${HELPER_HEADER}" ] || helper_missing "${out}"
+  KNOWN_H="$(printf '%s\n' "${out}" | tail -n +2)"
+  if [ -z "${KNOWN_H}" ] && [ -s "${SYNC_STATE}" ]; then
+    KNOWN_H="$(cat "${SYNC_STATE}")"
+    note "using local sync marker (migration): the server has none yet"
+  fi
+}
+# One deploy at a time on the server; the lock is ours to release only once we hold it.
+acquire_lock() {
+  local who="laptop" out rc=0
+  [ "${DEPLOY_CI:-0}" != "1" ] || who="ci"
+  out="$(remote_helper lock "${who}" 2>&1)" || rc=$?
+  if [ "${rc}" -eq 4 ]; then
+    echo -e "${RED}✗ ${out#blog-remote: }${NC}"
+    echo "  Wait for it to finish, then deploy again."
+    exit 4
+  fi
+  [ "${rc}" -eq 0 ] || die "could not take the deploy lock on the server: ${out}"
+  LOCK_HELD=1
+}
 
 # --- status: which side is ahead, and nothing else ---------------------------
 # The guard below answers this question in order to refuse a push. Asking it on its own is cheaper
@@ -267,6 +310,7 @@ if [ "${CMD}" = "status" ]; then
   echo
 
   remote_hashes
+  known_hashes
   LOCAL_H="$(sync_hashes_local)"
 
   SAME=0; AHEAD_LOCAL=0; AHEAD_REMOTE=0; ONLY_LOCAL=0
@@ -277,8 +321,7 @@ if [ "${CMD}" = "status" ]; then
     RHASH="${line%% *}"; RPATH="${line#* }"; RPATH="${RPATH# }"
     LHASH="$(printf '%s\n' "${LOCAL_H}" | awk -v p="${RPATH}" '$2==p {print $1; exit}')"
     if [ "${RHASH}" = "${LHASH}" ]; then SAME=$((SAME + 1)); continue; fi
-    KHASH=""
-    [ ! -f "${SYNC_STATE}" ] || KHASH="$(awk -v p="${RPATH}" '$2==p {print $1; exit}' "${SYNC_STATE}")"
+    KHASH="$(printf '%s\n' "${KNOWN_H}" | awk -v p="${RPATH}" '$2==p {print $1; exit}')"
     if [ "${RHASH}" = "${KHASH}" ]; then
       AHEAD_LOCAL=$((AHEAD_LOCAL + 1)); AHEAD_LOCAL_LIST="${AHEAD_LOCAL_LIST}  ${RPATH}\n"
     else
@@ -306,10 +349,10 @@ if [ "${CMD}" = "status" ]; then
     echo -en "${AHEAD_REMOTE_LIST}"
     echo
     echo -e "  ${BOLD}Run ./deploy.sh pull before the next push.${NC}"
-    exit 1
+    exit 3
   fi
   echo
-  [ ! -f "${SYNC_STATE}" ] && warn "no sync marker yet — the first pull or push writes it" || true
+  [ -n "${KNOWN_H}" ] || warn "no sync marker yet — the first push writes it"
   echo -e "${GREEN}${BOLD}In step.${NC} A push would not overwrite anything on the server."
   exit 0
 fi
@@ -350,7 +393,8 @@ if [ "${CMD}" = "pull" ]; then
     step_done "${CHANGED} file(s) would be updated"
   else
     step_done "${CHANGED} file(s) updated"
-    sync_state_write
+    # no marker: a pull brings the server's edits here, it does not put anything there.
+    # The next push from any machine that carries them is what makes the sides agree.
   fi
 
   step "Writing the briefs"
@@ -595,8 +639,11 @@ fi
 # --- 3b. refuse to overwrite a server that is ahead ---
 # Cheap: one ssh, a few dozen md5s. Runs before the backup so a refusal costs nothing.
 maybe_install_remote
+check_helper
+[ ${#RSYNC_MODE[@]} -ne 0 ] || acquire_lock
 step "Checking the server is not ahead"
 remote_hashes
+known_hashes
 LOCAL_H="$(sync_hashes_local)"
 CONFLICTS=""
 if [ -n "${REMOTE_H}" ]; then
@@ -606,8 +653,7 @@ if [ -n "${REMOTE_H}" ]; then
     RPATH="${line#* }"; RPATH="${RPATH# }"
     LHASH="$(printf '%s\n' "${LOCAL_H}" | awk -v p="${RPATH}" '$2==p {print $1; exit}')"
     [ "${RHASH}" != "${LHASH}" ] || continue                 # identical: nothing to decide
-    KHASH=""
-    [ ! -f "${SYNC_STATE}" ] || KHASH="$(awk -v p="${RPATH}" '$2==p {print $1; exit}' "${SYNC_STATE}")"
+    KHASH="$(printf '%s\n' "${KNOWN_H}" | awk -v p="${RPATH}" '$2==p {print $1; exit}')"
     # remote still matches what we last agreed on, so the difference is our local edit going up
     [ "${RHASH}" != "${KHASH}" ] || continue
     CONFLICTS="${CONFLICTS}  ${RPATH}\n"
@@ -616,10 +662,11 @@ fi
 
 if [ -n "${CONFLICTS}" ] && [ "${FORCE_PUSH}" -eq 0 ]; then
   echo
-  warn "The server has changes these files do not have locally:"
+  warn "These files changed on the server since the last deploy (review.php or admin.php):"
   echo -en "${CONFLICTS}"
   echo
-  die "Run ./deploy.sh --pull first, or ./deploy.sh --force to overwrite the server."
+  echo -e "${RED}✗ Run ./deploy.sh pull, commit, push — or ./deploy.sh --force to overwrite the server.${NC}"
+  exit 3
 fi
 if [ -n "${CONFLICTS}" ]; then
   warn "--force: overwriting server-side changes in $(echo -en "${CONFLICTS}" | wc -l) file(s)"
@@ -687,6 +734,10 @@ run "${RSYNC_LOG}" rsync -az "${RSYNC_PROGRESS[@]}" --stats --itemize-changes "$
   --exclude='content/.sessions/' \
   --exclude='content/.ratelimit/' \
   --exclude='content/.buildlock' \
+  --exclude='content/.sync-state' \
+  --exclude='content/.sync-state.*' \
+  --exclude='content/.deploylock/' \
+  --exclude='content/.logpull.*' \
   --exclude='Dockerfile' \
   --exclude='docker-compose.yml' \
   --exclude='run.sh' \

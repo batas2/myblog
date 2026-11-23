@@ -12,6 +12,8 @@
 #   sync-state-write    stdin becomes that marker (atomic)
 #   snapshot            consistent copies of the runtime databases; prints "dir <path>"
 #   cleanup <path>      removes a snapshot directory, and nothing else
+#   lock <who>          one deploy at a time; exit 4 while another holds it (15 min)
+#   unlock              releases the lock
 set -euo pipefail
 
 VERSION=1
@@ -65,6 +67,29 @@ case "${cmd}" in
     suffix="${target#"${DOCROOT}/content/.logpull."}"
     [[ "${suffix}" =~ ^[A-Za-z0-9-]+$ ]] || fail 2 "refusing to remove ${target}: not a snapshot directory"
     rm -rf -- "${target}"
+    echo ok
+    ;;
+  lock)
+    need_docroot
+    who="${1:-unknown}"
+    now="$(date +%s)"
+    if mkdir content/.deploylock 2>/dev/null; then
+      echo "${who} ${now}" > content/.deploylock/owner
+      echo ok
+      exit 0
+    fi
+    owner=unknown; since=0
+    [ ! -f content/.deploylock/owner ] || read -r owner since < content/.deploylock/owner || true
+    [[ "${since}" =~ ^[0-9]+$ ]] || since=0
+    age=$(( now - since ))
+    # a deploy takes a minute or two; a lock this old belongs to one that died
+    [ "${age}" -ge 900 ] || fail 4 "another deploy is running (${owner}, started ${age}s ago)"
+    echo "${who} ${now}" > content/.deploylock/owner
+    echo "ok (took over a lock left by ${owner} ${age}s ago)"
+    ;;
+  unlock)
+    need_docroot
+    rm -rf content/.deploylock
     echo ok
     ;;
   *)

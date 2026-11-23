@@ -154,6 +154,28 @@ function dp_wal_db(string $path, int $rows): PDO
     return $db;   // keep it open: the rows stay in the -wal file
 }
 
+/**
+ * A second machine deploying to the same server: a copy of $s's working tree with
+ * no sync marker of its own, the way a CI checkout starts.
+ */
+function dp_clone(array $s, string $name): array
+{
+    global $DP_TMP;
+    $local = "{$DP_TMP}/{$name}/local";
+    @mkdir($local, 0755, true);
+    [$rc, $out] = dp_sh('rsync -a --exclude=content/.sync-state --exclude=_remote-backup/ --exclude=_remote-logs/ '
+        . escapeshellarg($s['local'] . '/') . ' ' . escapeshellarg($local . '/'));
+    if ($rc !== 0) throw new RuntimeException("clone failed: {$out}");
+    return ['local' => $local, 'rhome' => $s['rhome'], 'docroot' => $s['docroot']];
+}
+
+/** the hash list deploy.sh records for a tree, as blog-remote prints it (header dropped) */
+function dp_hashes(string $dir): string
+{
+    $r = br_run($dir, ['hashes']);
+    return implode("\n", array_slice(explode("\n", $r['out']), 1));
+}
+
 /** on an unexpected failure, show the tail of what deploy.sh said */
 function dp_show(array $r, int $expect = 0): void
 {
@@ -288,5 +310,82 @@ t_eq(1, count($pulled), 'data pulled the analytics snapshot');
 if ($pulled) t_eq(3, (int) (new PDO('sqlite:' . $pulled[0]))->query('SELECT COUNT(*) FROM hits')->fetchColumn(), 'snapshot carries every row');
 t_eq([], glob($s['docroot'] . '/content/.logpull.*') ?: [], 'no snapshot directory left on the server');
 $live = null;
+
+/* ---------------- the sync marker lives on the server ---------------- */
+section('shared guard');
+
+$s = dp_sandbox('guard');
+$posts = glob($s['local'] . '/content/posts/*.md');
+$postA = basename($posts[0]);
+$postB = basename($posts[1]);
+$remoteA = "{$s['docroot']}/content/posts/{$postA}";
+$state = "{$s['docroot']}/content/.sync-state";
+
+$r = dp_run($s, ['push']);
+t_eq(0, $r['rc'], 'first push succeeds');
+dp_show($r);
+t_assert(is_file($state), 'push records state on server');
+t_eq(dp_hashes($s['local']), (string) @file_get_contents($state), 'recorded state is the local post list');
+t_assert(!is_file($s['local'] . '/content/.sync-state'), 'no local marker written');
+
+// someone fixes a typo on the site through review.php
+file_put_contents($remoteA, "\nedited on the site\n", FILE_APPEND);
+$edited = md5_file($remoteA);
+
+$r = dp_run($s, ['status']);
+t_eq(3, $r['rc'], 'status exits 3 when server ahead');
+$r = dp_run($s, ['push']);
+t_eq(3, $r['rc'], 'server edit blocks older push');
+t_contains('changed on the server', $r['out'], 'the refusal says why');
+t_eq($edited, md5_file($remoteA), 'the edit on the server survived');
+t_assert(!is_dir("{$s['docroot']}/content/.deploylock"), 'lock released after failed deploy');
+
+$ci = dp_clone($s, 'guard-ci');
+$r = dp_run($ci, ['push'], ['DEPLOY_CI' => '1']);
+t_eq(3, $r['rc'], 'a CI clone without the edit is refused too');
+copy($remoteA, "{$ci['local']}/content/posts/{$postA}");
+$r = dp_run($ci, ['push'], ['DEPLOY_CI' => '1']);
+t_eq(0, $r['rc'], 'CI clone with the server edit deploys');
+dp_show($r);
+t_eq($edited, md5_file($remoteA), 'the edit is still on the server');
+
+$stateBefore = md5_file($state);
+$r = dp_run($s, ['pull']);
+t_eq(0, $r['rc'], 'pull succeeds');
+t_eq($stateBefore, md5_file($state), 'pull does not write state');
+t_eq($edited, md5_file("{$s['local']}/content/posts/{$postA}"), 'pull brought the edit home');
+$r = dp_run($s, ['push']);
+t_eq(0, $r['rc'], 'pull then push passes');
+dp_show($r);
+
+// a server deployed by the old deploy.sh: no marker there, the laptop holds one
+unlink($state);
+file_put_contents("{$s['local']}/content/.sync-state", dp_hashes($s['local']));
+file_put_contents("{$s['local']}/content/posts/{$postB}", "\nedited on the laptop\n", FILE_APPEND);
+$r = dp_run($s, ['push']);
+t_eq(0, $r['rc'], 'migration uses local marker');
+dp_show($r);
+t_contains('using local sync marker (migration)', $r['out'], 'migration says so');
+t_assert(is_file($state), 'migration leaves a marker on the server');
+t_eq(md5_file("{$s['local']}/content/posts/{$postB}"), md5_file("{$s['docroot']}/content/posts/{$postB}"), 'the laptop edit went up');
+
+t_eq(0, br_run($s['docroot'], ['lock', 'other'])['rc'], 'another deploy takes the lock');
+file_put_contents($s['local'] . '/robots.txt', "# while locked\n", FILE_APPEND);
+$robots = md5_file("{$s['docroot']}/robots.txt");
+$r = dp_run($s, ['push']);
+t_eq(4, $r['rc'], 'concurrent deploy exits 4');
+t_eq($robots, md5_file("{$s['docroot']}/robots.txt"), 'a refused deploy changes nothing');
+t_assert(is_dir("{$s['docroot']}/content/.deploylock"), 'and leaves the other deploy its lock');
+t_eq(0, br_run($s['docroot'], ['unlock'])['rc'], 'the other deploy unlocks');
+$r = dp_run($s, ['push']);
+t_eq(0, $r['rc'], 'push passes after unlock');
+dp_show($r);
+
+// a lock left behind by a crashed deploy expires
+br_run($s['docroot'], ['lock', 'crashed']);
+file_put_contents("{$s['docroot']}/content/.deploylock/owner", 'crashed ' . (time() - 1000));
+$r = dp_run($s, ['push']);
+t_eq(0, $r['rc'], 'a lock older than 15 minutes is taken over');
+t_assert(!is_dir("{$s['docroot']}/content/.deploylock"), 'and released afterwards');
 
 exit(t_summary());
