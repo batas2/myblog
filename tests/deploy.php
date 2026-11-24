@@ -147,6 +147,14 @@ function br_run(string $docroot, array $args, string $stdin = ''): array
     return ['rc' => proc_close($p), 'out' => (string) $out];
 }
 
+/** the subscriber database a live server has: the nightly copy fails without it */
+function dp_newsletter_db(string $path): void
+{
+    $db = new PDO('sqlite:' . $path, null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+    $db->exec('CREATE TABLE IF NOT EXISTS subscribers (email TEXT)');
+    $db->exec("INSERT INTO subscribers VALUES ('reader@example.com')");
+}
+
 /** a WAL-mode sqlite database with a hits table of $rows rows, written but not checkpointed */
 function dp_wal_db(string $path, int $rows): PDO
 {
@@ -492,6 +500,7 @@ if ($rrsync === '') {
     // a real database: in CI mode a snapshot that fails fails the run
     unlink($s['docroot'] . '/content/analytics.db');
     $gatedDb = dp_wal_db($s['docroot'] . '/content/analytics.db', 1);
+    dp_newsletter_db($s['docroot'] . '/content/newsletter.db');
     $r = dp_run($s, ['data'], $env);
     t_eq(0, $r['rc'], 'data through the gate');
     $gatedDb = null;
@@ -718,6 +727,13 @@ t_eq([], glob($s['docroot'] . '/content/.logpull.*') ?: [], 'and leaves no snaps
 
 unlink($s['docroot'] . '/content/analytics.db');
 $live = dp_wal_db($s['docroot'] . '/content/analytics.db', 2);
+// newsletter.db missing on the server (the kind of loss of 2026-07-19): not a skip in the nightly copy
+$r = dp_run($s, ['data'], ['DEPLOY_CI' => '1', 'DEPLOY_LOGS_DIR' => "{$DP_TMP}/nightly-missing"]);
+t_eq(1, $r['rc'], 'a missing newsletter.db fails the nightly copy');
+t_contains('newsletter.db', $r['out'], 'naming it');
+$r = dp_run($s, ['data'], ['DEPLOY_LOGS_DIR' => "{$DP_TMP}/nightly-missing-laptop"]);
+t_eq(0, $r['rc'], 'from the laptop it is a note, as before');
+dp_newsletter_db($s['docroot'] . '/content/newsletter.db');
 $r = dp_run($s, ['data'], ['DEPLOY_CI' => '1', 'DEPLOY_LOGS_DIR' => $logs]);
 t_eq(0, $r['rc'], 'data in CI mode with healthy databases');
 dp_show($r);
@@ -748,5 +764,30 @@ $r = dp_run($s, ['backup'], ['DEPLOY_CI' => '1', 'DEPLOY_BACKUP_DIR' => $weekly]
 t_eq(4, $r['rc'], 'backup waits for a deploy holding the lock');
 dp_sh('BLOG_DOCROOT=' . escapeshellarg($s['docroot']) . ' ' . escapeshellarg("{$ROOT}/ci/remote/blog-remote") . ' unlock');
 $live = null;
+
+/* ---------------- the backup archive is whole, or there is none ---------------- */
+section('backup archive');
+
+$s = dp_sandbox('tarfail');
+$shim = "{$DP_TMP}/tarshim";
+@mkdir($shim, 0755, true);
+$realTar = trim((string) shell_exec('command -v tar'));
+// writes half an archive, then fails, the way a full disk or a dying connection would
+file_put_contents("{$shim}/tar", "#!/bin/bash\nif [ \"\$1\" = \"-czf\" ]; then printf partial > \"\$2\"; exit 1; fi\nexec " . escapeshellarg($realTar) . " \"\$@\"\n");
+chmod("{$shim}/tar", 0755);
+$robots = (string) file_get_contents($s['docroot'] . '/robots.txt');
+file_put_contents($s['local'] . '/robots.txt', $robots . "# changed\n");
+$r = dp_run($s, ['push'], ['PATH' => "{$shim}:" . getenv('PATH')]);
+t_eq(1, $r['rc'], 'a backup archive that cannot be written stops the push');
+t_contains('backup', strtolower($r['out']), 'and says it was the backup');
+t_eq([], glob($s['local'] . '/_remote-backup/*.tar.gz*') ?: [], 'no partial archive is left to be mistaken for a backup');
+t_eq($robots, (string) file_get_contents($s['docroot'] . '/robots.txt'), 'and nothing was deployed');
+t_assert(!is_dir($s['docroot'] . '/content/.deploylock'), 'the lock is released');
+$r = dp_run($s, ['push']);
+t_eq(0, $r['rc'], 'with a working tar the push goes through');
+$arch = glob($s['local'] . '/_remote-backup/*.tar.gz') ?: [];
+t_eq(1, count($arch), 'one archive');
+[$trc] = dp_sh('tar -tzf ' . escapeshellarg($arch[0] ?? '/nope') . ' >/dev/null');
+t_eq(0, $trc, 'and it reads back');
 
 exit(t_summary());

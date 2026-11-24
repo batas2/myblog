@@ -532,7 +532,9 @@ if [ "${CMD}" = "data" ]; then
       case "${line}" in
         ok\ *)   [ "${VERBOSE}" -eq 1 ] || note "${line#ok }" ;;
         fail\ *) warn "${line#fail }"; SNAP_FAILS="${SNAP_FAILS}  ${line#fail }\n" ;;
-        skip\ *) note "${line#skip }" ;;
+        skip\ *) note "${line#skip }"
+                 # the site cannot lose these and keep working: for the nightly copy a missing one is a failure
+                 case "${line}" in skip\ analytics.db*|skip\ newsletter.db*) SNAP_FAILS="${SNAP_FAILS}  ${line#skip }\n" ;; esac ;;
       esac
     done < "${LOG_DIR}/snapshot.log"
   fi
@@ -709,7 +711,14 @@ backup_remote() {
     die "Remote backup contains only ${BACKUP_FILES} files — the remote looks empty or wrong. Investigate first; nothing was ${what} (backup kept at ${BACKUP_STAGE})."
   fi
 
-  tar -czf "${BACKUP_ARCHIVE}" -C "${BACKUP_DIR}" "${TIMESTAMP}"
+  # Written under a temporary name, read back, and only then given its own: a half-written
+  # archive must never sit among the backups as the newest one (rollback, restore-test).
+  if ! tar -czf "${BACKUP_ARCHIVE}.part" -C "${BACKUP_DIR}" "${TIMESTAMP}" 2>"${LOG_DIR}/tar.log" \
+     || ! tar -tzf "${BACKUP_ARCHIVE}.part" >/dev/null 2>>"${LOG_DIR}/tar.log"; then
+    rm -f "${BACKUP_ARCHIVE}.part"
+    fail_with_log "${LOG_DIR}/tar.log" "Writing the backup archive failed — nothing was ${what} (the copy is kept at ${BACKUP_STAGE})."
+  fi
+  mv "${BACKUP_ARCHIVE}.part" "${BACKUP_ARCHIVE}"
   rm -rf "${BACKUP_STAGE}"
 
   BACKUP_SIZE="$(du -h "${BACKUP_ARCHIVE}" | cut -f1)"
