@@ -815,7 +815,8 @@ run "${RSYNC_LOG}" rsync -az "${RSYNC_CMP[@]}" "${RSYNC_PROGRESS[@]}" --stats --
   --exclude='config.example.php' \
   --exclude='tools/preview_admin.php' \
   --exclude='_archive/' \
-  --exclude='_remote-backup/' \
+  --exclude='/_remote-backup/' \
+  --exclude='/_remote-logs/' \
   --exclude='content/comments/' \
   --exclude='content/.sessions/' \
   --exclude='content/.ratelimit/' \

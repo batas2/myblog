@@ -497,13 +497,13 @@ t_contains("sha=abc123\n", $build, 'build.txt carries the sha');
 t_contains("by=laptop\n", $build, 'build.txt says who deployed');
 t_assert((bool) preg_match('/^deployed=\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/m', $build), 'build.txt carries the UTC time');
 
-foreach (['.gitea/workflows/x.yml', 'ci/gate-patterns.txt', 'content/outlines/a.md'] as $f) {
+foreach (['.gitea/workflows/x.yml', 'ci/gate-patterns.txt', 'content/outlines/a.md', '_remote-logs/20261123/access.log', '.superpowers/sdd/x/brief.md'] as $f) {
     @mkdir(dirname($s['local'] . '/' . $f), 0755, true);
     file_put_contents($s['local'] . '/' . $f, "private\n");
 }
 $r = dp_run($s, ['push']);
 t_eq(0, $r['rc'], 'push with private dirs present');
-foreach (['.gitea', 'ci', '.githooks', 'content/outlines'] as $d) {
+foreach (['.gitea', 'ci', '.githooks', 'content/outlines', '_remote-logs', '.superpowers'] as $d) {
     t_assert(!file_exists($s['docroot'] . '/' . $d), "private dirs never shipped: {$d}");
 }
 // a deploy from a git worktree: .git is a file there, and must stay home as well
