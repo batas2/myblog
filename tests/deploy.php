@@ -709,6 +709,14 @@ $r = dp_run($s, ['data'], ['DEPLOY_CI' => '1', 'DEPLOY_LOGS_DIR' => $logs]);
 t_eq(0, $r['rc'], 'data in CI mode with healthy databases');
 dp_show($r);
 t_eq(1, count(glob("{$logs}/*/content/analytics.db") ?: []), 'data honours DEPLOY_LOGS_DIR');
+// the host's own logs are symlinks into its log tree, which the CI key may not follow (rrsync
+// refuses -L): in CI they are left out, said so, and the run still succeeds
+$r = dp_run($s, ['data'], ['DEPLOY_CI' => '1', 'DEPLOY_LOGS_DIR' => $logs, 'REMOTE_LOG_DIR' => "{$s['rhome']}/no-such-logs"]);
+t_eq(0, $r['rc'], 'in CI, data leaves the host\'s server logs out');
+t_contains('server logs: not in CI', $r['out'], 'and says so');
+$r = dp_run($s, ['data'], ['DEPLOY_LOGS_DIR' => $logs, 'REMOTE_LOG_DIR' => "{$s['rhome']}/no-such-logs"]);
+t_eq(0, $r['rc'], 'from the laptop, unreadable server logs are a warning');
+t_contains('could not read', $r['out'], 'naming the directory');
 t_eq([], glob($s['local'] . '/_remote-logs/*') ?: [], 'and writes nothing into the checkout');
 
 $before = dp_tree($s['docroot']);

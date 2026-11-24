@@ -487,8 +487,15 @@ fi
 # Nothing on the server is modified. Set REMOTE_LOG_DIR in deploy.env to pull
 # the host's own access/error logs alongside it.
 if [ "${CMD}" = "data" ]; then
+  # The host's own logs are symlinks into its log tree. The CI key may not follow links
+  # (rrsync refuses -L), and the nightly copy is the site's own data: in CI they stay out.
+  SERVER_LOGS="${REMOTE_LOG_DIR:-}"
+  if [ "${DEPLOY_CI:-0}" = "1" ] && [ -n "${SERVER_LOGS}" ]; then
+    SERVER_LOGS=""
+    note "server logs: not in CI (the CI key cannot follow the host's log links); ./deploy.sh data from the laptop brings them"
+  fi
   STEP_TOTAL=2
-  [ -z "${REMOTE_LOG_DIR:-}" ] || STEP_TOTAL=3
+  [ -z "${SERVER_LOGS}" ] || STEP_TOTAL=3
   DRY=0
   [ ${#RSYNC_MODE[@]} -eq 0 ] || DRY=1
 
@@ -568,7 +575,7 @@ if [ "${CMD}" = "data" ]; then
   fi
 
   # 3. the host's own web logs, when deploy.env points at them
-  if [ -n "${REMOTE_LOG_DIR:-}" ]; then
+  if [ -n "${SERVER_LOGS}" ]; then
     step "Downloading server logs from ${REMOTE_LOG_DIR}"
     [ "${DRY}" -eq 1 ] || mkdir -p "${LOGS_STAGE}/server-logs"
     # -L: on MyDevil ~/domains/<domain>/logs/access is a symlink into the host's
@@ -583,7 +590,6 @@ if [ "${CMD}" = "data" ]; then
       # own data is already down and that is what the run was for
       dump_log "${LOG_DIR}/pullsrv.log"
       warn "could not read ${REMOTE_LOG_DIR} — check REMOTE_LOG_DIR in deploy.env"
-      SNAP_FAILS="${SNAP_FAILS:-}  server logs: ${REMOTE_LOG_DIR} could not be read\n"
     fi
   fi
 
