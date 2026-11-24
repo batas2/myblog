@@ -7,8 +7,10 @@
 # Whatever the client asked for arrives in SSH_ORIGINAL_COMMAND and is never
 # handed to a shell. Two things get through: rsync, confined by rrsync to the
 # blog's directory, and the fixed subcommands of blog-remote. Everything else is
-# refused and logged. A stolen CI key can therefore touch the blog and nothing
-# else on the account.
+# refused and logged. A stolen CI key gets no shell and cannot copy files
+# anywhere but the blog's directory. It can still deploy code, though: PHP it
+# writes there runs as the account user when the page is requested, and that
+# user owns every site on the account. Guard the key accordingly.
 set -uo pipefail
 
 ROOT="${BLOG_GATE_ROOT:-${HOME}/domains/bfrackowiak.pl}"

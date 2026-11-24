@@ -315,7 +315,8 @@ smoke checks against it.
 
 The pipeline's key to the host is pinned to one command (`ci/remote/blog-gate`):
 rsync inside the blog's directory, and the helper's own subcommands, nothing
-else. No shell, no other site on the account.
+else, no shell. It is still a deploy key: whatever PHP it deploys runs as the
+hosting account's user, so it is guarded like one.
 
 **The public history.** GitHub gets the real history of `main`, filtered with
 `git filter-repo`: an allowlist of public paths (anything new is private until
