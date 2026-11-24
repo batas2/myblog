@@ -81,6 +81,7 @@ SKIP_GEOIP=0
 VERBOSE=0
 FORCE_PUSH=0
 SMOKE_ARGS=()
+ROLLBACK_ARCHIVE=""
 CMD=""
 
 usage() {
@@ -105,6 +106,12 @@ COMMANDS
               Check the live site (or url): pages, feed, sitemap, 404s, files that
               must stay hidden, security headers, certificate, and with --sha the
               commit in build.txt. push runs it at the end (DEPLOY_SMOKE=0 skips).
+  rollback <archive.tar.gz> [-n]
+              Put a pre-deploy backup back on the server: code, pages and post
+              sources as they were then. Runtime data (comments, analytics,
+              subscribers) stays as it is now, and the server is backed up first.
+              No tests, no build. The next push ships its own tree again, so fix
+              forward on main once the site is safe.
   install-remote
               Copy ci/remote/* into ~/bin on the server. push, pull and data do it
               on their own; run it by hand after changing those scripts when you
@@ -149,6 +156,8 @@ EXAMPLES
   ./deploy.sh --delete            deploy and prune files gone from this machine
   ./deploy.sh pull -n             see what a pull would bring home
   ./deploy.sh status              are the two sides in step?
+  ./deploy.sh rollback _remote-backup/20261124-102357.tar.gz
+                                  undo a bad deploy (the backup it took first)
 HELPTEXT
 }
 
@@ -156,9 +165,10 @@ HELPTEXT
 # The old flag spellings still work, because muscle memory is a real cost.
 for arg in "$@"; do
   case "$arg" in
-    push|pull|data|status|install-remote|smoke|help)
+    push|pull|data|status|install-remote|smoke|rollback|help)
       [ -z "${CMD}" ] || die "Two commands given (${CMD}, ${arg}) — pick one."
       CMD="${arg}" ;;
+    *.tar.gz|*.tgz) ROLLBACK_ARCHIVE="${arg}" ;;
     --pull)       CMD="pull";   echo "note: --pull is now 'deploy.sh pull'" >&2 ;;
     --pull-logs)  CMD="data";   echo "note: --pull-logs is now 'deploy.sh data'" >&2 ;;
     --clean)      DELETE_FLAG=(--delete); echo "note: --clean is now --delete" >&2 ;;
@@ -184,6 +194,19 @@ if [ "${CMD}" != "push" ]; then
   [ "${FORCE_PUSH}" -eq 0 ]    || die "--force applies to push, not to ${CMD}."
 fi
 [ "${CMD}" = "smoke" ] || [ ${#SMOKE_ARGS[@]} -eq 0 ] || die "${SMOKE_ARGS[0]} applies to smoke, not to ${CMD}."
+[ "${CMD}" = "rollback" ] || [ -z "${ROLLBACK_ARCHIVE}" ] || die "${ROLLBACK_ARCHIVE} applies to rollback, not to ${CMD}."
+if [ "${CMD}" = "rollback" ]; then
+  if [ -z "${ROLLBACK_ARCHIVE}" ]; then
+    echo "usage: ./deploy.sh rollback <archive.tar.gz> [-n]" >&2
+    RB_DIR="${DEPLOY_BACKUP_DIR:-${LOCAL_DIR}_remote-backup}"
+    if compgen -G "${RB_DIR%/}/*.tar.gz" >/dev/null; then
+      echo "newest archives in ${RB_DIR%/}:" >&2
+      find "${RB_DIR%/}" -maxdepth 1 -name '*.tar.gz' -printf '  %f\n' | sort -r | head -10 >&2
+    fi
+    exit 2
+  fi
+  [ -f "${ROLLBACK_ARCHIVE}" ] || { echo "rollback: no such archive: ${ROLLBACK_ARCHIVE}" >&2; exit 2; }
+fi
 
 # --- smoke: is the live site up, in one piece, and the commit we think it is? ---
 # tools/smoke.php does the work; the URL defaults to SMOKE_URL (deploy.env) or the live site.
@@ -261,10 +284,11 @@ fail_with_log() { dump_log "$1"; die "$2"; }
 SYNC_STATE="${LOCAL_DIR}content/.sync-state"
 
 # md5 of every post source and review note, one "hash  path" per line, sorted.
-sync_hashes_local() {
-  ( cd "${LOCAL_DIR}" && find content/posts content/review -type f \( -name '*.md' -o -name '*.json' \) 2>/dev/null \
+sync_hashes_of() {
+  ( cd "$1" && find content/posts content/review -type f \( -name '*.md' -o -name '*.json' \) 2>/dev/null \
     | sort | xargs -r md5sum 2>/dev/null ) || true
 }
+sync_hashes_local() { sync_hashes_of "${LOCAL_DIR}"; }
 # The server's side of the same list, into REMOTE_H. No answer, or an answer from a
 # helper that is not the expected version for this docroot, stops everything: an
 # empty list would read as "nothing on the server", and the guard would wave the
@@ -307,8 +331,9 @@ if [ "${CMD}" = "install-remote" ]; then
   echo -e "${GREEN}${BOLD}Remote helper installed:${NC} ${VERSION_LINE}"
   exit 0
 fi
+# Record the post sources of a tree (this checkout by default) as what both sides agree on.
 sync_state_write() {
-  sync_hashes_local | remote_helper sync-state-write >/dev/null \
+  sync_hashes_of "${1:-${LOCAL_DIR}}" | remote_helper sync-state-write >/dev/null \
     || warn "could not record the sync marker on the server — the next push may ask for a pull"
 }
 # The agreed hashes into KNOWN_H: the server's marker, or this machine's old one as a fallback.
@@ -596,6 +621,192 @@ if [ "${CMD}" = "data" ]; then
   exit 0
 fi
 
+# --- shared by push and rollback -------------------------------------------------
+# What never goes up from here, and what is never overwritten up there: the private material
+# of this repository, and the runtime data the live site writes for itself.
+SHIP_EXCLUDES=(
+  --exclude='/.git'
+  --exclude='.gitignore'
+  --exclude='/.gitea/'
+  --exclude='/.githooks/'
+  --exclude='/.superpowers/'
+  --exclude='/ci/'
+  --exclude='/content/outlines/'
+  --exclude='.claude/'
+  --exclude='deploy.sh'
+  --exclude='deploy.env'
+  --exclude='deploy.env.example'
+  --exclude='docs/'
+  --exclude='drafts/'
+  --exclude='Refernce/'
+  --exclude='tests/'
+  --exclude='README.md'
+  --exclude='LICENSE'
+  --exclude='config.example.php'
+  --exclude='tools/preview_admin.php'
+  --exclude='_archive/'
+  --exclude='/_remote-backup/'
+  --exclude='/_remote-logs/'
+  --exclude='content/comments/'
+  --exclude='content/.sessions/'
+  --exclude='content/.ratelimit/'
+  --exclude='content/.buildlock'
+  --exclude='content/.sync-state'
+  --exclude='content/.sync-state.*'
+  --exclude='content/.deploylock/'
+  --exclude='content/.logpull.*'
+  --exclude='Dockerfile'
+  --exclude='docker-compose.yml'
+  --exclude='run.sh'
+  --exclude='content/analytics.db'
+  --exclude='content/analytics.db-*'
+  --exclude='content/analytics.seed'
+  --exclude='content/newsletter.db'
+  --exclude='content/newsletter.db-*'
+  --exclude='content/scores.db'
+  --exclude='content/scores.db-*'
+  --exclude='*.log'
+  --exclude='.DS_Store'
+)
+
+# The live docroot into BACKUP_ARCHIVE, before anything overwrites it. $1 names what would have
+# happened ("deployed", "rolled back") for the messages that stop it. Sets BACKUP_WHERE.
+backup_remote() {
+  local what="$1"
+  step "Backing up remote -> ${BACKUP_ARCHIVE}"
+  mkdir -p "${BACKUP_STAGE}"
+
+  run "${LOG_DIR}/backup.log" rsync -az "${RSYNC_PROGRESS[@]}" \
+    -e "${SSH_RSH} -p ${SSH_PORT}" \
+    "${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}/" \
+    "${BACKUP_STAGE}/" \
+    || fail_with_log "${LOG_DIR}/backup.log" "Remote backup failed — nothing was ${what}."
+
+  # sanity: an (almost) empty remote means something is very wrong — pushing over
+  # it would make the loss permanent and silent (this exact thing ate the
+  # analytics history on 2026-07-19). Stop and let a human look first.
+  BACKUP_FILES="$(find "${BACKUP_STAGE}" -type f | wc -l | tr -d ' ')"
+  if [ "${BACKUP_FILES}" -lt 20 ]; then
+    die "Remote backup contains only ${BACKUP_FILES} files — the remote looks empty or wrong. Investigate first; nothing was ${what} (backup kept at ${BACKUP_STAGE})."
+  fi
+
+  tar -czf "${BACKUP_ARCHIVE}" -C "${BACKUP_DIR}" "${TIMESTAMP}"
+  rm -rf "${BACKUP_STAGE}"
+
+  BACKUP_SIZE="$(du -h "${BACKUP_ARCHIVE}" | cut -f1)"
+  BACKUP_WHERE="${BACKUP_ARCHIVE}"
+  # From the laptop the archive moves to the home server (HOME_BACKUP_TARGET in deploy.env), where
+  # the CI's own backups live too. If that fails it stays here: a backup is never lost to a hop.
+  if [ "${DEPLOY_CI:-0}" != "1" ] && [ -n "${HOME_BACKUP_TARGET:-}" ]; then
+    if rsync -a -e "ssh -o ConnectTimeout=5 -o BatchMode=yes" "${BACKUP_ARCHIVE}" "${HOME_BACKUP_TARGET}" >"${LOG_DIR}/homebackup.log" 2>&1; then
+      rm -f "${BACKUP_ARCHIVE}"
+      BACKUP_WHERE="${HOME_BACKUP_TARGET%/}/${TIMESTAMP}.tar.gz"
+      step_done "Backup saved (${BACKUP_SIZE}, ${BACKUP_FILES} files) → ${HOME_BACKUP_TARGET}"
+    else
+      warn "could not copy the backup to ${HOME_BACKUP_TARGET}: kept here, ${BACKUP_ARCHIVE}"
+      step_done "Backup saved (${BACKUP_SIZE}, ${BACKUP_FILES} files)"
+    fi
+  else
+    step_done "Backup saved (${BACKUP_SIZE}, ${BACKUP_FILES} files)"
+  fi
+  BACKUP_HINT=" — backup: ${BACKUP_WHERE}"
+}
+
+# How to undo what just went up, for the message that says it went wrong.
+undo_hint() {
+  if [ -f "${BACKUP_WHERE}" ]; then
+    echo "  to undo it: ./deploy.sh rollback ${BACKUP_WHERE}"
+  elif [ -n "${BACKUP_WHERE}" ]; then
+    echo "  to undo it: Gitea → Actions → rollback, archive $(basename "${BACKUP_WHERE}") (or copy it here and ./deploy.sh rollback it)"
+  fi
+}
+
+# --- rollback: put a pre-deploy archive back ----------------------------------------
+# An archive is what a push saved just before it overwrote the server: the whole docroot.
+# Code, pages and post sources go back as they were; runtime data written since stays, by the
+# same excludes as a push. The server is archived first, so a rollback can be undone as well.
+# No tests and no build: the archive was a working site, and this is for when the current one
+# is not.
+if [ "${CMD}" = "rollback" ]; then
+  STEP_TOTAL=4
+  [ ${#RSYNC_MODE[@]} -eq 0 ] || STEP_TOTAL=3   # --dry-run skips the backup step
+  echo -e "${BOLD}Rolling back bfrackowiak.pl${NC}"
+  echo -e "  target:  ${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}"
+  echo -e "  archive: ${ROLLBACK_ARCHIVE}"
+  echo -e "  mode:    $([ ${#RSYNC_MODE[@]} -eq 0 ] && echo 'live' || echo 'dry-run')"
+
+  step "Unpacking the archive"
+  RB_UNPACK="${LOG_DIR}/rollback"
+  mkdir -p "${RB_UNPACK}"
+  run "${LOG_DIR}/unpack.log" tar -xzf "${ROLLBACK_ARCHIVE}" --no-same-owner -C "${RB_UNPACK}" \
+    || fail_with_log "${LOG_DIR}/unpack.log" "Could not unpack ${ROLLBACK_ARCHIVE} — nothing was touched."
+  # a push archive holds one directory, named after its timestamp: the docroot is inside it
+  RB_ROOT="${RB_UNPACK}"
+  RB_ENTRIES="$(find "${RB_UNPACK}" -mindepth 1 -maxdepth 1)"
+  if [ "$(printf '%s\n' "${RB_ENTRIES}" | grep -c .)" -eq 1 ] && [ -d "${RB_ENTRIES}" ]; then
+    RB_ROOT="${RB_ENTRIES}"
+  fi
+  RB_FILES="$(find "${RB_ROOT}" -type f | wc -l | tr -d ' ')"
+  # the same floor as the backup: restoring a near-empty tree is how a site disappears
+  [ "${RB_FILES}" -ge 20 ] || die "${ROLLBACK_ARCHIVE} looks empty (${RB_FILES} files) — refusing to roll back onto it. Nothing was touched."
+  RB_SHA="$(sed -n 's/^sha=//p' "${RB_ROOT}/build.txt" 2>/dev/null | head -1 || true)"
+  step_done "Unpacked (${RB_FILES} files$([ -z "${RB_SHA}" ] || echo ", commit ${RB_SHA:0:12}"))"
+
+  maybe_install_remote
+  check_helper
+  BACKUP_HINT=""
+  BACKUP_WHERE=""
+  if [ ${#RSYNC_MODE[@]} -eq 0 ]; then
+    acquire_lock
+    backup_remote "rolled back"
+  fi
+
+  step "Restoring the archive to ${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}"
+  RSYNC_LOG="${LOG_DIR}/rollback.log"
+  run "${RSYNC_LOG}" rsync -az "${RSYNC_PROGRESS[@]}" --stats --itemize-changes "${RSYNC_MODE[@]}" "${SHIP_EXCLUDES[@]}" \
+    -e "${SSH_RSH} -p ${SSH_PORT}" \
+    "${RB_ROOT}/" \
+    "${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}" \
+    || fail_with_log "${RSYNC_LOG}" "Restore failed — the remote may be half-restored${BACKUP_HINT}."
+  XFERRED="$(grep -m1 'Number of regular files transferred' "${RSYNC_LOG}" | grep -oE '[0-9.,]+$' || echo '?')"
+  step_done "Restored (${XFERRED} files transferred)"
+
+  step "Mirroring content/posts from the archive"
+  POSTS_LOG="${LOG_DIR}/rollback-posts.log"
+  run "${POSTS_LOG}" rsync -az --delete --itemize-changes "${RSYNC_MODE[@]}" \
+    -e "${SSH_RSH} -p ${SSH_PORT}" \
+    "${RB_ROOT}/content/posts/" \
+    "${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}/content/posts/" \
+    || fail_with_log "${POSTS_LOG}" "content/posts mirror failed${BACKUP_HINT}."
+  GONE="$(grep -c '^\*deleting' "${POSTS_LOG}" || true)"
+  step_done "content/posts mirrored (${GONE} file(s) removed)"
+
+  echo
+  if [ ${#RSYNC_MODE[@]} -ne 0 ]; then
+    CHANGES="$(cat "${RSYNC_LOG}" "${POSTS_LOG}" | grep -E '^(\*deleting|[<>ch.][fLDS])' | grep -v '^\.' | sed -E 's/^[^ ]+ //' || true)"
+    while IFS= read -r line; do [ -z "${line}" ] || note "${line}"; done < <(printf '%s\n' "${CHANGES}" | head -15)
+    echo -e "${GREEN}${BOLD}Dry run done — nothing was touched.${NC}"
+    exit 0
+  fi
+  # the server now holds the archive's post sources: the next push measures against those
+  sync_state_write "${RB_ROOT}"
+  echo -e "${GREEN}${BOLD}Rolled back to $(basename "${ROLLBACK_ARCHIVE}")${RB_SHA:+ (commit ${RB_SHA})}${NC}"
+  note "the server as it was a moment ago: ${BACKUP_WHERE}"
+  note "the next deploy ships its own tree again: fix forward on main"
+
+  if [ "${DEPLOY_SMOKE:-1}" != "0" ]; then
+    echo
+    echo -e "${BOLD}Smoke checks${NC}"
+    RB_SMOKE=()
+    [ -z "${RB_SHA}" ] || RB_SMOKE=("--sha=${RB_SHA}")
+    if ! run_smoke "${RB_SMOKE[@]}" | sed 's/^/  /'; then
+      echo -e "${RED}✗ rolled back, but the smoke checks failed${BACKUP_HINT}.${NC}"
+      exit 1
+    fi
+  fi
+  exit 0
+fi
+
 [ ${#RSYNC_MODE[@]} -eq 0 ] || STEP_TOTAL=6   # --dry-run skips the backup step
 
 echo -e "${BOLD}Deploying bfrackowiak.pl${NC}"
@@ -730,44 +941,8 @@ fi
 
 # --- 4. backup remote -> local archive (skipped on --dry-run) ---
 BACKUP_HINT=""   # only points at an archive once one actually exists
-if [ ${#RSYNC_MODE[@]} -eq 0 ]; then
-  step "Backing up remote -> ${BACKUP_ARCHIVE}"
-  mkdir -p "${BACKUP_STAGE}"
-
-  run "${LOG_DIR}/backup.log" rsync -az "${RSYNC_PROGRESS[@]}" \
-    -e "${SSH_RSH} -p ${SSH_PORT}" \
-    "${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}/" \
-    "${BACKUP_STAGE}/" \
-    || fail_with_log "${LOG_DIR}/backup.log" "Remote backup failed — nothing was deployed."
-
-  # sanity: an (almost) empty remote means something is very wrong — pushing over
-  # it would make the loss permanent and silent (this exact thing ate the
-  # analytics history on 2026-07-19). Stop and let a human look first.
-  BACKUP_FILES="$(find "${BACKUP_STAGE}" -type f | wc -l | tr -d ' ')"
-  if [ "${BACKUP_FILES}" -lt 20 ]; then
-    die "Remote backup contains only ${BACKUP_FILES} files — the remote looks empty or wrong. Investigate before deploying (backup kept at ${BACKUP_STAGE})."
-  fi
-
-  tar -czf "${BACKUP_ARCHIVE}" -C "${BACKUP_DIR}" "${TIMESTAMP}"
-  rm -rf "${BACKUP_STAGE}"
-
-  BACKUP_SIZE="$(du -h "${BACKUP_ARCHIVE}" | cut -f1)"
-  BACKUP_HINT=" — backup: ${BACKUP_ARCHIVE}"
-  # From the laptop the archive moves to the home server (HOME_BACKUP_TARGET in deploy.env), where
-  # the CI's own backups live too. If that fails it stays here: a backup is never lost to a hop.
-  if [ "${DEPLOY_CI:-0}" != "1" ] && [ -n "${HOME_BACKUP_TARGET:-}" ]; then
-    if rsync -a -e "ssh -o ConnectTimeout=5 -o BatchMode=yes" "${BACKUP_ARCHIVE}" "${HOME_BACKUP_TARGET}" >"${LOG_DIR}/homebackup.log" 2>&1; then
-      rm -f "${BACKUP_ARCHIVE}"
-      BACKUP_HINT=" — backup: ${HOME_BACKUP_TARGET%/}/${TIMESTAMP}.tar.gz"
-      step_done "Backup saved (${BACKUP_SIZE}, ${BACKUP_FILES} files) → ${HOME_BACKUP_TARGET}"
-    else
-      warn "could not copy the backup to ${HOME_BACKUP_TARGET}: kept here, ${BACKUP_ARCHIVE}"
-      step_done "Backup saved (${BACKUP_SIZE}, ${BACKUP_FILES} files)"
-    fi
-  else
-    step_done "Backup saved (${BACKUP_SIZE}, ${BACKUP_FILES} files)"
-  fi
-fi
+BACKUP_WHERE=""
+[ ${#RSYNC_MODE[@]} -ne 0 ] || backup_remote "deployed"
 
 # --- 5. deploy ---
 # build.txt: which commit is live, since when, deployed by whom. The smoke checks compare it with
@@ -795,48 +970,7 @@ RSYNC_LOG="${LOG_DIR}/sync.log"
 RSYNC_CMP=()
 [ "${DEPLOY_CI:-0}" != "1" ] || RSYNC_CMP=(--checksum)
 run "${RSYNC_LOG}" rsync -az "${RSYNC_CMP[@]}" "${RSYNC_PROGRESS[@]}" --stats --itemize-changes "${RSYNC_MODE[@]}" "${DELETE_FLAG[@]}" "${GEOIP_PROTECT[@]}" \
-  --exclude='/.git' \
-  --exclude='.gitignore' \
-  --exclude='/.gitea/' \
-  --exclude='/.githooks/' \
-  --exclude='/.superpowers/' \
-  --exclude='/ci/' \
-  --exclude='/content/outlines/' \
-  --exclude='.claude/' \
-  --exclude='deploy.sh' \
-  --exclude='deploy.env' \
-  --exclude='deploy.env.example' \
-  --exclude='docs/' \
-  --exclude='drafts/' \
-  --exclude='Refernce/' \
-  --exclude='tests/' \
-  --exclude='README.md' \
-  --exclude='LICENSE' \
-  --exclude='config.example.php' \
-  --exclude='tools/preview_admin.php' \
-  --exclude='_archive/' \
-  --exclude='/_remote-backup/' \
-  --exclude='/_remote-logs/' \
-  --exclude='content/comments/' \
-  --exclude='content/.sessions/' \
-  --exclude='content/.ratelimit/' \
-  --exclude='content/.buildlock' \
-  --exclude='content/.sync-state' \
-  --exclude='content/.sync-state.*' \
-  --exclude='content/.deploylock/' \
-  --exclude='content/.logpull.*' \
-  --exclude='Dockerfile' \
-  --exclude='docker-compose.yml' \
-  --exclude='run.sh' \
-  --exclude='content/analytics.db' \
-  --exclude='content/analytics.db-*' \
-  --exclude='content/analytics.seed' \
-  --exclude='content/newsletter.db' \
-  --exclude='content/newsletter.db-*' \
-  --exclude='content/scores.db' \
-  --exclude='content/scores.db-*' \
-  --exclude='*.log' \
-  --exclude='.DS_Store' \
+  "${SHIP_EXCLUDES[@]}" \
   -e "${SSH_RSH} -p ${SSH_PORT}" \
   "${LOCAL_DIR}" \
   "${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}" \
@@ -897,6 +1031,7 @@ if [ ${#RSYNC_MODE[@]} -eq 0 ] && [ "${DEPLOY_SMOKE:-1}" != "0" ]; then
   echo -e "${BOLD}Smoke checks${NC}"
   if ! run_smoke "--sha=${BUILD_SHA}" | sed 's/^/  /'; then
     echo -e "${RED}✗ deployed, but the smoke checks failed${BACKUP_HINT}.${NC}"
+    undo_hint
     exit 1
   fi
 fi

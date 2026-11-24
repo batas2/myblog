@@ -582,6 +582,7 @@ t_assert((bool) preg_match('/PASS build_sha\s+live feed123, expected feed123/', 
 $r = dp_run($s, ['push'], ['DEPLOY_SMOKE' => '1', 'SMOKE_URL' => 'http://127.0.0.1:1', 'SMOKE_LOCAL' => '1']);
 t_eq(1, $r['rc'], 'a push whose smoke checks fail exits 1');
 t_contains('deployed, but the smoke checks failed', $r['out'], 'and says what happened');
+t_assert((bool) preg_match('#to undo it: \./deploy\.sh rollback \S+/_remote-backup/\d{8}-\d{6}\.tar\.gz#', $r['out']), 'and how to undo it');
 
 $r = dp_run($s, ['status', '--sha=x']);
 t_eq(1, $r['rc'], '--sha belongs to smoke only');
@@ -599,5 +600,90 @@ t_eq(0, $r['rc'], 'CI push from a fresh checkout');
 dp_show($r);
 preg_match('/Synced \((\d+) files transferred/', $r['out'], $m);
 t_assert(isset($m[1]) && (int) $m[1] <= 3, 'a fresh checkout sends only what changed (got ' . ($m[1] ?? '?') . ' files)');
+
+/* ---------------- rollback: put a pre-deploy archive back ---------------- */
+section('rollback');
+
+$s = dp_sandbox('rollback');
+$posts = glob($s['local'] . '/content/posts/*.md');
+$postA = basename($posts[0]);
+$localA = "{$s['local']}/content/posts/{$postA}";
+$remoteA = "{$s['docroot']}/content/posts/{$postA}";
+$origA = (string) file_get_contents($localA);
+$backups = "{$s['local']}/_remote-backup";
+$remoteDb = "{$s['docroot']}/content/analytics.db";
+
+$r = dp_run($s, ['push']);   // the first push records the sync marker
+t_eq(0, $r['rc'], 'first push');
+file_put_contents($localA, $origA . "\nrollback-marker v1\n");
+$r = dp_run($s, ['push']);
+t_eq(0, $r['rc'], 'push v1');
+dp_show($r);
+array_map('unlink', glob("{$backups}/*.tar.gz") ?: []);
+file_put_contents($localA, $origA . "\nrollback-marker v2\n");
+$r = dp_run($s, ['push']);
+t_eq(0, $r['rc'], 'push v2');
+dp_show($r);
+t_contains('rollback-marker v2', (string) @file_get_contents($remoteA), 'v2 is live');
+$archives = glob("{$backups}/*.tar.gz") ?: [];
+t_eq(1, count($archives), 'push v2 archived the server as it was at v1');
+$archive = $archives[0] ?? '/missing.tar.gz';
+
+// the site keeps living after the archive: runtime data written since must survive the rollback
+file_put_contents($remoteDb, 'REMOTE-NEWER');
+@mkdir("{$s['docroot']}/content/comments", 0755, true);
+file_put_contents("{$s['docroot']}/content/comments/after-archive.json", '[]');
+sleep(1);   // the pre-rollback backup must not share the archive's timestamp
+
+$r = dp_run($s, ['rollback']);
+t_eq(2, $r['rc'], 'rollback without an archive is a usage error');
+t_contains('rollback <archive.tar.gz>', $r['out'], 'and says how to call it');
+$r = dp_run($s, ['rollback', "{$backups}/nope.tar.gz"]);
+t_eq(2, $r['rc'], 'rollback of a missing file is a usage error');
+$r = dp_run($s, ['push', $archive]);
+t_eq(1, $r['rc'], 'an archive given to push is refused');
+t_contains('applies to rollback', $r['out'], 'and named as such');
+
+$r = dp_run($s, ['rollback', '-n', $archive]);
+t_eq(0, $r['rc'], 'rollback dry run');
+dp_show($r);
+t_contains('rollback-marker v2', (string) @file_get_contents($remoteA), 'dry run leaves the server alone');
+t_eq(1, count(glob("{$backups}/*.tar.gz") ?: []), 'dry run writes no backup');
+
+[, $lockOut] = dp_sh('BLOG_DOCROOT=' . escapeshellarg($s['docroot']) . ' ' . escapeshellarg("{$ROOT}/ci/remote/blog-remote") . ' lock ci');
+$r = dp_run($s, ['rollback', $archive]);
+t_eq(4, $r['rc'], 'rollback waits for a deploy holding the lock');
+t_contains('rollback-marker v2', (string) @file_get_contents($remoteA), 'and touches nothing');
+dp_sh('BLOG_DOCROOT=' . escapeshellarg($s['docroot']) . ' ' . escapeshellarg("{$ROOT}/ci/remote/blog-remote") . ' unlock');
+
+$r = dp_run($s, ['rollback', $archive]);
+t_eq(0, $r['rc'], 'rollback succeeds');
+dp_show($r);
+$liveA = (string) @file_get_contents($remoteA);
+t_contains('rollback-marker v1', $liveA, 'the post is back at v1');
+t_not_contains('rollback-marker v2', $liveA, 'and v2 is gone');
+t_eq('REMOTE-NEWER', (string) @file_get_contents($remoteDb), 'runtime data written after the archive stays');
+t_assert(is_file("{$s['docroot']}/content/comments/after-archive.json"), 'a comment written after the archive stays');
+t_assert(!is_dir("{$s['docroot']}/content/.deploylock"), 'the lock is released (the one inside the archive is not restored)');
+t_eq(2, count(glob("{$backups}/*.tar.gz") ?: []), 'the server was backed up before the rollback');
+t_contains('Rolled back', $r['out'], 'the summary says what happened');
+$unpacked = "{$DP_TMP}/rollback-unpacked";
+@mkdir($unpacked, 0755, true);
+dp_sh('tar -xzf ' . escapeshellarg($archive) . ' -C ' . escapeshellarg($unpacked));
+$top = glob("{$unpacked}/*", GLOB_ONLYDIR) ?: [''];
+$marker = (string) @file_get_contents("{$s['docroot']}/content/.sync-state");
+t_assert(str_contains($marker, "content/posts/{$postA}"), 'the sync marker lists the posts');
+t_eq(dp_hashes($top[0]), $marker, 'the sync marker records the archive');
+$r = dp_run($s, ['status']);
+t_eq(0, $r['rc'], 'after a rollback the server is not ahead: the next push simply ships again');
+
+$tiny = "{$DP_TMP}/rollback-tiny";
+@mkdir("{$tiny}/20260101-000000/content", 0755, true);
+foreach (['index.php', 'robots.txt', 'content/.htaccess'] as $f) file_put_contents("{$tiny}/20260101-000000/{$f}", "x\n");
+dp_sh('tar -czf ' . escapeshellarg("{$tiny}.tar.gz") . ' -C ' . escapeshellarg($tiny) . ' 20260101-000000');
+$r = dp_run($s, ['rollback', "{$tiny}.tar.gz"]);
+t_eq(1, $r['rc'], 'an archive with 3 files is refused');
+t_contains('looks empty', $r['out'], 'as one that looks empty');
+t_contains('rollback-marker v1', (string) @file_get_contents($remoteA), 'and the server is untouched');
 
 exit(t_summary());
