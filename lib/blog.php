@@ -744,6 +744,22 @@ function series_slugs(string $slug): array
 }
 
 /**
+ * Re-point site links at /blog/<slug>/ to a route an admin can open. A post that is not
+ * live has no page under /blog/, so inside a draft every link to a sibling draft 404s
+ * until both are published, and a series read in preview is a chain of dead ends.
+ * $to maps a slug to the replacement href; $only, when given, limits the swap to those
+ * slugs (a set: slug => true), so links to published essays keep pointing at the site.
+ * Admin surfaces only: a share-link guest must never be handed a path to a second draft.
+ */
+function admin_post_links(string $html, callable $to, ?array $only = null): string
+{
+    return (string) preg_replace_callback('#href="/blog/([a-z0-9-]+)/"#', function (array $m) use ($to, $only): string {
+        if ($only !== null && !isset($only[$m[1]])) return $m[0];
+        return 'href="' . e($to($m[1])) . '"';
+    }, $html);
+}
+
+/**
  * The three reading paths ("doors"): one editorial list, rendered on the start
  * page and on the homepage so the two never drift apart.
  */

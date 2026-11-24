@@ -85,7 +85,16 @@ $i = array_search($slug, array_column($published, 'slug'), true);
 $prev = $i === false ? ($published[0] ?? null) : ($published[$i + 1] ?? null);
 $next = $i === false ? null : ($i > 0 ? $published[$i - 1] : null);
 
-$html = render_post($post, $prev, $next, $published);
+/* The admin reads drafts against every other post, drafts included, so the series box
+   lists the unpublished parts and their links lead to their previews instead of 404s.
+   A guest gets the public pool only: one shared draft never opens a door to the next. */
+$pool = $isAdmin ? load_posts(true) : $published;
+$html = render_post($post, $prev, $next, $pool);
+if ($isAdmin) {
+    $unpublished = [];
+    foreach ($pool as $p) if ($p['status'] !== 'published') $unpublished[$p['slug']] = true;
+    $html = admin_post_links($html, fn(string $s): string => '/preview.php?slug=' . $s, $unpublished);
+}
 
 /* The generated page carries one PHP island, the comment thread. Preview never
    executes generated source; it substitutes a note instead. Nothing is lost:

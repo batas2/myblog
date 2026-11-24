@@ -1645,6 +1645,19 @@ t_contains('Reviewability, part 1', $arch, 'archive rows carry the series label'
 $bySlug = array_column($allPosts, null, 'slug');
 t_contains('class="series-nav"', render_post($bySlug['the-bottleneck-moved'], null, null, $posts), 'post page carries the series nav');
 
+/* Admin surfaces re-point links to posts that have no page yet. Preview and review rely on it,
+   so a series of drafts reads in order instead of as a chain of 404s. */
+section('admin_post_links');
+$toPv = fn(string $s): string => '/preview.php?slug=' . $s;
+$links = '<a href="/blog/draft-a/">a</a> <a href="/blog/live-b/">b</a> <a href="https://x.test/blog/draft-a/">c</a>';
+$swapped = admin_post_links($links, $toPv, ['draft-a' => true]);
+t_contains('href="/preview.php?slug=draft-a"', $swapped, 'a link to an unpublished post opens its preview');
+t_contains('href="/blog/live-b/"', $swapped, 'a link to a published post keeps pointing at the site');
+t_contains('href="https://x.test/blog/draft-a/"', $swapped, 'absolute urls are left alone');
+t_contains('href="/review.php?slug=live-b&amp;mode=read"',
+    admin_post_links($links, fn(string $s): string => '/review.php?slug=' . $s . '&mode=read'),
+    'without a filter every post link is swapped, and the new href is escaped');
+
 section('list thumbnails are always the main image of the post');
 foreach (['a-feature-is-not-a-service', 'the-bottleneck-moved', 'turn-the-sequence-diagram-on-its-side', 'mathematicians-vs-lawyers'] as $slug) {
     $h = hero_meta($slug);

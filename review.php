@@ -113,6 +113,16 @@ foreach ($parsed['blocks'] as $b) {
 }
 
 $mode = ($_GET['mode'] ?? 'read') === 'review' ? 'review' : 'read';
+
+/* A draft's links to its sibling drafts lead to /blog/ pages that do not exist yet. Where a
+   block cannot be edited, those links open the sibling here instead. Never inside an editable
+   block: its HTML is turned back into markdown on save, and the swapped href would ship. */
+$everyPost = load_posts(true);
+$unpublished = [];
+foreach ($everyPost as $q) if ($q['status'] !== 'published') $unpublished[$q['slug']] = true;
+$toReview = fn(string $s): string => '/review.php?slug=' . $s . '&mode=read';
+$seriesNav = admin_post_links(series_nav($slug, $everyPost), $toReview);
+
 $statusLabel = ['draft' => 'draft', 'scheduled' => 'scheduled', 'published' => 'published'][$post['status']] ?? $post['status'];
 $csrf = admin_csrf_token();
 ?>
@@ -185,7 +195,8 @@ $csrf = admin_csrf_token();
     <div class="prose rv-prose" style="margin-top:1.6rem;padding-inline:0;max-width:none">
       <?php foreach ($parsed['blocks'] as $b):
           $editable = $mode === 'review' && $b['editable'];
-          $html = md_to_html(explode("\n", $b['md'])); ?>
+          $html = md_to_html(explode("\n", $b['md']));
+          if (!$editable) $html = admin_post_links($html, $toReview, $unpublished); ?>
         <div class="rv-b<?= $editable ? ' is-editable' : '' ?>"
              data-id="<?= e($b['id']) ?>"
              data-type="<?= e($b['type']) ?>"
@@ -194,6 +205,8 @@ $csrf = admin_csrf_token();
              <?= $editable ? 'contenteditable="true" spellcheck="true"' : '' ?>><?= $html ?></div>
       <?php endforeach; ?>
     </div>
+    <?php /* outside .rv-prose: review.js anchors and edits only inside it */ ?>
+    <?php if ($seriesNav !== ''): ?><div class="rv-series" style="margin-top:2.6rem"><?= $seriesNav ?></div><?php endif; ?>
   </article>
 
   <aside class="rv-rail" id="rv-rail" aria-label="Notes"></aside>
