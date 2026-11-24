@@ -94,7 +94,7 @@ cp config.example.php config.php   # fill in secrets: openssl rand -hex 24
 php tools/build.php                # generate the site
 php -S 127.0.0.1:8080              # serve locally
 ./run.sh                           # …or the docker-compose equivalent
-php tests/run.php                  # 500+ assertions, unit + integration
+php tests/run.php                  # 1,900+ checks: unit, integration, deploy, CI scripts
 ```
 
 ## Writing a post
@@ -235,37 +235,54 @@ prints the queue after every deploy so nothing waits unnoticed.
 
 `deploy.sh` reads its SSH target from a gitignored `deploy.env` (copy
 `deploy.env.example`), runs the tests, rebuilds, refreshes the GeoIP database,
-**backs up the remote docroot to a local `_remote-backup/<timestamp>.tar.gz`**,
-then rsyncs. Runtime data on the server (comments, analytics, subscribers,
-scores mirror) is excluded in both directions and can never be overwritten.
-`./deploy.sh help` is the reference. Four commands: `push` (the default, so a
-bare `./deploy.sh` still deploys), `pull`, `data` and `status`. Modifiers:
-`-n/--dry-run` previews, `--delete` also removes remotely deleted files,
-`--no-geoip` skips the refresh, `-v/--verbose` streams every command. The old
-`--clean` and `--pull-logs` spellings still work and say what replaced them.
+**backs up the remote docroot** to `<timestamp>.tar.gz` (into `_remote-backup/`,
+or onward to `HOME_BACKUP_TARGET` when `deploy.env` sets one), then rsyncs and
+finishes with the smoke checks. Runtime data on the server (comments, analytics,
+subscribers, scores mirror) is excluded in both directions and can never be
+overwritten. `./deploy.sh help` is the reference.
+
+| Command | What it does |
+|---|---|
+| `push` | The default, so a bare `./deploy.sh` still deploys |
+| `pull` | Post sources and review notes come home, briefs are written |
+| `data` | The live site's runtime data comes home; nothing is deployed |
+| `status` | Do both sides hold the same post sources and notes? Reads only |
+| `smoke [url] [--sha=…] [--local]` | Pages, feed, sitemap, 404s, hidden files, security headers, certificate, and the live commit in `build.txt` |
+| `rollback <archive.tar.gz>` | Puts a pre-deploy backup back: code, pages and post sources as they were, runtime data as it is now. The server is backed up first |
+| `backup` | The pre-deploy backup on its own, without deploying |
+| `install-remote` | Copies `ci/remote/*` (the server-side helpers) into `~/bin` on the server; push, pull and data do it on their own |
+
+Modifiers: `-n/--dry-run` previews, `--delete` also removes remotely deleted
+files, `--no-geoip` skips the refresh, `--force` pushes over a server that has
+moved on, `-v/--verbose` streams every command.
+
+Exit codes: `0` done, `1` failed, `2` bad arguments, `3` the server is ahead
+(pull first), `4` another deploy holds the lock on the server.
 
 Since `review.php` lets the server edit post sources too, both sides can write
-`content/posts/`. Every pull and successful push records what the two agreed on,
-and a push **stops** rather than overwriting a server that has changed since:
+`content/posts/`. Every pull and successful push records on the server what the
+two agreed on, and a push from any machine **stops** rather than overwriting a
+server that has changed since:
 
     read the post on the site, leave notes, fix small things
     ./deploy.sh pull            posts and notes come home, briefs are written
     claude code                 works from drafts/review/, resolves each note
     ./deploy.sh                 the result and the history go back up
+                                (or commit and push: the pipeline deploys main)
 
-`./deploy.sh status` answers "did I pull?" without changing anything, and exits
-non-zero when the server is ahead. `--force` overrides the guard.
+One deploy runs at a time: the laptop and the pipeline take the same lock on the
+server, and a second one exits with `4`. A deploy from the laptop warns when it
+ships uncommitted changes or a commit that is not on `main` yet, because the
+next pipeline deploy replaces it.
 
-`./deploy.sh data` goes the other way and deploys nothing: it downloads
-the live site's runtime data into `_remote-logs/<timestamp>/`, mirroring the
-server's layout — `analytics.db` (every visit ever recorded; nothing is pruned
-or rotated), `newsletter.db`, `scores.db`, `content/comments/*.json` and the
-cron's `content/*.log`. The databases are copied with `VACUUM INTO` **on the
-server**, so a WAL-mode database being written to by live traffic still arrives
-as a consistent single file — plain rsync of a `.db` would leave recent hits
-behind in the `-wal` sidecar. Nothing on the server is modified, and the run
-prints the row count and date span of what it pulled. Set `REMOTE_LOG_DIR` in
-`deploy.env` to pull the host's own access/error logs alongside it.
+`./deploy.sh data` downloads the live site's runtime data into
+`_remote-logs/<timestamp>/` (`DEPLOY_LOGS_DIR` moves it), mirroring the
+server's layout: `analytics.db` (every visit ever recorded), `newsletter.db`,
+`scores.db`, `content/comments/*.json` and the cron's `content/*.log`. The
+databases are copied with `VACUUM INTO` **on the server**, so a WAL-mode
+database being written to by live traffic still arrives as a consistent single
+file. Set `REMOTE_LOG_DIR` in `deploy.env` to pull the host's own access and
+error logs alongside it.
 
 `content/geoip.dat` is the one data file that ships *from* your machine, so a
 stale local copy would overwrite a fresher one on the server. The deploy
@@ -273,6 +290,53 @@ re-runs `tools/geoip_update.php` whenever the local database is older than
 `GEOIP_MAX_AGE_DAYS` (default 7, set it in `deploy.env`; DB-IP publishes
 monthly). If that refresh cannot run or fails, the file is excluded from the
 sync instead, so the server's copy is never replaced by an older one.
+
+## CI/CD
+
+The repository of record is a private Gitea; this GitHub repository is its
+public mirror. A self-hosted Gitea runner, in a container with the production
+PHP version, runs the pipeline on every push:
+
+| Job | When | What |
+|---|---|---|
+| `checks` | every push | PHP lint, the test suite, a build, the site check (links, feeds, sitemap, post metadata, nothing unpublished in the output), the editorial report |
+| `public-export` | every push | The public history of this commit, through the publication gate, into a private preview |
+| `dry-run` | branches | What a deploy of the branch would change on the server |
+| `deploy` | `main` | Stops if the server has edits not yet pulled, backs the server up, deploys, smoke checks the live commit, prunes old backups |
+| `publish` | `main`, after `deploy` | The gated public history onto GitHub, fast-forward only |
+
+By hand from the Gitea UI: `deploy-manual` (any ref, dry run by default),
+`rollback` (lists the archives; acts only with `confirm=ROLLBACK`) and
+`publish-github`. On a schedule: `nightly` copies the site's data every night,
+checks every database, takes a copy of the whole docroot on Mondays and prunes
+(14 nightly copies plus one a month for a year, 8 weekly ones); `restore-test`
+restores the newest copy once a month, serves it with `php -S` and runs the
+smoke checks against it.
+
+The pipeline's key to the host is pinned to one command (`ci/remote/blog-gate`):
+rsync inside the blog's directory, and the helper's own subcommands, nothing
+else. No shell, no other site on the account.
+
+**The public history.** GitHub gets the real history of `main`, filtered with
+`git filter-repo`: an allowlist of public paths (anything new is private until
+it is listed), private paths dropped once more, host names and home paths
+replaced, the author mapped to the GitHub noreply address. The rewrite is
+deterministic, so every export fast-forwards the last one. Before anything
+leaves, a gate reads every commit and stops on a private path, a gitleaks
+finding, an infrastructure name, a value from the real `config.php`, an e-mail
+address outside an allowlist, or a blob of 50 MB or more.
+
+**How the writing shows in it.** Posts are written in two passes: I outline,
+AI turns the outline into native English, and each step is its own commit.
+Outlines live in `content/outlines/<slug>.md`, which never ships to the server.
+
+| Prefix | Commit |
+|---|---|
+| `Outline: <title>` | The outline |
+| `Draft: <title>` | The post, `**Status:** draft` |
+| `Native pass: <title>` | An AI pass for native English, with a `Co-Authored-By` trailer |
+| `Voice check: <title>` | An AI pass against the voice rules, with a `Co-Authored-By` trailer |
+| `Publish: <title>` | A date set, the draft status gone |
 
 ## License
 
