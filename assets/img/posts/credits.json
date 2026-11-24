@@ -214,5 +214,35 @@
     "license": "by",
     "source": "https://www.flickr.com/photos/10934572@N00/4208690449",
     "title": "Stamp of Approval"
+  },
+  "the-graph-database-we-didnt-buy": {
+    "creator": "Mike McBey",
+    "license": "by",
+    "source": "https://commons.wikimedia.org/wiki/File:Vintage_telephone_switchboard_(49467795397).jpg",
+    "title": "Vintage telephone switchboard"
+  },
+  "one-row-per-edge": {
+    "creator": "Cbaile19",
+    "license": "cc0",
+    "source": "https://commons.wikimedia.org/wiki/File:Demmler_Bros_ghost_signs,_2021-04-26.jpg",
+    "title": "Demmler Bros ghost signs"
+  },
+  "the-name-is-an-observation": {
+    "creator": "D. Benjamin Miller",
+    "license": "cc0",
+    "source": "https://commons.wikimedia.org/wiki/File:Bilingual_street_sign_in_Hampstead,_Quebec.jpg",
+    "title": "Bilingual street sign in Hampstead, Quebec"
+  },
+  "rejected-in-the-morning": {
+    "creator": "unknown",
+    "license": "pdm",
+    "source": "https://commons.wikimedia.org/wiki/File:Harvard_Rowing_Crew_at_Henley_2004.JPG",
+    "title": "Harvard Rowing Crew at Henley 2004"
+  },
+  "owned-elsewhere": {
+    "creator": "MarkBuckawicki",
+    "license": "cc0",
+    "source": "https://commons.wikimedia.org/wiki/File:Post_Office_Boxes.JPG",
+    "title": "Post Office Boxes"
   }
 }

@@ -1,0 +1,22 @@
+<mxfile host="app.diagrams.net" agent="bfrackowiak.pl diagram-gen" version="24.7.17">
+  <diagram name="three-verdicts" id="three-verdicts">
+    <mxGraphModel dx="580" dy="356" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="580" pageHeight="356" background="none" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="l0" value="Removes the cause: the collectors are the fix" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;fontColor=#767884;fontSize=17;fontFamily=Helvetica;" vertex="1" parent="1"><mxGeometry x="20" y="16" width="540" height="28" as="geometry"/></mxCell>
+        <mxCell id="b0" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#767884;strokeWidth=1.6;fontColor=#767884;fontSize=17;fontFamily=Helvetica;" vertex="1" parent="1"><mxGeometry x="20" y="50" width="244" height="26" as="geometry"/></mxCell>
+        <mxCell id="v0" value="9" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;fontColor=#767884;fontSize=21;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="276" y="46" width="80" height="34" as="geometry"/></mxCell>
+        <mxCell id="l1" value="Supplies the inputs: another component makes the result" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;fontColor=#767884;fontSize=17;fontFamily=Helvetica;" vertex="1" parent="1"><mxGeometry x="20" y="100" width="540" height="28" as="geometry"/></mxCell>
+        <mxCell id="b1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#767884;strokeWidth=1.6;fontColor=#767884;fontSize=17;fontFamily=Helvetica;" vertex="1" parent="1"><mxGeometry x="20" y="134" width="380" height="26" as="geometry"/></mxCell>
+        <mxCell id="v1" value="14" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;fontColor=#767884;fontSize=21;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="412" y="130" width="80" height="34" as="geometry"/></mxCell>
+        <mxCell id="l2" value="Owned elsewhere: the fix is in another component" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;fontColor=#6366E8;fontSize=17;fontFamily=Helvetica;" vertex="1" parent="1"><mxGeometry x="20" y="184" width="540" height="28" as="geometry"/></mxCell>
+        <mxCell id="b2" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#6366E8;strokeColor=#6366E8;strokeWidth=1.6;fontColor=#767884;fontSize=17;fontFamily=Helvetica;" vertex="1" parent="1"><mxGeometry x="20" y="218" width="163" height="26" as="geometry"/></mxCell>
+        <mxCell id="v2" value="6" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;fontColor=#6366E8;fontSize=21;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="195" y="214" width="80" height="34" as="geometry"/></mxCell>
+        <mxCell id="l3" value="Fell off the map: which customers use my data, and for what?" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;fontColor=#767884;fontSize=17;fontFamily=Helvetica;" vertex="1" parent="1"><mxGeometry x="20" y="268" width="540" height="28" as="geometry"/></mxCell>
+        <mxCell id="b3" value="" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;dashPattern=6 4;fillColor=none;strokeColor=#767884;strokeWidth=1.6;fontColor=#767884;fontSize=17;fontFamily=Helvetica;" vertex="1" parent="1"><mxGeometry x="20" y="302" width="27" height="26" as="geometry"/></mxCell>
+        <mxCell id="v3" value="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;fontColor=#767884;fontSize=21;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="59" y="298" width="80" height="34" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

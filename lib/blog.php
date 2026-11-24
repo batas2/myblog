@@ -81,6 +81,11 @@ const SERIES = [
     'diagrams-are-conversations-not-documentation' => ['Diagrams', 1],
     'the-diagram-that-cannot-lie'             => ['Diagrams', 2],
     'turn-the-sequence-diagram-on-its-side'   => ['Diagrams', 3],
+    'the-graph-database-we-didnt-buy'         => ['From edges to facts', 1],
+    'one-row-per-edge'                        => ['From edges to facts', 2],
+    'the-name-is-an-observation'              => ['From edges to facts', 3],
+    'rejected-in-the-morning'                 => ['From edges to facts', 4],
+    'owned-elsewhere'                         => ['From edges to facts', 5],
 ];
 
 /** How many of the newest essays the homepage lists before linking the full archive. */

@@ -1,0 +1,61 @@
+<mxfile host="app.diagrams.net" agent="bfrackowiak.pl diagram-gen" version="24.7.17">
+  <diagram name="where-the-write-runs" id="where-the-write-runs">
+    <mxGraphModel dx="580" dy="600" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="580" pageHeight="600" background="none" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="t1" value="Morning version" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;fontColor=#767884;fontSize=18;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="10" width="250" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="t2" value="Evening version" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;fontColor=#6366E8;fontSize=18;fontFamily=Helvetica;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="300" y="10" width="250" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="l1" value="Service that learns the fact" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#767884;fontColor=#767884;fontSize=17;fontFamily=Helvetica;strokeWidth=1.6;" vertex="1" parent="1">
+          <mxGeometry x="20" y="50" width="250" height="64" as="geometry"/>
+        </mxCell>
+        <mxCell id="l2" value="Collector service for its channel" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#767884;fontColor=#767884;fontSize=17;fontFamily=Helvetica;strokeWidth=1.6;" vertex="1" parent="1">
+          <mxGeometry x="20" y="160" width="250" height="64" as="geometry"/>
+        </mxCell>
+        <mxCell id="l3" value="Central intake:&lt;br&gt;maps and writes" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#767884;fontColor=#767884;fontSize=17;fontFamily=Helvetica;strokeWidth=1.6;" vertex="1" parent="1">
+          <mxGeometry x="20" y="270" width="250" height="64" as="geometry"/>
+        </mxCell>
+        <mxCell id="r1" value="Service that learns the fact,&lt;br&gt;with the collector library inside&lt;br&gt;&lt;br&gt;one outbox row in its&lt;br&gt;own transaction, then&lt;br&gt;archive, map and write" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#6366E8;fontColor=#6366E8;fontSize=17;fontFamily=Helvetica;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="300" y="50" width="250" height="284" as="geometry"/>
+        </mxCell>
+        <mxCell id="lnd" value="Landing store: every raw record is archived first" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#767884;fontColor=#767884;fontSize=17;fontFamily=Helvetica;strokeWidth=1.6;" vertex="1" parent="1">
+          <mxGeometry x="20" y="400" width="530" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="g" value="Fact graph" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#767884;fontColor=#767884;fontSize=17;fontFamily=Helvetica;strokeWidth=1.6;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="520" width="530" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="e1" value="" style="edgeStyle=none;rounded=0;html=1;strokeColor=#767884;strokeWidth=1.6;endArrow=block;endFill=1;" edge="1" parent="1" source="l1" target="l2">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e1l" value="network hop" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontColor=#767884;fontSize=17;fontFamily=Helvetica;" vertex="1" parent="1">
+          <mxGeometry x="155" y="122" width="120" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="e2" value="" style="edgeStyle=none;rounded=0;html=1;strokeColor=#767884;strokeWidth=1.6;endArrow=block;endFill=1;" edge="1" parent="1" source="l2" target="l3">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e2l" value="network hop" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontColor=#767884;fontSize=17;fontFamily=Helvetica;" vertex="1" parent="1">
+          <mxGeometry x="155" y="232" width="120" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="e3" value="" style="edgeStyle=none;rounded=0;html=1;strokeColor=#767884;strokeWidth=1.6;endArrow=block;endFill=1;" edge="1" parent="1" source="l3" target="lnd">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="145" y="334" as="sourcePoint"/>
+            <mxPoint x="145" y="400" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e4" value="" style="edgeStyle=none;rounded=0;html=1;strokeColor=#6366E8;strokeWidth=2;endArrow=block;endFill=1;exitX=0.5;exitY=1;entryX=0.75;entryY=0;" edge="1" parent="1" source="r1" target="lnd">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e5" value="" style="edgeStyle=none;rounded=0;html=1;strokeColor=#767884;strokeWidth=1.6;endArrow=block;endFill=1;" edge="1" parent="1" source="lnd" target="g">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e5l" value="then the write" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontColor=#767884;fontSize=17;fontFamily=Helvetica;" vertex="1" parent="1">
+          <mxGeometry x="295" y="472" width="160" height="30" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
