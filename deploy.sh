@@ -659,6 +659,9 @@ run "${RSYNC_LOG}" rsync -az "${RSYNC_PROGRESS[@]}" --stats --itemize-changes "$
   --exclude='.git/' \
   --exclude='.gitignore' \
   --exclude='.claude/' \
+  --exclude='.superpowers/' \
+  --exclude='.githooks/' \
+  --exclude='_remote-logs/' \
   --exclude='deploy.sh' \
   --exclude='deploy.env' \
   --exclude='deploy.env.example' \
