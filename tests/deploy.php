@@ -478,8 +478,12 @@ if ($rrsync === '') {
 
     $r = dp_run($s, ['status'], $env);
     t_eq(0, $r['rc'], 'status through the gate');
+    // a real database: in CI mode a snapshot that fails fails the run
+    unlink($s['docroot'] . '/content/analytics.db');
+    $gatedDb = dp_wal_db($s['docroot'] . '/content/analytics.db', 1);
     $r = dp_run($s, ['data'], $env);
     t_eq(0, $r['rc'], 'data through the gate');
+    $gatedDb = null;
     dp_show($r);
     $r = dp_run($s, ['install-remote'], $env);
     t_assert($r['rc'] !== 0, 'the CI key cannot install into ~/bin');
@@ -685,5 +689,43 @@ $r = dp_run($s, ['rollback', "{$tiny}.tar.gz"]);
 t_eq(1, $r['rc'], 'an archive with 3 files is refused');
 t_contains('looks empty', $r['out'], 'as one that looks empty');
 t_contains('rollback-marker v1', (string) @file_get_contents($remoteA), 'and the server is untouched');
+
+/* ---------------- nightly: data in CI mode, DEPLOY_LOGS_DIR, backup ---------------- */
+section('nightly');
+
+$s = dp_sandbox('nightly');   // the server's analytics.db is the text 'REMOTE': its snapshot fails
+$logs = "{$DP_TMP}/nightly-data";
+$r = dp_run($s, ['data'], ['DEPLOY_LOGS_DIR' => $logs]);
+t_eq(0, $r['rc'], 'a failed snapshot from the laptop: a warning and rc 0, as before');
+t_contains('analytics.db', $r['out'], 'the warning names the database');
+$r = dp_run($s, ['data'], ['DEPLOY_CI' => '1', 'DEPLOY_LOGS_DIR' => $logs]);
+t_eq(1, $r['rc'], 'data fails in CI mode on snapshot failure');
+t_contains('analytics.db', $r['out'], 'naming the database');
+t_eq([], glob($s['docroot'] . '/content/.logpull.*') ?: [], 'and leaves no snapshot directory on the server');
+
+unlink($s['docroot'] . '/content/analytics.db');
+$live = dp_wal_db($s['docroot'] . '/content/analytics.db', 2);
+$r = dp_run($s, ['data'], ['DEPLOY_CI' => '1', 'DEPLOY_LOGS_DIR' => $logs]);
+t_eq(0, $r['rc'], 'data in CI mode with healthy databases');
+dp_show($r);
+t_eq(1, count(glob("{$logs}/*/content/analytics.db") ?: []), 'data honours DEPLOY_LOGS_DIR');
+t_eq([], glob($s['local'] . '/_remote-logs/*') ?: [], 'and writes nothing into the checkout');
+
+$before = dp_tree($s['docroot']);
+$weekly = "{$DP_TMP}/nightly-weekly";
+$r = dp_run($s, ['backup'], ['DEPLOY_CI' => '1', 'DEPLOY_BACKUP_DIR' => $weekly]);
+t_eq(0, $r['rc'], 'backup succeeds');
+dp_show($r);
+$arch = glob("{$weekly}/*.tar.gz") ?: [];
+t_eq(1, count($arch), 'backup creates an archive');
+[, $listing] = dp_sh('tar -tzf ' . escapeshellarg($arch[0] ?? '/nope') . ' | grep -c "/index.php$"');
+t_assert((int) $listing > 0, 'of the whole docroot');
+t_eq($before, dp_tree($s['docroot']), 'backup creates an archive without deploying: the server is unchanged');
+t_assert(!is_dir($s['docroot'] . '/content/.deploylock'), 'and the lock is released');
+dp_sh('BLOG_DOCROOT=' . escapeshellarg($s['docroot']) . ' ' . escapeshellarg("{$ROOT}/ci/remote/blog-remote") . ' lock laptop');
+$r = dp_run($s, ['backup'], ['DEPLOY_CI' => '1', 'DEPLOY_BACKUP_DIR' => $weekly]);
+t_eq(4, $r['rc'], 'backup waits for a deploy holding the lock');
+dp_sh('BLOG_DOCROOT=' . escapeshellarg($s['docroot']) . ' ' . escapeshellarg("{$ROOT}/ci/remote/blog-remote") . ' unlock');
+$live = null;
 
 exit(t_summary());

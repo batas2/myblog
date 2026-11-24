@@ -46,7 +46,9 @@ BACKUP_DIR="${BACKUP_DIR%/}"
 TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
 BACKUP_STAGE="${BACKUP_DIR}/${TIMESTAMP}"
 BACKUP_ARCHIVE="${BACKUP_DIR}/${TIMESTAMP}.tar.gz"
-LOGS_DIR="${LOCAL_DIR}_remote-logs"
+# data writes here; the nightly job points it at the backup mount (DEPLOY_LOGS_DIR)
+LOGS_DIR="${DEPLOY_LOGS_DIR:-${LOCAL_DIR}_remote-logs}"
+LOGS_DIR="${LOGS_DIR%/}"
 LOGS_STAGE="${LOGS_DIR}/${TIMESTAMP}"
 
 # --- colors ---
@@ -112,6 +114,8 @@ COMMANDS
               subscribers) stays as it is now, and the server is backed up first.
               No tests, no build. The next push ships its own tree again, so fix
               forward on main once the site is safe.
+  backup      Archive the live docroot into _remote-backup/ (DEPLOY_BACKUP_DIR), the
+              same backup a push takes first, without deploying anything.
   install-remote
               Copy ci/remote/* into ~/bin on the server. push, pull and data do it
               on their own; run it by hand after changing those scripts when you
@@ -165,7 +169,7 @@ HELPTEXT
 # The old flag spellings still work, because muscle memory is a real cost.
 for arg in "$@"; do
   case "$arg" in
-    push|pull|data|status|install-remote|smoke|rollback|help)
+    push|pull|data|status|install-remote|smoke|rollback|backup|help)
       [ -z "${CMD}" ] || die "Two commands given (${CMD}, ${arg}) — pick one."
       CMD="${arg}" ;;
     *.tar.gz|*.tgz) ROLLBACK_ARCHIVE="${arg}" ;;
@@ -514,12 +518,13 @@ if [ "${CMD}" = "data" ]; then
       || fail_with_log "${LOG_DIR}/snapshot.log" "Snapshot failed on the server — nothing was pulled."
 
     SNAP_OK="$(grep -c '^ok ' "${LOG_DIR}/snapshot.log" || true)"
+    SNAP_FAILS=""
     step_done "${SNAP_OK} database(s) snapshotted"
     # a database that could not be copied is the whole point of the run — say so
     while IFS= read -r line; do
       case "${line}" in
         ok\ *)   [ "${VERBOSE}" -eq 1 ] || note "${line#ok }" ;;
-        fail\ *) warn "${line#fail }" ;;
+        fail\ *) warn "${line#fail }"; SNAP_FAILS="${SNAP_FAILS}  ${line#fail }\n" ;;
         skip\ *) note "${line#skip }" ;;
       esac
     done < "${LOG_DIR}/snapshot.log"
@@ -578,6 +583,7 @@ if [ "${CMD}" = "data" ]; then
       # own data is already down and that is what the run was for
       dump_log "${LOG_DIR}/pullsrv.log"
       warn "could not read ${REMOTE_LOG_DIR} — check REMOTE_LOG_DIR in deploy.env"
+      SNAP_FAILS="${SNAP_FAILS:-}  server logs: ${REMOTE_LOG_DIR} could not be read\n"
     fi
   fi
 
@@ -589,6 +595,13 @@ if [ "${CMD}" = "data" ]; then
   fi
 
   # --- what came back ---
+  # From the laptop a missing database is a warning above. For the nightly backup it is the
+  # failure the job exists to catch: everything that could come down did, and the run says no.
+  if [ "${DEPLOY_CI:-0}" = "1" ] && [ -n "${SNAP_FAILS:-}" ]; then
+    echo -e "${RED}✗ incomplete copy in ${LOGS_STAGE}/:${NC}"
+    echo -en "${SNAP_FAILS}"
+    exit 1
+  fi
   PULLED_SIZE="$(du -sh "${LOGS_STAGE}" | cut -f1)"
   PULLED_N="$(find "${LOGS_STAGE}" -type f | wc -l | tr -d ' ')"
   echo -e "${GREEN}${BOLD}Pulled ${PULLED_N} file(s), ${PULLED_SIZE} → ${LOGS_STAGE}/${NC}"
@@ -804,6 +817,27 @@ if [ "${CMD}" = "rollback" ]; then
       exit 1
     fi
   fi
+  exit 0
+fi
+
+# --- backup: the pre-deploy archive on its own, for the weekly copy of the whole site ---
+if [ "${CMD}" = "backup" ]; then
+  STEP_TOTAL=1
+  echo -e "${BOLD}Backing up bfrackowiak.pl${NC}"
+  echo -e "  source: ${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}"
+  echo -e "  target: ${BACKUP_ARCHIVE}"
+  if [ ${#RSYNC_MODE[@]} -ne 0 ]; then
+    echo -e "${GREEN}${BOLD}Dry run done — nothing was touched.${NC}"
+    exit 0
+  fi
+  maybe_install_remote
+  check_helper
+  acquire_lock   # a deploy halfway through would be archived halfway through
+  BACKUP_HINT=""
+  BACKUP_WHERE=""
+  backup_remote "backed up"
+  echo
+  echo -e "${GREEN}${BOLD}Backup: ${BACKUP_WHERE}${NC}"
   exit 0
 fi
 
