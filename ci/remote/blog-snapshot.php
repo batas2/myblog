@@ -38,6 +38,9 @@ foreach (['analytics.db', 'newsletter.db', 'scores.db'] as $name) {
             if (!copy($src, $out)) throw new RuntimeException('copy failed');
             $method = 'checkpoint+copy';
         } catch (Throwable $e2) {
+            // SQLite 3.40 creates the VACUUM INTO target before it fails: a copy that is not one
+            // must not sit in the snapshot under the database's name
+            @unlink($out);
             echo "fail {$name} — {$e2->getMessage()}\n";
             continue;
         }

@@ -257,6 +257,17 @@ t_assert(is_dir("{$d}/content/posts") && is_file("{$d}/content/posts/2026-01-01-
 t_eq(0, br_run($d, ['cleanup', "{$d}/content/.logpull.1"])['rc'], 'cleanup accepts a snapshot directory');
 t_assert(!is_dir("{$d}/content/.logpull.1"), 'snapshot directory removed');
 
+// A database that cannot be read is reported, and leaves nothing under its name: SQLite 3.40
+// (the CI image) creates the VACUUM INTO target before it fails, which made an empty
+// analytics.db sit in the copy next to the warning.
+$bad = "{$DP_TMP}/br-bad";
+@mkdir("{$bad}/content", 0755, true);
+file_put_contents("{$bad}/content/analytics.db", 'REMOTE');
+$r = br_run($bad, ['snapshot']);
+preg_match('/^dir (\S+)$/m', $r['out'], $m);
+t_contains('fail analytics.db', $r['out'], 'a database that is not one is reported as failed');
+t_assert(isset($m[1]) && !file_exists($m[1] . '/analytics.db'), 'and leaves no file of that name in the snapshot');
+
 $live = dp_wal_db("{$d}/content/analytics.db", 3);
 $r = br_run($d, ['snapshot']);
 t_eq(0, $r['rc'], 'snapshot succeeds');
@@ -697,10 +708,12 @@ $s = dp_sandbox('nightly');   // the server's analytics.db is the text 'REMOTE':
 $logs = "{$DP_TMP}/nightly-data";
 $r = dp_run($s, ['data'], ['DEPLOY_LOGS_DIR' => $logs]);
 t_eq(0, $r['rc'], 'a failed snapshot from the laptop: a warning and rc 0, as before');
-t_contains('analytics.db', $r['out'], 'the warning names the database');
+t_assert((bool) preg_match('/⚠ analytics\.db — /u', $r['out']), 'the warning names the database');
+t_eq([], glob("{$logs}/*/content/analytics.db") ?: [], 'and the failed database is not in the copy');
 $r = dp_run($s, ['data'], ['DEPLOY_CI' => '1', 'DEPLOY_LOGS_DIR' => $logs]);
 t_eq(1, $r['rc'], 'data fails in CI mode on snapshot failure');
-t_contains('analytics.db', $r['out'], 'naming the database');
+t_contains('analytics.db — ', $r['out'], 'naming the database');
+t_eq([], glob("{$logs}/*/content/analytics.db") ?: [], 'and the copy holds no broken database');
 t_eq([], glob($s['docroot'] . '/content/.logpull.*') ?: [], 'and leaves no snapshot directory on the server');
 
 unlink($s['docroot'] . '/content/analytics.db');
