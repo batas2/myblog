@@ -14,6 +14,8 @@ $which = $argv[1] ?? 'all';
 $fail = 0;
 
 $run = function (string $script) use (&$fail) {
+    // the public clone has no tests/ci.php (it tests scripts private to the Gitea repository)
+    if (!is_file(__DIR__ . '/' . $script)) { echo "\n{$script}: not in this checkout, skipped\n"; return; }
     passthru(PHP_BINARY . ' ' . escapeshellarg(__DIR__ . '/' . $script), $rc);
     if ($rc !== 0) $fail = 1;
 };
