@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# tests/fixtures/fake-ssh — stands in for ssh in tests/deploy.php.
+#
+# Takes ssh's own options, a host and a remote command, and runs the command on
+# this machine with HOME (and the working directory) set to $FAKE_REMOTE_HOME,
+# the temp directory that plays the server's home. With $FAKE_FORCED_COMMAND
+# set it behaves like an authorized_keys command="..." entry instead: that
+# program runs with SSH_ORIGINAL_COMMAND holding what the client asked for.
+set -euo pipefail
+: "${FAKE_REMOTE_HOME:?fake-ssh needs FAKE_REMOTE_HOME}"
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -p|-o|-i|-l|-F|-E|-c|-m|-J|-b) shift 2 ;;
+    -p*|-o*|-i*|-l*) shift ;;
+    -[TqtnxAaNvCK46]*) shift ;;
+    --) shift; break ;;
+    -*) echo "fake-ssh: unsupported option $1" >&2; exit 255 ;;
+    *) break ;;
+  esac
+done
+[ $# -gt 0 ] || { echo "fake-ssh: no host" >&2; exit 255; }
+shift                      # the host: there is only one server here
+cmd="$*"
+
+cd "${FAKE_REMOTE_HOME}"
+export HOME="${FAKE_REMOTE_HOME}"
+if [ -n "${FAKE_FORCED_COMMAND:-}" ]; then
+  SSH_ORIGINAL_COMMAND="${cmd}" exec "${FAKE_FORCED_COMMAND}"
+fi
+exec bash -c "${cmd}"

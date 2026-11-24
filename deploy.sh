@@ -16,17 +16,33 @@ set -euo pipefail
 # deploy.env.example and fill in your host. Required vars:
 #   SSH_USER, SSH_HOST, SSH_PORT, REMOTE_DIR
 LOCAL_DIR="$(cd "$(dirname "$0")" && pwd)/"
-if [ ! -f "${LOCAL_DIR}deploy.env" ]; then
-  echo "Missing deploy.env — copy deploy.env.example and fill in your SSH target." >&2
+ENV_FILE="${DEPLOY_ENV_FILE:-${LOCAL_DIR}deploy.env}"
+if [ ! -f "${ENV_FILE}" ]; then
+  echo "Missing ${ENV_FILE} — copy deploy.env.example and fill in your SSH target." >&2
   exit 1
 fi
 # shellcheck source=deploy.env.example
-source "${LOCAL_DIR}deploy.env"
+source "${ENV_FILE}"
 : "${SSH_USER:?deploy.env must set SSH_USER}"
 : "${SSH_HOST:?deploy.env must set SSH_HOST}"
 : "${SSH_PORT:=22}"
 : "${REMOTE_DIR:?deploy.env must set REMOTE_DIR}"
-BACKUP_DIR="${LOCAL_DIR}_remote-backup"
+# The ssh command, with any options it needs (CI passes a key: "ssh -i … -o IdentitiesOnly=yes").
+# A string for rsync -e, an array for direct calls.
+SSH_RSH="${DEPLOY_SSH:-ssh}"
+read -r -a SSH_CMD <<< "${SSH_RSH}"
+
+# Everything a deploy does on the server, apart from rsync, is a subcommand of one
+# program installed in ~/bin there (ci/remote/blog-remote). That is what lets the
+# CI key be pinned to rsync and that program (ci/remote/blog-gate).
+REMOTE_HELPER='~/bin/blog-remote'
+HELPER_HEADER="# blog-remote 1 ${REMOTE_DIR%/}"
+remote_helper() {
+  "${SSH_CMD[@]}" -p "${SSH_PORT}" -o ConnectTimeout=15 "${SSH_USER}@${SSH_HOST}" "${REMOTE_HELPER} $*"
+}
+# CI keeps its backups outside the throwaway checkout (a mounted directory on the build host)
+BACKUP_DIR="${DEPLOY_BACKUP_DIR:-${LOCAL_DIR}_remote-backup}"
+BACKUP_DIR="${BACKUP_DIR%/}"
 TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
 BACKUP_STAGE="${BACKUP_DIR}/${TIMESTAMP}"
 BACKUP_ARCHIVE="${BACKUP_DIR}/${TIMESTAMP}.tar.gz"
@@ -35,6 +51,11 @@ LOGS_STAGE="${LOGS_DIR}/${TIMESTAMP}"
 
 # --- colors ---
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; BOLD='\033[1m'; NC='\033[0m'
+# DEPLOY_CI=1: run by the pipeline. Plain output for the job log; ~/bin on the server is out of
+# reach of the CI key, so the helper is never installed from there.
+if [ "${DEPLOY_CI:-0}" = "1" ] || [ -n "${NO_COLOR:-}" ]; then
+  RED=''; GREEN=''; YELLOW=''; BLUE=''; BOLD=''; NC=''
+fi
 
 # --- output helpers ---
 STEP_NUM=0
@@ -59,6 +80,7 @@ RSYNC_MODE=()
 SKIP_GEOIP=0
 VERBOSE=0
 FORCE_PUSH=0
+SMOKE_ARGS=()
 CMD=""
 
 usage() {
@@ -79,6 +101,14 @@ COMMANDS
               the server, changes nothing on it.
   status      Say whether both sides hold the same post sources and notes. Reads
               only; useful when you cannot remember whether you pulled.
+  smoke [url] [--sha=<commit>] [--local]
+              Check the live site (or url): pages, feed, sitemap, 404s, files that
+              must stay hidden, security headers, certificate, and with --sha the
+              commit in build.txt. push runs it at the end (DEPLOY_SMOKE=0 skips).
+  install-remote
+              Copy ci/remote/* into ~/bin on the server. push, pull and data do it
+              on their own; run it by hand after changing those scripts when you
+              only deploy from CI, whose key cannot write there.
   help        This.
 
 OPTIONS
@@ -95,18 +125,23 @@ OPTIONS
 
 THE WRITING ROUND TRIP
   Both sides can write content/posts now: review.php edits post sources in place
-  and stores margin notes beside them. So every pull and every successful push
-  records what the two sides agreed on, and a push stops when the server has
-  moved on since. The loop is:
+  and stores margin notes beside them. So every successful push records on the
+  server what the two sides agreed on, and a push from any machine (this one or
+  CI) stops, with exit code 3, when the server has moved on since. The loop is:
 
       read the post on the site, leave notes, fix small things
       ./deploy.sh pull            posts and notes come home, briefs are written
       claude code                 works from drafts/review/, resolves each note
       ./deploy.sh                 the result and the history go back up
+                                  (or commit and push: CI deploys main)
 
 WHAT IS NEVER TOUCHED ON THE SERVER
   content/comments/*.json, content/analytics.db, content/analytics.seed,
   content/newsletter.db, content/scores.db, content/.sessions/
+
+EXIT CODES
+  0 done   1 failed   2 bad arguments   3 the server is ahead (pull first)
+  4 another deploy holds the lock on the server
 
 EXAMPLES
   ./deploy.sh                     build and deploy
@@ -121,7 +156,7 @@ HELPTEXT
 # The old flag spellings still work, because muscle memory is a real cost.
 for arg in "$@"; do
   case "$arg" in
-    push|pull|data|status|help)
+    push|pull|data|status|install-remote|smoke|help)
       [ -z "${CMD}" ] || die "Two commands given (${CMD}, ${arg}) — pick one."
       CMD="${arg}" ;;
     --pull)       CMD="pull";   echo "note: --pull is now 'deploy.sh pull'" >&2 ;;
@@ -133,6 +168,7 @@ for arg in "$@"; do
     -v|--verbose) VERBOSE=1 ;;
     --force)      FORCE_PUSH=1 ;;
     -h|--help)    CMD="help" ;;
+    --sha=*|--local|http://*|https://*) SMOKE_ARGS+=("$arg") ;;
     *) echo "Unknown argument: ${arg}" >&2; echo "Run ./deploy.sh help for the reference." >&2; exit 2 ;;
   esac
 done
@@ -147,6 +183,22 @@ if [ "${CMD}" != "push" ]; then
   [ "${SKIP_GEOIP}" -eq 0 ]    || die "--no-geoip applies to push, not to ${CMD}."
   [ "${FORCE_PUSH}" -eq 0 ]    || die "--force applies to push, not to ${CMD}."
 fi
+[ "${CMD}" = "smoke" ] || [ ${#SMOKE_ARGS[@]} -eq 0 ] || die "${SMOKE_ARGS[0]} applies to smoke, not to ${CMD}."
+
+# --- smoke: is the live site up, in one piece, and the commit we think it is? ---
+# tools/smoke.php does the work; the URL defaults to SMOKE_URL (deploy.env) or the live site.
+run_smoke() {
+  local args=("$@")
+  [ "${SMOKE_LOCAL:-0}" != "1" ] || args+=(--local)
+  local has_url=0 a
+  for a in "${args[@]}"; do case "${a}" in http://*|https://*) has_url=1 ;; esac; done
+  [ "${has_url}" -eq 1 ] || args=("${SMOKE_URL:-https://bfrackowiak.pl}" "${args[@]}")
+  php "${LOCAL_DIR}tools/smoke.php" "${args[@]}"
+}
+if [ "${CMD}" = "smoke" ]; then
+  run_smoke "${SMOKE_ARGS[@]}"
+  exit $?
+fi
 
 # --- quiet-by-default plumbing ---
 # Every noisy command runs through run(): verbose streams it, quiet captures it.
@@ -157,10 +209,17 @@ LOG_DIR="$(mktemp -d)"
 # on every exit path, including the failing ones, so a dead deploy never leaves
 # a copy of the analytics database sitting in the docroot.
 REMOTE_SNAP=""
+LOCK_HELD=0
+# Uncommitted changes that matter to a deploy: everything except the private material that is
+# never shipped (drafts, notes, references), where work in progress is normal.
+shipped_changes() {
+  git -C "${LOCAL_DIR}" status --porcelain -- . ':(exclude)drafts' ':(exclude)docs' \
+    ':(exclude)_archive' ':(exclude)Refernce' 2>/dev/null
+}
 cleanup() {
   rm -rf "${LOG_DIR}"
-  [ -z "${REMOTE_SNAP}" ] || ssh -p "${SSH_PORT}" -o ConnectTimeout=10 \
-    "${SSH_USER}@${SSH_HOST}" "rm -rf '${REMOTE_SNAP}'" >/dev/null 2>&1 || true
+  [ -z "${REMOTE_SNAP}" ] || remote_helper cleanup "${REMOTE_SNAP}" >/dev/null 2>&1 || true
+  [ "${LOCK_HELD}" -eq 0 ] || remote_helper unlock >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
 RSYNC_PROGRESS=()
@@ -196,6 +255,9 @@ fail_with_log() { dump_log "$1"; die "$2"; }
 #
 # So every pull and every successful push records what both sides agreed on. A file whose remote
 # hash differs from local AND from that record changed on the server since, and the push stops.
+# The marker lives on the server (content/.sync-state there), written by every successful push
+# from any machine, so the laptop and CI measure against the same record. A marker left on this
+# machine by the old deploy.sh is read once, when the server has none yet.
 SYNC_STATE="${LOCAL_DIR}content/.sync-state"
 
 # md5 of every post source and review note, one "hash  path" per line, sorted.
@@ -203,11 +265,76 @@ sync_hashes_local() {
   ( cd "${LOCAL_DIR}" && find content/posts content/review -type f \( -name '*.md' -o -name '*.json' \) 2>/dev/null \
     | sort | xargs -r md5sum 2>/dev/null ) || true
 }
-sync_hashes_remote() {
-  ssh -p "${SSH_PORT}" -o ConnectTimeout=15 "${SSH_USER}@${SSH_HOST}" \
-    "cd '${REMOTE_DIR}' 2>/dev/null && find content/posts content/review -type f \( -name '*.md' -o -name '*.json' \) 2>/dev/null | sort | xargs -r md5sum 2>/dev/null" || true
+# The server's side of the same list, into REMOTE_H. No answer, or an answer from a
+# helper that is not the expected version for this docroot, stops everything: an
+# empty list would read as "nothing on the server", and the guard would wave the
+# push through over whatever is really there.
+remote_hashes() {
+  local out
+  out="$(remote_helper hashes 2>/dev/null)" || true
+  [ "$(printf '%s\n' "${out}" | head -1)" = "${HELPER_HEADER}" ] || helper_missing "${out}"
+  REMOTE_H="$(printf '%s\n' "${out}" | tail -n +2)"
 }
-sync_state_write() { sync_hashes_local > "${SYNC_STATE}" 2>/dev/null || true; }
+helper_missing() {
+  local got
+  got="$(printf '%s\n' "${1:-}" | head -1)"
+  die "remote helper missing or outdated: run ./deploy.sh install-remote (expected '${HELPER_HEADER}', got '${got:-nothing}')"
+}
+# The right helper, for this docroot, answering on the server — or a stop that says so.
+check_helper() {
+  local v
+  v="$(remote_helper version 2>/dev/null || true)"
+  [ "# ${v}" = "${HELPER_HEADER}" ] || helper_missing "${v}"
+}
+install_remote() {
+  run "${LOG_DIR}/install.log" rsync -a --chmod=F755 -e "${SSH_RSH} -p ${SSH_PORT}" \
+    "${LOCAL_DIR}ci/remote/" "${SSH_USER}@${SSH_HOST}:bin/" \
+    || fail_with_log "${LOG_DIR}/install.log" "Installing the remote helper into ~/bin failed."
+}
+# push, pull and data keep the helper current on their own. Not in CI (its key
+# cannot write ~/bin) and not on a dry run (which writes nothing anywhere).
+maybe_install_remote() {
+  [ "${DEPLOY_CI:-0}" != "1" ] || return 0
+  [ ${#RSYNC_MODE[@]} -eq 0 ] || return 0
+  install_remote
+}
+
+if [ "${CMD}" = "install-remote" ]; then
+  [ "${DEPLOY_CI:-0}" != "1" ] || die "install-remote runs from a machine with a full key: the CI key cannot write ~/bin on the server."
+  install_remote
+  VERSION_LINE="$(remote_helper version 2>&1 || true)"
+  [ "# ${VERSION_LINE}" = "${HELPER_HEADER}" ] || die "installed, but the server answers '${VERSION_LINE}' instead of '${HELPER_HEADER#\# }'"
+  echo -e "${GREEN}${BOLD}Remote helper installed:${NC} ${VERSION_LINE}"
+  exit 0
+fi
+sync_state_write() {
+  sync_hashes_local | remote_helper sync-state-write >/dev/null \
+    || warn "could not record the sync marker on the server — the next push may ask for a pull"
+}
+# The agreed hashes into KNOWN_H: the server's marker, or this machine's old one as a fallback.
+known_hashes() {
+  local out
+  out="$(remote_helper sync-state-read 2>/dev/null)" || true
+  [ "$(printf '%s\n' "${out}" | head -1)" = "${HELPER_HEADER}" ] || helper_missing "${out}"
+  KNOWN_H="$(printf '%s\n' "${out}" | tail -n +2)"
+  if [ -z "${KNOWN_H}" ] && [ -s "${SYNC_STATE}" ]; then
+    KNOWN_H="$(cat "${SYNC_STATE}")"
+    note "using local sync marker (migration): the server has none yet"
+  fi
+}
+# One deploy at a time on the server; the lock is ours to release only once we hold it.
+acquire_lock() {
+  local who="laptop" out rc=0
+  [ "${DEPLOY_CI:-0}" != "1" ] || who="ci"
+  out="$(remote_helper lock "${who}" 2>&1)" || rc=$?
+  if [ "${rc}" -eq 4 ]; then
+    echo -e "${RED}✗ ${out#blog-remote: }${NC}"
+    echo "  Wait for it to finish, then deploy again."
+    exit 4
+  fi
+  [ "${rc}" -eq 0 ] || die "could not take the deploy lock on the server: ${out}"
+  LOCK_HELD=1
+}
 
 # --- status: which side is ahead, and nothing else ---------------------------
 # The guard below answers this question in order to refuse a push. Asking it on its own is cheaper
@@ -218,9 +345,9 @@ if [ "${CMD}" = "status" ]; then
   echo -e "  server: ${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}"
   echo
 
-  REMOTE_H="$(sync_hashes_remote)"
+  remote_hashes
+  known_hashes
   LOCAL_H="$(sync_hashes_local)"
-  [ -n "${REMOTE_H}" ] || warn "the server returned nothing — check SSH and REMOTE_DIR"
 
   SAME=0; AHEAD_LOCAL=0; AHEAD_REMOTE=0; ONLY_LOCAL=0
   AHEAD_REMOTE_LIST=""; AHEAD_LOCAL_LIST=""; ONLY_LOCAL_LIST=""
@@ -230,8 +357,7 @@ if [ "${CMD}" = "status" ]; then
     RHASH="${line%% *}"; RPATH="${line#* }"; RPATH="${RPATH# }"
     LHASH="$(printf '%s\n' "${LOCAL_H}" | awk -v p="${RPATH}" '$2==p {print $1; exit}')"
     if [ "${RHASH}" = "${LHASH}" ]; then SAME=$((SAME + 1)); continue; fi
-    KHASH=""
-    [ ! -f "${SYNC_STATE}" ] || KHASH="$(awk -v p="${RPATH}" '$2==p {print $1; exit}' "${SYNC_STATE}")"
+    KHASH="$(printf '%s\n' "${KNOWN_H}" | awk -v p="${RPATH}" '$2==p {print $1; exit}')"
     if [ "${RHASH}" = "${KHASH}" ]; then
       AHEAD_LOCAL=$((AHEAD_LOCAL + 1)); AHEAD_LOCAL_LIST="${AHEAD_LOCAL_LIST}  ${RPATH}\n"
     else
@@ -259,10 +385,10 @@ if [ "${CMD}" = "status" ]; then
     echo -en "${AHEAD_REMOTE_LIST}"
     echo
     echo -e "  ${BOLD}Run ./deploy.sh pull before the next push.${NC}"
-    exit 1
+    exit 3
   fi
   echo
-  [ ! -f "${SYNC_STATE}" ] && warn "no sync marker yet — the first pull or push writes it" || true
+  [ -n "${KNOWN_H}" ] || warn "no sync marker yet — the first push writes it"
   echo -e "${GREEN}${BOLD}In step.${NC} A push would not overwrite anything on the server."
   exit 0
 fi
@@ -284,6 +410,7 @@ if [ "${CMD}" = "pull" ]; then
   [ "${DRY}" -eq 0 ] || echo -e "  mode:   dry-run (nothing is written)"
   echo
 
+  maybe_install_remote
   step "Downloading content/posts and content/review"
   run "${LOG_DIR}/pullreview.log" rsync -az "${RSYNC_PROGRESS[@]}" --itemize-changes "${RSYNC_MODE[@]}" \
     --include='/content/' \
@@ -292,7 +419,7 @@ if [ "${CMD}" = "pull" ]; then
     --include='/content/review/' \
     --include='/content/review/*.json' \
     --exclude='*' \
-    -e "ssh -p ${SSH_PORT}" \
+    -e "${SSH_RSH} -p ${SSH_PORT}" \
     "${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}/" \
     "${LOCAL_DIR}" \
     || fail_with_log "${LOG_DIR}/pullreview.log" "Downloading posts and review notes failed."
@@ -302,7 +429,8 @@ if [ "${CMD}" = "pull" ]; then
     step_done "${CHANGED} file(s) would be updated"
   else
     step_done "${CHANGED} file(s) updated"
-    sync_state_write
+    # no marker: a pull brings the server's edits here, it does not put anything there.
+    # The next push from any machine that carries them is what makes the sides agree.
   fi
 
   step "Writing the briefs"
@@ -347,59 +475,17 @@ if [ "${CMD}" = "data" ]; then
   # in, and rsyncing the three files one after another still races the live
   # beacon. VACUUM INTO writes a single consistent copy while readers and
   # writers carry on, so the server builds the snapshot and we fetch that.
+  maybe_install_remote
   step "Snapshotting databases on the server"
   if [ "${DRY}" -eq 1 ]; then
     step_done "Skipped (dry run) — the server is never written to anyway"
   else
-    cat > "${LOG_DIR}/snapshot.php" <<'SNAPSHOT_PHP'
-<?php
-// Piped to the server's php CLI by deploy.sh --pull-logs. Writes a consistent
-// copy of each runtime database into $argv[1] and reports one line per file.
-$dest = $argv[1] ?? '';
-if ($dest === '' || !is_dir($dest)) {
-    fwrite(STDERR, "snapshot destination is not a directory: {$dest}\n");
-    exit(1);
-}
-$open = static function (string $src): PDO {
-    $db = new PDO('sqlite:' . $src, null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
-    // the live site is writing to these; wait rather than fail on a busy lock
-    $db->exec('PRAGMA busy_timeout=10000');
-    return $db;
-};
-foreach (['analytics.db', 'newsletter.db', 'scores.db'] as $name) {
-    $src = 'content/' . $name;
-    if (!is_file($src)) { echo "skip {$name} — not on the server\n"; continue; }
-    $out = $dest . '/' . $name;
-    $method = '';
-    try {
-        $db = $open($src);
-        $db->exec('VACUUM INTO ' . $db->quote($out));
-        $method = 'vacuum';
-    } catch (Throwable $e) {
-        // VACUUM INTO needs SQLite 3.27+. Older hosts get the next best thing:
-        // fold the WAL back into the main file, then copy it. A checkpoint is
-        // routine maintenance the database does on its own anyway.
-        try {
-            $db = $open($src);
-            $db->exec('PRAGMA wal_checkpoint(TRUNCATE)');
-            $db = null;
-            if (!copy($src, $out)) throw new RuntimeException('copy failed');
-            $method = 'checkpoint+copy';
-        } catch (Throwable $e2) {
-            echo "fail {$name} — {$e2->getMessage()}\n";
-            continue;
-        }
-    }
-    printf("ok %s %d %s\n", $name, (int) filesize($out), $method);
-}
-SNAPSHOT_PHP
-    REMOTE_SNAP_PATH="${REMOTE_DIR}/content/.logpull.${TIMESTAMP}"
-    run "${LOG_DIR}/snapmk.log" ssh -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" "mkdir -p '${REMOTE_SNAP_PATH}'" \
-      || fail_with_log "${LOG_DIR}/snapmk.log" "Could not create the snapshot directory on the server."
-    REMOTE_SNAP="${REMOTE_SNAP_PATH}"   # armed: cleanup() removes it from here on
-
-    run "${LOG_DIR}/snapshot.log" bash -c \
-      "ssh -p ${SSH_PORT} '${SSH_USER}@${SSH_HOST}' \"cd '${REMOTE_DIR}' && php -- '${REMOTE_SNAP}'\" < '${LOG_DIR}/snapshot.php'" \
+    # blog-remote creates content/.logpull.<ts>, prints "dir <path>" and one ok|fail|skip
+    # line per database (ci/remote/blog-snapshot.php)
+    SNAP_RC=0
+    run "${LOG_DIR}/snapshot.log" remote_helper snapshot || SNAP_RC=$?
+    REMOTE_SNAP="$(sed -n 's/^dir //p' "${LOG_DIR}/snapshot.log" | head -1)"   # armed: cleanup() removes it
+    [ "${SNAP_RC}" -eq 0 ] && [ -n "${REMOTE_SNAP}" ] \
       || fail_with_log "${LOG_DIR}/snapshot.log" "Snapshot failed on the server — nothing was pulled."
 
     SNAP_OK="$(grep -c '^ok ' "${LOG_DIR}/snapshot.log" || true)"
@@ -420,7 +506,7 @@ SNAPSHOT_PHP
 
   if [ "${DRY}" -eq 0 ]; then
     run "${LOG_DIR}/pulldb.log" rsync -az "${RSYNC_PROGRESS[@]}" \
-      -e "ssh -p ${SSH_PORT}" \
+      -e "${SSH_RSH} -p ${SSH_PORT}" \
       "${SSH_USER}@${SSH_HOST}:${REMOTE_SNAP}/" \
       "${LOGS_STAGE}/content/" \
       || fail_with_log "${LOG_DIR}/pulldb.log" "Downloading the database snapshots failed."
@@ -436,7 +522,7 @@ SNAPSHOT_PHP
     --include='/content/comments/' \
     --include='/content/comments/*.json' \
     --exclude='*' \
-    -e "ssh -p ${SSH_PORT}" \
+    -e "${SSH_RSH} -p ${SSH_PORT}" \
     "${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}/" \
     "${LOGS_STAGE}/" \
     || fail_with_log "${LOG_DIR}/pullfiles.log" "Downloading the logs and comments failed."
@@ -458,7 +544,7 @@ SNAPSHOT_PHP
     # -L: on MyDevil ~/domains/<domain>/logs/access is a symlink into the host's
     # log tree; follow it, or the pull brings a dangling link instead of the logs
     if run "${LOG_DIR}/pullsrv.log" rsync -azL "${RSYNC_PROGRESS[@]}" "${RSYNC_MODE[@]}" \
-      -e "ssh -p ${SSH_PORT}" \
+      -e "${SSH_RSH} -p ${SSH_PORT}" \
       "${SSH_USER}@${SSH_HOST}:${REMOTE_LOG_DIR}/" \
       "${LOGS_STAGE}/server-logs/"; then
       step_done "Server logs downloaded"
@@ -516,6 +602,23 @@ echo -e "${BOLD}Deploying bfrackowiak.pl${NC}"
 echo -e "  target: ${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}"
 echo -e "  mode:   $([ ${#RSYNC_MODE[@]} -eq 0 ] && echo 'live' || echo 'dry-run')$([ ${#DELETE_FLAG[@]} -eq 0 ] || echo ', clean (deletes stale remote files)')$([ "${VERBOSE}" -eq 1 ] && echo ', verbose')"
 
+# --- what the next CI deploy would undo ---
+# CI deploys main from the repository. Whatever goes up from here that main does not carry
+# is replaced by the next pipeline run, silently. Say so; deploying it is still allowed.
+if [ "${DEPLOY_CI:-0}" != "1" ] && git -C "${LOCAL_DIR}" rev-parse --git-dir >/dev/null 2>&1; then
+  if [ -n "$(shipped_changes)" ]; then
+    warn "uncommitted changes: the next CI deploy will replace this deploy"
+  fi
+  if git -C "${LOCAL_DIR}" remote get-url origin >/dev/null 2>&1; then
+    if timeout 10 git -C "${LOCAL_DIR}" fetch -q origin main >/dev/null 2>&1; then
+      git -C "${LOCAL_DIR}" merge-base --is-ancestor HEAD origin/main 2>/dev/null \
+        || warn "HEAD is not in main on origin: the next CI deploy will replace this deploy"
+    else
+      note "could not reach origin to check whether HEAD is pushed"
+    fi
+  fi
+fi
+
 # --- sanity: config must exist (endpoints read it at runtime) ---
 if [ ! -f "${LOCAL_DIR}config.php" ]; then
   die "Missing config.php — copy config.example.php and fill it in."
@@ -523,12 +626,16 @@ fi
 
 # --- 1. tests ---
 step "Running test suite"
-run "${LOG_DIR}/tests.log" php "${LOCAL_DIR}tests/run.php" \
-  || fail_with_log "${LOG_DIR}/tests.log" "Test suite failed — nothing was deployed."
-# run.php prints one tally per script (unit, integration) and no grand total
-TEST_TALLY="$(grep -oE 'PASS: [0-9]+ +FAIL: [0-9]+' "${LOG_DIR}/tests.log" \
-  | awk '{p += $2} END {if (NR) printf "%d checks", p}' || true)"
-step_done "Tests passed${TEST_TALLY:+ — ${TEST_TALLY}}"
+if [ "${DEPLOY_SKIP_TESTS:-0}" = "1" ]; then
+  step_done "Skipped (DEPLOY_SKIP_TESTS=1: the caller ran them)"
+else
+  run "${LOG_DIR}/tests.log" php "${LOCAL_DIR}tests/run.php" \
+    || fail_with_log "${LOG_DIR}/tests.log" "Test suite failed — nothing was deployed."
+  # run.php prints one tally per script (unit, integration) and no grand total
+  TEST_TALLY="$(grep -oE 'PASS: [0-9]+ +FAIL: [0-9]+' "${LOG_DIR}/tests.log" \
+    | awk '{p += $2} END {if (NR) printf "%d checks", p}' || true)"
+  step_done "Tests passed${TEST_TALLY:+ — ${TEST_TALLY}}"
+fi
 
 # --- 2. build ---
 step "Building site (php tools/build.php)"
@@ -584,8 +691,12 @@ fi
 
 # --- 3b. refuse to overwrite a server that is ahead ---
 # Cheap: one ssh, a few dozen md5s. Runs before the backup so a refusal costs nothing.
+maybe_install_remote
+check_helper
+[ ${#RSYNC_MODE[@]} -ne 0 ] || acquire_lock
 step "Checking the server is not ahead"
-REMOTE_H="$(sync_hashes_remote)"
+remote_hashes
+known_hashes
 LOCAL_H="$(sync_hashes_local)"
 CONFLICTS=""
 if [ -n "${REMOTE_H}" ]; then
@@ -595,8 +706,7 @@ if [ -n "${REMOTE_H}" ]; then
     RPATH="${line#* }"; RPATH="${RPATH# }"
     LHASH="$(printf '%s\n' "${LOCAL_H}" | awk -v p="${RPATH}" '$2==p {print $1; exit}')"
     [ "${RHASH}" != "${LHASH}" ] || continue                 # identical: nothing to decide
-    KHASH=""
-    [ ! -f "${SYNC_STATE}" ] || KHASH="$(awk -v p="${RPATH}" '$2==p {print $1; exit}' "${SYNC_STATE}")"
+    KHASH="$(printf '%s\n' "${KNOWN_H}" | awk -v p="${RPATH}" '$2==p {print $1; exit}')"
     # remote still matches what we last agreed on, so the difference is our local edit going up
     [ "${RHASH}" != "${KHASH}" ] || continue
     CONFLICTS="${CONFLICTS}  ${RPATH}\n"
@@ -605,10 +715,11 @@ fi
 
 if [ -n "${CONFLICTS}" ] && [ "${FORCE_PUSH}" -eq 0 ]; then
   echo
-  warn "The server has changes these files do not have locally:"
+  warn "These files changed on the server since the last deploy (review.php or admin.php):"
   echo -en "${CONFLICTS}"
   echo
-  die "Run ./deploy.sh --pull first, or ./deploy.sh --force to overwrite the server."
+  echo -e "${RED}✗ Run ./deploy.sh pull, commit, push — or ./deploy.sh --force to overwrite the server.${NC}"
+  exit 3
 fi
 if [ -n "${CONFLICTS}" ]; then
   warn "--force: overwriting server-side changes in $(echo -en "${CONFLICTS}" | wc -l) file(s)"
@@ -624,7 +735,7 @@ if [ ${#RSYNC_MODE[@]} -eq 0 ]; then
   mkdir -p "${BACKUP_STAGE}"
 
   run "${LOG_DIR}/backup.log" rsync -az "${RSYNC_PROGRESS[@]}" \
-    -e "ssh -p ${SSH_PORT}" \
+    -e "${SSH_RSH} -p ${SSH_PORT}" \
     "${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}/" \
     "${BACKUP_STAGE}/" \
     || fail_with_log "${LOG_DIR}/backup.log" "Remote backup failed — nothing was deployed."
@@ -642,10 +753,34 @@ if [ ${#RSYNC_MODE[@]} -eq 0 ]; then
 
   BACKUP_SIZE="$(du -h "${BACKUP_ARCHIVE}" | cut -f1)"
   BACKUP_HINT=" — backup: ${BACKUP_ARCHIVE}"
-  step_done "Backup saved (${BACKUP_SIZE}, ${BACKUP_FILES} files)"
+  # From the laptop the archive moves to the home server (HOME_BACKUP_TARGET in deploy.env), where
+  # the CI's own backups live too. If that fails it stays here: a backup is never lost to a hop.
+  if [ "${DEPLOY_CI:-0}" != "1" ] && [ -n "${HOME_BACKUP_TARGET:-}" ]; then
+    if rsync -a -e "ssh -o ConnectTimeout=5 -o BatchMode=yes" "${BACKUP_ARCHIVE}" "${HOME_BACKUP_TARGET}" >"${LOG_DIR}/homebackup.log" 2>&1; then
+      rm -f "${BACKUP_ARCHIVE}"
+      BACKUP_HINT=" — backup: ${HOME_BACKUP_TARGET%/}/${TIMESTAMP}.tar.gz"
+      step_done "Backup saved (${BACKUP_SIZE}, ${BACKUP_FILES} files) → ${HOME_BACKUP_TARGET}"
+    else
+      warn "could not copy the backup to ${HOME_BACKUP_TARGET}: kept here, ${BACKUP_ARCHIVE}"
+      step_done "Backup saved (${BACKUP_SIZE}, ${BACKUP_FILES} files)"
+    fi
+  else
+    step_done "Backup saved (${BACKUP_SIZE}, ${BACKUP_FILES} files)"
+  fi
 fi
 
 # --- 5. deploy ---
+# build.txt: which commit is live, since when, deployed by whom. The smoke checks compare it with
+# the commit the pipeline deployed. Written into the tree only for a real deploy.
+if [ ${#RSYNC_MODE[@]} -eq 0 ]; then
+  BUILD_SHA="${DEPLOY_SHA:-}"
+  if [ -z "${BUILD_SHA}" ]; then
+    BUILD_SHA="$(git -C "${LOCAL_DIR}" rev-parse HEAD 2>/dev/null || echo unknown)"
+    [ -z "$(shipped_changes)" ] || BUILD_SHA="${BUILD_SHA}-dirty"
+  fi
+  printf 'sha=%s\ndeployed=%s\nby=%s\n' "${BUILD_SHA}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    "$([ "${DEPLOY_CI:-0}" = "1" ] && echo ci || echo laptop)" > "${LOCAL_DIR}build.txt"
+fi
 step "Syncing to ${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}"
 
 # What ships: index.php, comments.php, a.php, stats.php, admin.php, .htaccess,
@@ -655,13 +790,19 @@ step "Syncing to ${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}"
 # content/geoip.dat (offline IP→country db) and content/.htaccess.
 # What never ships: docs, drafts, tests, archives, backups, git, runtime data.
 RSYNC_LOG="${LOG_DIR}/sync.log"
-run "${RSYNC_LOG}" rsync -az "${RSYNC_PROGRESS[@]}" --stats --itemize-changes "${RSYNC_MODE[@]}" "${DELETE_FLAG[@]}" "${GEOIP_PROTECT[@]}" \
-  --exclude='.git/' \
+# A CI checkout is fresh: every file has a new mtime, and rsync's quick check would resend all
+# of them. Compare by content there.
+RSYNC_CMP=()
+[ "${DEPLOY_CI:-0}" != "1" ] || RSYNC_CMP=(--checksum)
+run "${RSYNC_LOG}" rsync -az "${RSYNC_CMP[@]}" "${RSYNC_PROGRESS[@]}" --stats --itemize-changes "${RSYNC_MODE[@]}" "${DELETE_FLAG[@]}" "${GEOIP_PROTECT[@]}" \
+  --exclude='/.git' \
   --exclude='.gitignore' \
+  --exclude='/.gitea/' \
+  --exclude='/.githooks/' \
+  --exclude='/.superpowers/' \
+  --exclude='/ci/' \
+  --exclude='/content/outlines/' \
   --exclude='.claude/' \
-  --exclude='.superpowers/' \
-  --exclude='.githooks/' \
-  --exclude='_remote-logs/' \
   --exclude='deploy.sh' \
   --exclude='deploy.env' \
   --exclude='deploy.env.example' \
@@ -674,11 +815,16 @@ run "${RSYNC_LOG}" rsync -az "${RSYNC_PROGRESS[@]}" --stats --itemize-changes "$
   --exclude='config.example.php' \
   --exclude='tools/preview_admin.php' \
   --exclude='_archive/' \
-  --exclude='_remote-backup/' \
+  --exclude='/_remote-backup/' \
+  --exclude='/_remote-logs/' \
   --exclude='content/comments/' \
   --exclude='content/.sessions/' \
   --exclude='content/.ratelimit/' \
   --exclude='content/.buildlock' \
+  --exclude='content/.sync-state' \
+  --exclude='content/.sync-state.*' \
+  --exclude='content/.deploylock/' \
+  --exclude='content/.logpull.*' \
   --exclude='Dockerfile' \
   --exclude='docker-compose.yml' \
   --exclude='run.sh' \
@@ -691,7 +837,7 @@ run "${RSYNC_LOG}" rsync -az "${RSYNC_PROGRESS[@]}" --stats --itemize-changes "$
   --exclude='content/scores.db-*' \
   --exclude='*.log' \
   --exclude='.DS_Store' \
-  -e "ssh -p ${SSH_PORT}" \
+  -e "${SSH_RSH} -p ${SSH_PORT}" \
   "${LOCAL_DIR}" \
   "${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}" \
   || fail_with_log "${RSYNC_LOG}" "Sync failed — the remote may be half-updated${BACKUP_HINT}."
@@ -725,8 +871,8 @@ fi
 # pipeline lists it twice. Mirror that directory exactly, every deploy.
 step "Mirroring content/posts (clearing renamed leftovers)"
 POSTS_LOG="${LOG_DIR}/posts.log"
-run "${POSTS_LOG}" rsync -az --delete --itemize-changes "${RSYNC_MODE[@]}" \
-  -e "ssh -p ${SSH_PORT}" \
+run "${POSTS_LOG}" rsync -az "${RSYNC_CMP[@]}" --delete --itemize-changes "${RSYNC_MODE[@]}" \
+  -e "${SSH_RSH} -p ${SSH_PORT}" \
   "${LOCAL_DIR}content/posts/" \
   "${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}/content/posts/" \
   || fail_with_log "${POSTS_LOG}" "content/posts mirror failed${BACKUP_HINT}."
@@ -744,11 +890,16 @@ if [ ${#RSYNC_MODE[@]} -eq 0 ]; then
 else
   echo -e "${GREEN}${BOLD}Dry run done — nothing was touched.${NC}"
 fi
-echo -e "Post-deploy checks:"
-echo -e "  curl -s -o /dev/null -w '%{http_code}' https://bfrackowiak.pl/"
-echo -e "  curl -s -o /dev/null -w '%{http_code}' https://bfrackowiak.pl/blog/"
-echo -e "  stats: https://bfrackowiak.pl/stats.php?key=<STATS_KEY>"
-echo -e "  admin: https://bfrackowiak.pl/admin.php"
+
+# --- 7. smoke checks of what just went live ---
+if [ ${#RSYNC_MODE[@]} -eq 0 ] && [ "${DEPLOY_SMOKE:-1}" != "0" ]; then
+  echo
+  echo -e "${BOLD}Smoke checks${NC}"
+  if ! run_smoke "--sha=${BUILD_SHA}" | sed 's/^/  /'; then
+    echo -e "${RED}✗ deployed, but the smoke checks failed${BACKUP_HINT}.${NC}"
+    exit 1
+  fi
+fi
 
 # --- scheduled-posts reminder ---
 # A scheduled post only goes live when tools/build.php runs on the server after

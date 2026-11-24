@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# ci/remote/blog-gate — the forced command of the key CI deploys with.
+#
+# In ~/.ssh/authorized_keys on the server:
+#   command="<home>/bin/blog-gate",no-pty,no-port-forwarding,no-agent-forwarding,no-X11-forwarding,no-user-rc ssh-ed25519 … blog-ci
+#
+# Whatever the client asked for arrives in SSH_ORIGINAL_COMMAND and is never
+# handed to a shell. Two things get through: rsync, confined by rrsync to the
+# blog's directory, and the fixed subcommands of blog-remote. Everything else is
+# refused and logged. A stolen CI key can therefore touch the blog and nothing
+# else on the account.
+set -uo pipefail
+
+ROOT="${BLOG_GATE_ROOT:-${HOME}/domains/bfrackowiak.pl}"
+ROOT="${ROOT%/}"
+RRSYNC="${BLOG_GATE_RRSYNC:-/usr/local/sbin/rrsync}"
+[ -x "${RRSYNC}" ] || RRSYNC="$(command -v rrsync || true)"
+HELPER="${BLOG_REMOTE_BIN:-${HOME}/bin/blog-remote}"
+LOG="${BLOG_GATE_LOG:-${HOME}/blog-gate.log}"
+CMD="${SSH_ORIGINAL_COMMAND:-}"
+
+deny() {
+  printf '%s denied (%s): %q\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$1" "${CMD}" >> "${LOG}" 2>/dev/null || true
+  echo "blog-gate: command not allowed" >&2
+  exit 1
+}
+
+# Only the characters rsync's server command line (--log-format=%i included) and the
+# helper's arguments use. No quotes, no shell syntax, no newline. Nothing here is
+# ever parsed by a shell anyway; this keeps the log readable and the surface small.
+allowed='^[A-Za-z0-9 ._/~=,:%+-]+$'
+[[ "${CMD}" =~ ${allowed} ]] || deny "characters"
+[[ "${CMD}" != *..* ]] || deny "parent directory"
+read -r -a ARGS <<< "${CMD}"
+[ ${#ARGS[@]} -gt 0 ] || deny "empty"
+
+# rsync: every path after the "." placeholder must lie under ROOT. rrsync reads
+# absolute paths as relative to its directory, so they are rewritten to relative
+# ones here; rrsync then checks again, options included.
+if [ "${ARGS[0]}" = "rsync" ] && [ "${ARGS[1]:-}" = "--server" ]; then
+  [ -n "${RRSYNC}" ] || deny "rrsync missing"
+  out=()
+  after_dot=0
+  for a in "${ARGS[@]}"; do
+    if [ "${after_dot}" -eq 1 ]; then
+      case "${a}" in
+        "${ROOT}"|"${ROOT}/") a="." ;;
+        "${ROOT}"/*) a="${a#"${ROOT}/"}" ;;
+        /*|~*) deny "path outside ${ROOT}" ;;
+      esac
+    elif [ "${a}" = "." ]; then
+      after_dot=1
+    fi
+    out+=("${a}")
+  done
+  [ "${after_dot}" -eq 1 ] || deny "no path"
+  SSH_ORIGINAL_COMMAND="${out[*]}" exec "${RRSYNC}" "${ROOT}"
+fi
+
+# blog-remote <subcommand> [one argument]
+helper_name='^(~/bin/)?blog-remote$'
+subcommand='^[a-z-]+$'
+if [ ${#ARGS[@]} -ge 2 ] && [ ${#ARGS[@]} -le 3 ] \
+   && { [[ "${ARGS[0]}" =~ ${helper_name} ]] || [ "${ARGS[0]}" = "${HOME}/bin/blog-remote" ]; } \
+   && [[ "${ARGS[1]}" =~ ${subcommand} ]]; then
+  unset SSH_ORIGINAL_COMMAND
+  exec "${HELPER}" "${ARGS[@]:1}"
+fi
+
+deny "not rsync or blog-remote"
